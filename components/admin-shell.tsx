@@ -25,7 +25,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   </div>
 }
 
-export function SectionHeading({ eyebrow, title, description }: { eyebrow?: string; title: string; description?: string }) { return <div>{eyebrow && <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">{eyebrow}</p>}<h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">{title}</h1>{description && <p className="mt-2 text-sm text-[#71838b]">{description}</p>}</div> }
+export function SectionHeading({ eyebrow, title, description }: { eyebrow?: string; title: string; description?: string }) { return <div>{eyebrow && <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">{eyebrow}</p>}<h1 className="mt-2 font-syne text-3xl font-bold tracking-[-.04em] text-[#12232b]">{title}</h1>{description && <p className="mt-2 text-sm text-[#71838b]">{description}</p>}</div> }
 
 export const Panel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <section className={`rounded-xl border border-[#dce5e8] bg-white ${className}`}>{children}</section>
 
