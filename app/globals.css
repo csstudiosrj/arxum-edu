@@ -163,7 +163,7 @@
     @apply bg-background text-foreground;
     font-family: var(--font-dm-sans), system-ui, sans-serif;
   }
-  h1, h2, h3, .font-syne {
+  .font-syne {
     font-family: var(--font-syne), system-ui, sans-serif;
   }
 }
