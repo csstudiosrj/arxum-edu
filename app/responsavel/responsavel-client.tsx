@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula } from './actions'
 
 type MenuItem = readonly [LucideIcon, string]
 type Evento = readonly [string, string, string, string, LucideIcon]
@@ -46,6 +46,13 @@ const atalhos: Atalho[] = [
   ['Autorizar saída',ShieldCheck,'#'],
 ]
 
+const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> = [
+  { key: 'rg_aluno', label: 'RG ou Certidão de nascimento do aluno' },
+  { key: 'cpf_responsavel', label: 'CPF do responsável' },
+  { key: 'comprovante_residencia', label: 'Comprovante de residência' },
+  { key: 'historico_escolar', label: 'Histórico escolar' },
+]
+
 function Sidebar({ onLogout, saindo }: { onLogout: () => void; saindo: boolean }) {
   return <aside className="hidden w-64 shrink-0 border-r border-[#dbe5e8] bg-white lg:flex lg:flex-col">
     <div className="p-6"><ArxumBrand light/></div>
@@ -72,6 +79,7 @@ function formatarData(iso: string): string {
 export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoResponsavel[] }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
+  const [detalhes, setDetalhes] = useState<InscricaoResponsavel | null>(null)
 
   async function handleLogout() {
     setSaindo(true)
@@ -123,6 +131,7 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
                 {inscricoes.map((i) => {
                   const st = statusMap[i.status] || statusMap.inscrito
                   const Icone = st.icon
+                  const docsEnviados = i.documentos ? nomesDocumentos.filter(({ key }) => i.documentos?.[key]?.url).length : 0
                   return (
                     <article key={i.id} className="rounded-xl border border-[#dbe5e8] bg-white p-5">
                       <div className="flex items-start justify-between gap-3">
@@ -144,15 +153,15 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
                           <p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.criado_em)}</p>
                         </div>
                         <div>
-                          <p className="text-[#8aa0ad]">Última atualização</p>
-                          <p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.atualizado_em)}</p>
+                          <p className="text-[#8aa0ad]">Documentos</p>
+                          <p className="mt-0.5 font-semibold text-[#243942]">{docsEnviados} de 4 enviados</p>
                         </div>
                       </div>
 
                       <div className="mt-5 grid grid-cols-3 gap-2">
-                        <button className="rounded-lg bg-[#f1f8f6] px-2 py-2 text-center text-xs font-semibold text-[#087f5b]">Ver detalhes</button>
-                        <button className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783]">Documentos</button>
-                        <button className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783]">Comunicados</button>
+                        <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f1f8f6] px-2 py-2 text-center text-xs font-semibold text-[#087f5b] hover:bg-[#d9f2e7]">Ver detalhes</button>
+                        <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Documentos</button>
+                        <button className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Comunicados</button>
                       </div>
                     </article>
                   )
@@ -242,5 +251,84 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
         </div>
       </main>
     </div>
+
+    {detalhes && (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setDetalhes(null)} />
+        <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
+          <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div>
+              <p className="font-mono text-xs text-[#82939a]">{detalhes.protocolo}</p>
+              <h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalhes.aluno_nome}</h2>
+            </div>
+            <button onClick={() => setDetalhes(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]">
+              <X className="size-5" />
+            </button>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="mb-6">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${(statusMap[detalhes.status] || statusMap.inscrito).style}`}>
+                {(statusMap[detalhes.status] || statusMap.inscrito).label}
+              </span>
+            </div>
+
+            <section className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Dados da inscrição</h3>
+              <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
+                <div><dt className="text-xs text-[#82939a]">Aluno</dt><dd className="text-[#243942]">{detalhes.aluno_nome}</dd></div>
+                <div><dt className="text-xs text-[#82939a]">Série pretendida</dt><dd className="text-[#243942]">{detalhes.aluno_serie || '—'}</dd></div>
+                <div><dt className="text-xs text-[#82939a]">Turno</dt><dd className="text-[#243942]">{detalhes.aluno_turno || '—'}</dd></div>
+                <div><dt className="text-xs text-[#82939a]">Enviada em</dt><dd className="text-[#243942]">{formatarData(detalhes.criado_em)}</dd></div>
+                <div><dt className="text-xs text-[#82939a]">Última atualização</dt><dd className="text-[#243942]">{formatarData(detalhes.atualizado_em)}</dd></div>
+              </dl>
+            </section>
+
+            <section className="mt-6 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Documentos enviados</h3>
+              <div className="space-y-2">
+                {nomesDocumentos.map(({ key, label }) => {
+                  const doc = detalhes.documentos?.[key]
+                  const temArquivo = doc && doc.url
+                  return (
+                    <div
+                      key={key}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${
+                        temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${
+                          temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'
+                        }`}>
+                          <FileText className="size-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
+                          <p className="truncate text-xs text-[#82939a]">
+                            {temArquivo ? doc.nome : 'Não enviado'}
+                          </p>
+                        </div>
+                      </div>
+                      {temArquivo && (
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"
+                        >
+                          <ExternalLink className="mr-1 inline size-3" />
+                          Abrir
+                        </a>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
+    )}
   </div>
 }
