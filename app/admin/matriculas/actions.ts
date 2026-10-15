@@ -3,6 +3,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
+export type DocumentosMatricula = {
+  rg_aluno?: { url: string; nome: string } | null
+  cpf_responsavel?: { url: string; nome: string } | null
+  comprovante_residencia?: { url: string; nome: string } | null
+  historico_escolar?: { url: string; nome: string } | null
+}
+
 export type Inscricao = {
   id: string
   protocolo: string
@@ -30,6 +37,7 @@ export type Inscricao = {
   anamnese_condicoes: string | null
   anamnese_medicamentos: string | null
   anamnese_plano_saude: string | null
+  documentos: DocumentosMatricula | null
   status: string
   criado_em: string
 }

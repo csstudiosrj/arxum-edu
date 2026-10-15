@@ -16,11 +16,13 @@ const superItems = [['Visão geral', '/super-admin', LayoutDashboard], ['Escolas
 
 export function AdminShell({ children, mode = 'school', active = 'Visão geral' }: { children: React.ReactNode; mode?: AdminMode; active?: string }) {
   const [open, setOpen] = useState(false)
+  const [saindo, setSaindo] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
   const items = mode === 'super' ? superItems : schoolItems
 
-  const handleLogout = async () => {
+  async function handleLogout() {
+    setSaindo(true)
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
@@ -30,7 +32,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white px-4 py-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center justify-between px-2"><ArxumBrand light={true} />{mode === 'super' && <span className="rounded-md bg-[#ccfbf1] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#0f766e]">Admin</span>}<button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button></div>
       <div className="mt-8 flex flex-1 flex-col gap-1">{items.map(([label, href, Icon]) => <Link key={label} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active === label ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`}><Icon className="size-[18px]" />{label}</Link>)}</div>
-      <div className="border-t border-[#e5ecee] pt-4"><div className="flex items-center gap-3 rounded-lg px-3 py-2"><div className="grid size-8 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">MS</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">Marina Silva</p><p className="truncate text-xs text-[#82939a]">{mode === 'super' ? 'Super admin' : 'Administradora'}</p></div><ChevronDown className="size-4 text-[#8da0a8]" /></div><button onClick={handleLogout} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#82939a] hover:bg-[#f1f5f6]"><LogOut className="size-[18px]" />Sair</button></div>
+      <div className="border-t border-[#e5ecee] pt-4"><div className="flex items-center gap-3 rounded-lg px-3 py-2"><div className="grid size-8 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">MS</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">Marina Silva</p><p className="truncate text-xs text-[#82939a]">{mode === 'super' ? 'Super admin' : 'Administradora'}</p></div><ChevronDown className="size-4 text-[#8da0a8]" /></div><button onClick={handleLogout} disabled={saindo} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#82939a] hover:bg-[#f1f5f6] disabled:opacity-50"><LogOut className="size-[18px]" />{saindo ? 'Saindo...' : 'Sair'}</button></div>
     </aside>
     <div className="lg:pl-[248px]"><header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8"><button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button><div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{mode === 'super' ? 'Painel ARXUM' : 'Colégio Horizonte'}</div><div className="ml-auto flex items-center gap-4"><button className="relative rounded-lg p-2 text-[#71838b] hover:bg-[#f1f5f6]" aria-label="Notificações"><Bell className="size-[19px]" /><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#0d9488]" /></button><div className="grid size-9 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">MS</div></div></header>{children}</div>
   </div>

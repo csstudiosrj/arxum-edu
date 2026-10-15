@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Eye, Check, X, Clock, Calendar, FileText, User, MapPin, Heart, X as XIcon, ArrowRight, Inbox } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { atualizarStatusInscricao, type Inscricao } from './actions'
+import { Search, Eye, Clock, User, MapPin, Heart, X as XIcon, Inbox, FileText, Download, ExternalLink } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { atualizarStatusInscricao, type Inscricao, type DocumentosMatricula } from './actions'
 
 const statusMap: Record<string, { label: string; style: string }> = {
   inscrito: { label: 'Inscrito', style: 'bg-[#e5ecee] text-[#5e7a94]' },
@@ -26,6 +26,13 @@ const filtros = [
   { key: 'matriculado', label: 'Matriculado' },
   { key: 'nao_aprovado', label: 'Não aprovado' },
   { key: 'cancelado', label: 'Cancelado' },
+]
+
+const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> = [
+  { key: 'rg_aluno', label: 'RG ou Certidão de nascimento do aluno' },
+  { key: 'cpf_responsavel', label: 'CPF do responsável' },
+  { key: 'comprovante_residencia', label: 'Comprovante de residência' },
+  { key: 'historico_escolar', label: 'Histórico escolar' },
 ]
 
 function formatDate(iso: string | null): string {
@@ -312,6 +319,51 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                     {[selecionada.endereco_bairro, selecionada.endereco_cidade, selecionada.endereco_estado].filter(Boolean).join(' · ') || '—'}
                   </dd></div>
                 </dl>
+              </section>
+
+              <section className="mt-6 space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <FileText className="size-3.5" /> Documentos enviados
+                </h3>
+                <div className="space-y-2">
+                  {nomesDocumentos.map(({ key, label }) => {
+                    const doc = selecionada.documentos?.[key]
+                    const temArquivo = doc && doc.url
+                    return (
+                      <div
+                        key={key}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${
+                          temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${
+                            temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'
+                          }`}>
+                            <FileText className="size-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
+                            <p className="truncate text-xs text-[#82939a]">
+                              {temArquivo ? doc.nome : 'Não enviado'}
+                            </p>
+                          </div>
+                        </div>
+                        {temArquivo && (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"
+                          >
+                            <ExternalLink className="mr-1 inline size-3" />
+                            Abrir
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </section>
 
               <section className="mt-6 space-y-3">
