@@ -171,7 +171,7 @@ export default function MatriculaPage() {
       return
     }
 
-    router.push(`/matricula/sucesso?protocolo=${result.protocolo}`)
+    router.push(`/matricula/sucesso?protocolo=${result.protocolo}&email=${encodeURIComponent(form.responsavel_email)}`)
   }
 
   return (
