@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { enviarEmailStatusMatricula } from '@/lib/emails/status-matricula'
 
 export type DocumentosMatricula = {
   rg_aluno?: { url: string; nome: string } | null
@@ -124,8 +125,21 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
       }
     }
 
+    // 3. Envia e-mail para o responsável (não bloqueia se falhar)
+    try {
+      await enviarEmailStatusMatricula({
+        para: inscricao.responsavel_email,
+        alunoNome: inscricao.aluno_nome,
+        protocolo: inscricao.protocolo,
+        novoStatus,
+      })
+    } catch (e) {
+      console.error('[email] Falha ao enviar, mas status foi atualizado:', e)
+    }
+
     revalidatePath('/admin/matriculas')
     revalidatePath('/admin/alunos')
+    revalidatePath('/responsavel')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao atualizar status.' }
