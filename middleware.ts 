@@ -1,17 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || ''
-  const { pathname } = request.nextUrl
-
-  // Redirecionamento do subdomínio edu.arxum.com.br para a home do produto
-  if (hostname.startsWith('edu.arxum.com.br')) {
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL('/arxum', request.url))
-    }
-  }
-
   return await updateSession(request)
 }
 
