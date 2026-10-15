@@ -33,6 +33,16 @@ export type ComunicadoResponsavel = {
   lido: boolean
 }
 
+export type FaturaResponsavel = {
+  id: string
+  aluno_nome: string
+  descricao: string
+  valor_centavos: number
+  vencimento: string
+  status: string
+  pago_em: string | null
+}
+
 async function getEmailUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -51,13 +61,9 @@ export async function getMinhasInscricoes(): Promise<InscricaoResponsavel[]> {
       .eq('responsavel_email', email)
       .order('criado_em', { ascending: false })
 
-    if (error) {
-      console.error('Erro ao buscar inscrições:', error)
-      return []
-    }
+    if (error) return []
     return (data || []) as InscricaoResponsavel[]
   } catch (e) {
-    console.error('Erro inesperado:', e)
     return []
   }
 }
@@ -95,7 +101,25 @@ export async function getMeusComunicados(): Promise<ComunicadoResponsavel[]> {
       lido: lidosSet.has(c.id),
     })) as ComunicadoResponsavel[]
   } catch (e) {
-    console.error('Erro:', e)
+    return []
+  }
+}
+
+export async function getMinhasFaturas(): Promise<FaturaResponsavel[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('faturas')
+      .select('id, aluno_nome, descricao, valor_centavos, vencimento, status, pago_em')
+      .eq('responsavel_email', email)
+      .order('vencimento', { ascending: false })
+
+    if (error) return []
+    return (data || []) as FaturaResponsavel[]
+  } catch (e) {
     return []
   }
 }
@@ -111,10 +135,7 @@ export async function marcarComoLido(comunicadoId: string) {
       responsavel_email: email,
     })
 
-    if (error && error.code !== '23505') {
-      return { success: false }
-    }
-
+    if (error && error.code !== '23505') return { success: false }
     return { success: true }
   } catch (e) {
     return { success: false }
