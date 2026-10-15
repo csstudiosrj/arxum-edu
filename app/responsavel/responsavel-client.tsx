@@ -2,15 +2,20 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, MoreHorizontal, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel } from './actions'
 
-const menu = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']] as const
+type MenuItem = readonly [LucideIcon, string]
+type Evento = readonly [string, string, string, string, LucideIcon]
+type Comunicado = readonly [string, string, string, string, boolean]
+type Atalho = readonly [string, LucideIcon, string]
 
-const statusMap: Record<string, { label: string; style: string; icon: typeof Clock }> = {
+const menu: MenuItem[] = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']]
+
+const statusMap: Record<string, { label: string; style: string; icon: LucideIcon }> = {
   inscrito: { label: 'Inscrito', style: 'bg-[#e5ecee] text-[#5e7a94]', icon: Clock },
   em_analise: { label: 'Em análise', style: 'bg-[#fef3c7] text-[#92400e]', icon: Clock },
   entrevista: { label: 'Entrevista agendada', style: 'bg-[#dbeafe] text-[#1e40af]', icon: CalendarDays },
@@ -21,17 +26,24 @@ const statusMap: Record<string, { label: string; style: string; icon: typeof Clo
   cancelado: { label: 'Cancelado', style: 'bg-[#e5ecee] text-[#5e7a94]', icon: X },
 }
 
-const eventos = [
+const eventos: Evento[] = [
   ['18','OUT','Prova de Matemática','Lucas · 9º Ano A',BookOpen],
   ['21','OUT','Reunião de pais','Auditório principal',Users],
   ['25','OUT','Passeio pedagógico','Sofia · 4º Ano B',CalendarDays],
   ['02','NOV','Feira de Ciências','Quadra da escola',CalendarDays],
 ]
 
-const comunicados = [
+const comunicados: Comunicado[] = [
   ['Secretaria','Rematrícula 2027: primeira chamada','Confira o calendário e os documentos necessários para garantir a vaga.','Hoje',true],
   ['Coordenação','Semana de avaliações','As avaliações do segundo bimestre começam na próxima segunda-feira.','Ontem',true],
   ['Financeiro','Boleto de outubro disponível','A fatura já está disponível para consulta e pagamento no portal.','12 out',false],
+]
+
+const atalhos: Atalho[] = [
+  ['Solicitar matrícula',FileText,'/matricula'],
+  ['Enviar documento',ClipboardCheck,'#'],
+  ['Falar com a escola',MessageSquare,'#'],
+  ['Autorizar saída',ShieldCheck,'#'],
 ]
 
 function Sidebar({ onLogout, saindo }: { onLogout: () => void; saindo: boolean }) {
@@ -154,14 +166,14 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
               <h3 className="mb-4 font-syne text-lg font-bold">Próximos eventos</h3>
               <div className="flex flex-col gap-3">
                 {eventos.map(([day,month,title,desc,Icon]) => (
-                  <article key={title as string} className="flex items-center gap-4 rounded-xl border border-[#dbe5e8] bg-white p-4">
+                  <article key={title} className="flex items-center gap-4 rounded-xl border border-[#dbe5e8] bg-white p-4">
                     <div className="w-12 shrink-0 rounded-lg bg-[#e6faf3] py-2 text-center">
-                      <strong className="block font-syne text-lg text-[#087f5b]">{day as string}</strong>
-                      <span className="text-[10px] font-bold text-[#087f5b]">{month as string}</span>
+                      <strong className="block font-syne text-lg text-[#087f5b]">{day}</strong>
+                      <span className="text-[10px] font-bold text-[#087f5b]">{month}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold">{title as string}</h4>
-                      <p className="mt-1 truncate text-xs text-[#8aa0ad]">{desc as string}</p>
+                      <h4 className="text-sm font-semibold">{title}</h4>
+                      <p className="mt-1 truncate text-xs text-[#8aa0ad]">{desc}</p>
                     </div>
                     <Icon className="text-[#0d9488]" size={19}/>
                   </article>
@@ -173,16 +185,16 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
               <h3 className="mb-4 font-syne text-lg font-bold">Últimos comunicados</h3>
               <div className="flex flex-col gap-3">
                 {comunicados.map(([sector,title,preview,date,unread]) => (
-                  <article key={title as string} className="rounded-xl border border-[#dbe5e8] bg-white p-4">
+                  <article key={title} className="rounded-xl border border-[#dbe5e8] bg-white p-4">
                     <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-[#e6faf3] px-2 py-1 text-[10px] font-bold text-[#087f5b]">{sector as string}</span>
-                      <span className="text-xs text-[#8aa0ad]">{date as string}</span>
+                      <span className="rounded-full bg-[#e6faf3] px-2 py-1 text-[10px] font-bold text-[#087f5b]">{sector}</span>
+                      <span className="text-xs text-[#8aa0ad]">{date}</span>
                     </div>
                     <h4 className="mt-3 text-sm font-semibold">
-                      {unread as boolean && <span className="mr-2 inline-block size-2 rounded-full bg-[#0d9488]"/>}
-                      {title as string}
+                      {unread && <span className="mr-2 inline-block size-2 rounded-full bg-[#0d9488]"/>}
+                      {title}
                     </h4>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{preview as string}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{preview}</p>
                     <a href="#" className="mt-3 inline-block text-xs font-semibold text-[#087f5b]">Ler completo <ChevronRight className="inline" size={13}/></a>
                   </article>
                 ))}
@@ -204,13 +216,13 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
                 </div>
               </div>
               {[['Mensalidade · Lucas Oliveira','Vencimento 10 nov','R$ 1.280,00','Em aberto'],['Mensalidade · Sofia Oliveira','Pago em 10 out','R$ 980,00','Pago']].map(([desc,date,value,status]) => (
-                <div key={desc as string} className="flex flex-wrap items-center gap-4 border-b border-[#edf1f2] p-5 last:border-0">
+                <div key={desc} className="flex flex-wrap items-center gap-4 border-b border-[#edf1f2] p-5 last:border-0">
                   <div className="flex-1">
-                    <p className="text-sm font-semibold">{desc as string}</p>
-                    <p className="mt-1 text-xs text-[#8aa0ad]">{date as string}</p>
+                    <p className="text-sm font-semibold">{desc}</p>
+                    <p className="mt-1 text-xs text-[#8aa0ad]">{date}</p>
                   </div>
-                  <strong className="font-syne text-base">{value as string}</strong>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status==='Pago'?'bg-[#e6faf3] text-[#087f5b]':'bg-[#fff7df] text-[#a16207]'}`}>{status as string}</span>
+                  <strong className="font-syne text-base">{value}</strong>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status==='Pago'?'bg-[#e6faf3] text-[#087f5b]':'bg-[#fff7df] text-[#a16207]'}`}>{status}</span>
                 </div>
               ))}
             </div>
@@ -219,10 +231,10 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
           <section className="mt-10">
             <h3 className="mb-4 font-syne text-lg font-bold">Atalhos rápidos</h3>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {[['Solicitar matrícula',FileText,'/matricula'],['Enviar documento',ClipboardCheck,'#'],['Falar com a escola',MessageSquare,'#'],['Autorizar saída',ShieldCheck,'#']].map(([label,Icon,href]) => (
-                <Link href={href as string} key={label as string} className="flex items-center gap-3 rounded-xl border border-[#dbe5e8] bg-white p-4 text-sm font-semibold hover:border-[#0d9488]">
+              {atalhos.map(([label,Icon,href]) => (
+                <Link href={href} key={label} className="flex items-center gap-3 rounded-xl border border-[#dbe5e8] bg-white p-4 text-sm font-semibold hover:border-[#0d9488]">
                   <span className="grid size-9 place-items-center rounded-lg bg-[#e6faf3] text-[#087f5b]"><Icon size={17}/></span>
-                  {label as string}
+                  {label}
                 </Link>
               ))}
             </div>
