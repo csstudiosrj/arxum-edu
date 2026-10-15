@@ -13,6 +13,7 @@ export type DocumentosMatricula = {
 export type Inscricao = {
   id: string
   protocolo: string
+  escola_id: string | null
   aluno_nome: string
   aluno_data_nascimento: string | null
   aluno_serie: string | null
@@ -64,16 +65,67 @@ export async function getInscricoes(): Promise<Inscricao[]> {
 export async function atualizarStatusInscricao(id: string, novoStatus: string) {
   try {
     const supabase = createAdminClient()
-    const { error } = await supabase
+
+    // 1. Atualiza status da inscrição
+    const { data: inscricao, error } = await supabase
       .from('inscricoes')
       .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
       .eq('id', id)
+      .select('*')
+      .single()
 
-    if (error) {
-      return { success: false, error: error.message }
+    if (error || !inscricao) {
+      return { success: false, error: error?.message || 'Inscrição não encontrada.' }
+    }
+
+    // 2. Se virou "matriculado", cria o aluno (se ainda não existir)
+    if (novoStatus === 'matriculado') {
+      const { data: existente } = await supabase
+        .from('alunos')
+        .select('id')
+        .eq('inscricao_id', id)
+        .maybeSingle()
+
+      if (!existente) {
+        const { error: erroAluno } = await supabase.from('alunos').insert({
+          escola_id: inscricao.escola_id,
+          inscricao_id: inscricao.id,
+          nome: inscricao.aluno_nome,
+          data_nascimento: inscricao.aluno_data_nascimento,
+          serie: inscricao.aluno_serie,
+          turno: inscricao.aluno_turno,
+          escola_origem: inscricao.aluno_escola_origem,
+          responsavel_nome: inscricao.responsavel_nome,
+          responsavel_email: inscricao.responsavel_email,
+          responsavel_telefone: inscricao.responsavel_telefone,
+          responsavel_cpf: inscricao.responsavel_cpf,
+          responsavel_parentesco: inscricao.responsavel_parentesco,
+          endereco_cep: inscricao.endereco_cep,
+          endereco_rua: inscricao.endereco_rua,
+          endereco_numero: inscricao.endereco_numero,
+          endereco_complemento: inscricao.endereco_complemento,
+          endereco_bairro: inscricao.endereco_bairro,
+          endereco_cidade: inscricao.endereco_cidade,
+          endereco_estado: inscricao.endereco_estado,
+          emergencia_nome: inscricao.emergencia_nome,
+          emergencia_telefone: inscricao.emergencia_telefone,
+          emergencia_parentesco: inscricao.emergencia_parentesco,
+          anamnese_alergias: inscricao.anamnese_alergias,
+          anamnese_condicoes: inscricao.anamnese_condicoes,
+          anamnese_medicamentos: inscricao.anamnese_medicamentos,
+          anamnese_plano_saude: inscricao.anamnese_plano_saude,
+          documentos: inscricao.documentos || {},
+        })
+
+        if (erroAluno) {
+          console.error('Erro ao criar aluno:', erroAluno)
+          return { success: false, error: 'Matrícula efetivada, mas houve erro ao criar o aluno.' }
+        }
+      }
     }
 
     revalidatePath('/admin/matriculas')
+    revalidatePath('/admin/alunos')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao atualizar status.' }
