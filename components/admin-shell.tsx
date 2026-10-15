@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Bell, BookOpen, Building2, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Users, WalletCards, X } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Users, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,7 @@ const schoolItems = [
   ['Alunos', '/admin/alunos', Users],
   ['Financeiro', '/admin/financeiro', WalletCards],
   ['Comunicação', '/admin/comunicacao', Bell],
+  ['Agenda', '/admin/agenda', Calendar],
   ['EduFlix', '/admin/eduflix', BookOpen],
   ['Sala virtual', '/admin/sala-virtual', BookOpen],
   ['Loja', '/admin/loja', CircleDollarSign],
@@ -53,7 +54,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         {mode === 'super' && <span className="rounded-md bg-[#ccfbf1] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#0f766e]">Admin</span>}
         <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
       </div>
-      <div className="mt-8 flex flex-1 flex-col gap-1">
+      <div className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto">
         {items.map(([label, href, Icon]) => (
           <Link
             key={label}
