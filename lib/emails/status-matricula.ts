@@ -108,7 +108,7 @@ export async function enviarEmailStatusMatricula(params: {
 
   try {
     const { error } = await resend.emails.send({
-      from: 'ARXUM Edu <onboarding@resend.dev>',
+      from: 'ARXUM Edu <noreply@arxum.com.br>',
       to: para,
       subject: `${assunto} — ${alunoNome}`,
       html,
