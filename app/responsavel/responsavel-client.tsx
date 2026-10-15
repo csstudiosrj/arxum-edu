@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel } from './actions'
-import { marcarComoLido } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel } from './actions'
+import { marcarComoLido, responderAutorizacao } from './actions'
 
 type MenuItem = readonly [LucideIcon, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -38,6 +38,14 @@ const tipoEvento: Record<string, { cor: string; label: string }> = {
   passeio: { cor: '#0d9488', label: 'Passeio' },
   feriado: { cor: '#d97706', label: 'Feriado' },
   evento: { cor: '#dc2626', label: 'Evento' },
+  outro: { cor: '#6b7d86', label: 'Outro' },
+}
+
+const tipoAutorizacao: Record<string, { cor: string; label: string }> = {
+  passeio: { cor: '#0d9488', label: 'Passeio' },
+  saida_antecipada: { cor: '#3b82f6', label: 'Saída antecipada' },
+  uso_imagem: { cor: '#7c3aed', label: 'Uso de imagem' },
+  medicamento: { cor: '#d97706', label: 'Medicamento' },
   outro: { cor: '#6b7d86', label: 'Outro' },
 }
 
@@ -108,16 +116,21 @@ export function ResponsavelClient({
   comunicados,
   faturas,
   eventos,
+  autorizacoes,
 }: {
   inscricoes: InscricaoResponsavel[]
   comunicados: ComunicadoResponsavel[]
   faturas: FaturaResponsavel[]
   eventos: EventoResponsavel[]
+  autorizacoes: AutorizacaoResponsavel[]
 }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
   const [detalhes, setDetalhes] = useState<InscricaoResponsavel | null>(null)
   const [comunicadoAberto, setComunicadoAberto] = useState<ComunicadoResponsavel | null>(null)
+  const [autorizacaoAberta, setAutorizacaoAberta] = useState<AutorizacaoResponsavel | null>(null)
+  const [observacao, setObservacao] = useState('')
+  const [enviandoResposta, setEnviandoResposta] = useState(false)
 
   async function handleLogout() {
     setSaindo(true)
@@ -129,13 +142,32 @@ export function ResponsavelClient({
 
   async function abrirComunicado(c: ComunicadoResponsavel) {
     setComunicadoAberto(c)
-    if (!c.lido) {
-      await marcarComoLido(c.id)
+    if (!c.lido) await marcarComoLido(c.id)
+  }
+
+  function abrirAutorizacao(a: AutorizacaoResponsavel) {
+    setAutorizacaoAberta(a)
+    setObservacao(a.observacao || '')
+  }
+
+  async function handleResponder(resposta: 'autorizado' | 'recusado') {
+    if (!autorizacaoAberta) return
+    setEnviandoResposta(true)
+    const result = await responderAutorizacao(autorizacaoAberta.id, resposta, observacao)
+    setEnviandoResposta(false)
+
+    if (result.success) {
+      setAutorizacaoAberta(null)
+      setObservacao('')
+      router.refresh()
+    } else {
+      alert(result.error || 'Erro ao responder.')
     }
   }
 
   const naoLidos = comunicados.filter((c) => !c.lido).length
   const faturasEmAberto = faturas.filter((f) => f.status === 'em_aberto' || f.status === 'vencido')
+  const autorizacoesPendentes = autorizacoes.filter((a) => !a.resposta)
 
   return <div className="min-h-screen bg-[#f7fafb] text-[#18313c]">
     <div className="flex min-h-screen">
@@ -161,6 +193,38 @@ export function ResponsavelClient({
             <p className="text-sm font-semibold uppercase tracking-[.15em] text-[#0d9488]">Visão geral</p>
             <h2 className="mt-1 font-syne text-3xl font-bold tracking-[-.04em]">Tudo em um só lugar</h2>
           </div>
+
+          {autorizacoesPendentes.length > 0 && (
+            <section className="mb-10">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-syne text-lg font-bold">Autorizações pendentes</h3>
+                <span className="rounded-full bg-[#dc2626] px-2.5 py-0.5 text-[10px] font-bold text-white">{autorizacoesPendentes.length}</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {autorizacoesPendentes.map((a) => {
+                  const info = tipoAutorizacao[a.tipo] || tipoAutorizacao.outro
+                  return (
+                    <article key={a.id} className="rounded-xl border-2 border-[#dc2626]/20 bg-white p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
+                          <h4 className="mt-2 font-syne text-base font-bold">{a.titulo}</h4>
+                          {a.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{a.descricao}</p>}
+                          {a.prazo_resposta && <p className="mt-2 text-xs font-semibold text-[#dc2626]">Responder até {formatarData(a.prazo_resposta)}</p>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => abrirAutorizacao(a)}
+                        className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]"
+                      >
+                        Responder
+                      </button>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
           <section>
             <div className="mb-4 flex items-center justify-between">
@@ -447,6 +511,66 @@ export function ResponsavelClient({
           <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{comunicadoAberto.mensagem}</p>
           </div>
+        </div>
+      </div>
+    )}
+
+    {autorizacaoAberta && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => !enviandoResposta && setAutorizacaoAberta(null)} />
+        <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+          <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div className="flex-1">
+              {(() => {
+                const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro
+                return <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
+              })()}
+              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{autorizacaoAberta.titulo}</h2>
+              {autorizacaoAberta.prazo_resposta && <p className="mt-1 text-xs text-[#dc2626]">Responder até {formatarData(autorizacaoAberta.prazo_resposta)}</p>}
+            </div>
+            <button onClick={() => setAutorizacaoAberta(null)} disabled={enviandoResposta} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
+              <X className="size-5" />
+            </button>
+          </header>
+          <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+            <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{autorizacaoAberta.descricao}</p>
+
+            {autorizacaoAberta.data_evento && (
+              <div className="mt-4 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
+                <p className="text-xs text-[#82939a]">Data do evento</p>
+                <p className="mt-0.5 text-sm font-semibold text-[#243942]">{formatarData(autorizacaoAberta.data_evento)}</p>
+              </div>
+            )}
+
+            <div className="mt-5">
+              <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label>
+              <textarea
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Ex: Meu filho não poderá participar por motivo médico..."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+              />
+            </div>
+          </div>
+          <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
+            <button
+              onClick={() => handleResponder('recusado')}
+              disabled={enviandoResposta}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50"
+            >
+              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+              Recusar
+            </button>
+            <button
+              onClick={() => handleResponder('autorizado')}
+              disabled={enviandoResposta}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+            >
+              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+              Autorizar
+            </button>
+          </footer>
         </div>
       </div>
     )}

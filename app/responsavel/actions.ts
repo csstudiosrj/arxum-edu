@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidatePath } from 'next/cache'
 
 export type DocumentosMatricula = {
   rg_aluno?: { url: string; nome: string } | null
@@ -54,10 +55,32 @@ export type EventoResponsavel = {
   serie: string | null
 }
 
+export type AutorizacaoResponsavel = {
+  id: string
+  titulo: string
+  descricao: string | null
+  tipo: string
+  data_evento: string | null
+  prazo_resposta: string | null
+  resposta: string | null
+  observacao: string | null
+}
+
 async function getEmailUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.email || null
+}
+
+async function getNomePrimeiroAluno(email: string): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('alunos')
+    .select('nome')
+    .eq('responsavel_email', email)
+    .limit(1)
+    .maybeSingle()
+  return data?.nome || null
 }
 
 export async function getMinhasInscricoes(): Promise<InscricaoResponsavel[]> {
@@ -144,14 +167,12 @@ export async function getMeusEventos(): Promise<EventoResponsavel[]> {
     const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
     if (!escola) return []
 
-    // Busca as séries dos filhos deste responsável para filtrar eventos por público
     const { data: inscricoes } = await admin
       .from('inscricoes')
       .select('aluno_serie')
       .eq('responsavel_email', email)
 
     const series = (inscricoes || []).map((i) => i.aluno_serie).filter(Boolean) as string[]
-
     const hoje = new Date().toISOString().split('T')[0]
 
     const { data, error } = await admin
@@ -165,7 +186,6 @@ export async function getMeusEventos(): Promise<EventoResponsavel[]> {
 
     if (error) return []
 
-    // Filtra: mostra eventos "todos" ou eventos com público que bate com a série do filho
     return ((data || []) as EventoResponsavel[]).filter((e) => {
       if (e.publico === 'todos') return true
       if (e.serie && series.some((s) => s.toLowerCase().includes(e.serie!.toLowerCase()))) return true
@@ -174,6 +194,93 @@ export async function getMeusEventos(): Promise<EventoResponsavel[]> {
     })
   } catch (e) {
     return []
+  }
+}
+
+export async function getMinhasAutorizacoes(): Promise<AutorizacaoResponsavel[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
+    if (!escola) return []
+
+    const { data: auts, error } = await admin
+      .from('autorizacoes')
+      .select('id, titulo, descricao, tipo, data_evento, prazo_resposta')
+      .eq('escola_id', escola.id)
+      .eq('ativo', true)
+      .order('criado_em', { ascending: false })
+      .limit(20)
+
+    if (error || !auts) return []
+
+    const { data: respostas } = await admin
+      .from('autorizacoes_respostas')
+      .select('autorizacao_id, resposta, observacao')
+      .eq('responsavel_email', email)
+
+    const respostaPorAut: Record<string, { resposta: string; observacao: string | null }> = {}
+    ;(respostas || []).forEach((r) => {
+      respostaPorAut[r.autorizacao_id] = { resposta: r.resposta, observacao: r.observacao }
+    })
+
+    return auts.map((a) => ({
+      id: a.id,
+      titulo: a.titulo,
+      descricao: a.descricao,
+      tipo: a.tipo,
+      data_evento: a.data_evento,
+      prazo_resposta: a.prazo_resposta,
+      resposta: respostaPorAut[a.id]?.resposta || null,
+      observacao: respostaPorAut[a.id]?.observacao || null,
+    })) as AutorizacaoResponsavel[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function responderAutorizacao(autorizacaoId: string, resposta: 'autorizado' | 'recusado', observacao: string) {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return { success: false, error: 'Não autenticado.' }
+
+    const nomeAluno = await getNomePrimeiroAluno(email)
+    if (!nomeAluno) return { success: false, error: 'Nenhum aluno vinculado a este e-mail.' }
+
+    const admin = createAdminClient()
+
+    const { data: existente } = await admin
+      .from('autorizacoes_respostas')
+      .select('id')
+      .eq('autorizacao_id', autorizacaoId)
+      .eq('responsavel_email', email)
+      .eq('aluno_nome', nomeAluno)
+      .maybeSingle()
+
+    if (existente) {
+      const { error } = await admin
+        .from('autorizacoes_respostas')
+        .update({ resposta, observacao: observacao || null, respondido_em: new Date().toISOString() })
+        .eq('id', existente.id)
+      if (error) return { success: false, error: error.message }
+    } else {
+      const { error } = await admin.from('autorizacoes_respostas').insert({
+        autorizacao_id: autorizacaoId,
+        responsavel_email: email,
+        aluno_nome: nomeAluno,
+        resposta,
+        observacao: observacao || null,
+      })
+      if (error) return { success: false, error: error.message }
+    }
+
+    revalidatePath('/responsavel')
+    revalidatePath('/admin/autorizacoes')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao responder.' }
   }
 }
 
