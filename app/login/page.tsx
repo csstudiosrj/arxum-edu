@@ -20,7 +20,7 @@ export default function LoginPage() {
     setError('')
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('E-mail ou senha incorretos.')
@@ -28,7 +28,17 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
+    // Redirecionamento baseado no perfil (role)
+    const role = data.user?.user_metadata?.role
+
+    if (role === 'super_admin') {
+      router.push('/super-admin')
+    } else if (role === 'admin') {
+      router.push('/dashboard')
+    } else {
+      router.push('/responsavel')
+    }
+    
     router.refresh()
   }
 
