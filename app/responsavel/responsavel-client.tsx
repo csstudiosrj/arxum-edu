@@ -6,11 +6,11 @@ import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel, DocumentosMatricula } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel } from './actions'
+import { marcarComoLido } from './actions'
 
 type MenuItem = readonly [LucideIcon, string]
 type Evento = readonly [string, string, string, string, LucideIcon]
-type Comunicado = readonly [string, string, string, string, boolean]
 type Atalho = readonly [string, LucideIcon, string]
 
 const menu: MenuItem[] = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']]
@@ -26,17 +26,18 @@ const statusMap: Record<string, { label: string; style: string; icon: LucideIcon
   cancelado: { label: 'Cancelado', style: 'bg-[#e5ecee] text-[#5e7a94]', icon: X },
 }
 
+const setorStyles: Record<string, string> = {
+  'Coordenação': 'bg-[#dbeafe] text-[#1e40af]',
+  'Secretaria': 'bg-[#ccfbf1] text-[#0f766e]',
+  'Financeiro': 'bg-[#fef3c7] text-[#92400e]',
+  'Direção': 'bg-[#ede9fe] text-[#5b21b6]',
+}
+
 const eventos: Evento[] = [
   ['18','OUT','Prova de Matemática','Lucas · 9º Ano A',BookOpen],
   ['21','OUT','Reunião de pais','Auditório principal',Users],
   ['25','OUT','Passeio pedagógico','Sofia · 4º Ano B',CalendarDays],
   ['02','NOV','Feira de Ciências','Quadra da escola',CalendarDays],
-]
-
-const comunicados: Comunicado[] = [
-  ['Secretaria','Rematrícula 2027: primeira chamada','Confira o calendário e os documentos necessários para garantir a vaga.','Hoje',true],
-  ['Coordenação','Semana de avaliações','As avaliações do segundo bimestre começam na próxima segunda-feira.','Ontem',true],
-  ['Financeiro','Boleto de outubro disponível','A fatura já está disponível para consulta e pagamento no portal.','12 out',false],
 ]
 
 const atalhos: Atalho[] = [
@@ -76,10 +77,20 @@ function formatarData(iso: string): string {
   }
 }
 
-export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoResponsavel[] }) {
+function formatarDataHora(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return '—'
+  }
+}
+
+export function ResponsavelClient({ inscricoes, comunicados }: { inscricoes: InscricaoResponsavel[]; comunicados: ComunicadoResponsavel[] }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
   const [detalhes, setDetalhes] = useState<InscricaoResponsavel | null>(null)
+  const [comunicadoAberto, setComunicadoAberto] = useState<ComunicadoResponsavel | null>(null)
 
   async function handleLogout() {
     setSaindo(true)
@@ -88,6 +99,15 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
     router.push('/login')
     router.refresh()
   }
+
+  async function abrirComunicado(c: ComunicadoResponsavel) {
+    setComunicadoAberto(c)
+    if (!c.lido) {
+      await marcarComoLido(c.id)
+    }
+  }
+
+  const naoLidos = comunicados.filter((c) => !c.lido).length
 
   return <div className="min-h-screen bg-[#f7fafb] text-[#18313c]">
     <div className="flex min-h-screen">
@@ -100,7 +120,10 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
           </div>
           <div className="flex items-center gap-3">
             <button className="hidden rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783] sm:block"><Search size={18}/></button>
-            <button className="relative rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783]"><Bell size={18}/><span className="absolute right-1 top-1 size-1.5 rounded-full bg-[#0d9488]"/></button>
+            <button className="relative rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783]">
+              <Bell size={18}/>
+              {naoLidos > 0 && <span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]"/>}
+            </button>
             <div className="grid size-9 place-items-center rounded-full bg-[#173b4a] text-sm font-bold text-white">MO</div>
           </div>
         </header>
@@ -191,23 +214,36 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
             </section>
 
             <section>
-              <h3 className="mb-4 font-syne text-lg font-bold">Últimos comunicados</h3>
-              <div className="flex flex-col gap-3">
-                {comunicados.map(([sector,title,preview,date,unread]) => (
-                  <article key={title} className="rounded-xl border border-[#dbe5e8] bg-white p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-[#e6faf3] px-2 py-1 text-[10px] font-bold text-[#087f5b]">{sector}</span>
-                      <span className="text-xs text-[#8aa0ad]">{date}</span>
-                    </div>
-                    <h4 className="mt-3 text-sm font-semibold">
-                      {unread && <span className="mr-2 inline-block size-2 rounded-full bg-[#0d9488]"/>}
-                      {title}
-                    </h4>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{preview}</p>
-                    <a href="#" className="mt-3 inline-block text-xs font-semibold text-[#087f5b]">Ler completo <ChevronRight className="inline" size={13}/></a>
-                  </article>
-                ))}
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-syne text-lg font-bold">Últimos comunicados</h3>
+                {naoLidos > 0 && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">{naoLidos} novos</span>}
               </div>
+              {comunicados.length === 0 ? (
+                <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center">
+                  <MessageSquare className="mx-auto text-[#a0afb4]" size={28}/>
+                  <p className="mt-3 text-sm text-[#8aa0ad]">Nenhum comunicado recebido ainda.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {comunicados.slice(0, 5).map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => abrirComunicado(c)}
+                      className="rounded-xl border border-[#dbe5e8] bg-white p-4 text-left transition hover:border-[#0d9488]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{c.setor}</span>
+                        <span className="text-xs text-[#8aa0ad]">{formatarData(c.criado_em)}</span>
+                      </div>
+                      <h4 className="mt-3 text-sm font-semibold">
+                        {!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]"/>}
+                        {c.titulo}
+                      </h4>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{c.mensagem}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
 
@@ -328,6 +364,30 @@ export function ResponsavelClient({ inscricoes }: { inscricoes: InscricaoRespons
             </section>
           </div>
         </aside>
+      </div>
+    )}
+
+    {comunicadoAberto && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setComunicadoAberto(null)} />
+        <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+          <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoAberto.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{comunicadoAberto.setor}</span>
+                {comunicadoAberto.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
+              </div>
+              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{comunicadoAberto.titulo}</h2>
+              <p className="mt-1 text-xs text-[#82939a]">Por {comunicadoAberto.autor_nome} · {formatarDataHora(comunicadoAberto.criado_em)}</p>
+            </div>
+            <button onClick={() => setComunicadoAberto(null)} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]">
+              <X className="size-5" />
+            </button>
+          </header>
+          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+            <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{comunicadoAberto.mensagem}</p>
+          </div>
+        </div>
       </div>
     )}
   </div>
