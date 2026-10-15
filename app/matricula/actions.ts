@@ -29,7 +29,14 @@ export type InscricaoInput = {
   anamnese_plano_saude: string
 }
 
-export async function submitInscricao(data: InscricaoInput) {
+export type DocumentosInput = {
+  rg_aluno?: { url: string; nome: string } | null
+  cpf_responsavel?: { url: string; nome: string } | null
+  comprovante_residencia?: { url: string; nome: string } | null
+  historico_escolar?: { url: string; nome: string } | null
+}
+
+export async function submitInscricao(data: InscricaoInput, documentos: DocumentosInput = {}) {
   try {
     const supabase = createAdminClient()
 
@@ -48,6 +55,7 @@ export async function submitInscricao(data: InscricaoInput) {
       .insert({
         escola_id: escola.id,
         ...data,
+        documentos,
       })
       .select('protocolo')
       .single()

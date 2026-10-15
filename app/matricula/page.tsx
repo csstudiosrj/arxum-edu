@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ArrowLeft, Check, User, MapPin, Heart, FileText, ClipboardCheck } from 'lucide-react'
 import { PublicHeader, PublicFooter } from '@/components/arxum-brand'
-import { submitInscricao, type InscricaoInput } from './actions'
+import { DocumentoUpload } from '@/components/documento-upload'
+import { submitInscricao, type InscricaoInput, type DocumentosInput } from './actions'
 
 const steps = [
   { num: 1, label: 'Dados do aluno', icon: User },
@@ -114,11 +115,19 @@ export default function MatriculaPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<InscricaoInput>(initialForm)
+  const [docs, setDocs] = useState<DocumentosInput>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   function update<K extends keyof InscricaoInput>(key: K, value: InscricaoInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function updateDoc(key: keyof DocumentosInput, url: string | null, nome: string | null) {
+    setDocs((prev) => ({
+      ...prev,
+      [key]: url && nome ? { url, nome } : null,
+    }))
   }
 
   function validateStep(): string | null {
@@ -154,7 +163,7 @@ export default function MatriculaPage() {
   async function submit() {
     setLoading(true)
     setError('')
-    const result = await submitInscricao(form)
+    const result = await submitInscricao(form, docs)
     setLoading(false)
 
     if (!result.success) {
@@ -271,17 +280,25 @@ export default function MatriculaPage() {
               <div className="space-y-4">
                 <h2 className="mb-2 font-syne text-xl font-bold text-white">Documentos</h2>
                 <p className="mb-6 text-sm leading-6 text-[#8aa0ad]">
-                  Os documentos poderão ser enviados após a efetivação da matrícula, pela área restrita do responsável. Você não precisa anexá-los agora.
+                  Anexe os documentos abaixo. Aceitamos PDF (até 8 MB) ou imagem (até 4 MB).
+                  Você também pode enviar depois, pela área restrita.
                 </p>
-                <div className="space-y-3">
-                  {['RG ou Certidão de nascimento do aluno', 'CPF do responsável', 'Comprovante de residência', 'Histórico escolar'].map((doc) => (
-                    <div key={doc} className="flex items-center gap-3 rounded-lg border border-white/[.08] bg-[#0b1115] px-4 py-3">
-                      <FileText className="size-4 text-[#0d9488]" />
-                      <span className="text-sm text-[#c7d5db]">{doc}</span>
-                      <span className="ml-auto text-xs text-[#5e7a94]">Pendente</span>
-                    </div>
-                  ))}
-                </div>
+                <DocumentoUpload
+                  label="RG ou Certidão de nascimento do aluno"
+                  onUploaded={(url, nome) => updateDoc('rg_aluno', url, nome)}
+                />
+                <DocumentoUpload
+                  label="CPF do responsável"
+                  onUploaded={(url, nome) => updateDoc('cpf_responsavel', url, nome)}
+                />
+                <DocumentoUpload
+                  label="Comprovante de residência"
+                  onUploaded={(url, nome) => updateDoc('comprovante_residencia', url, nome)}
+                />
+                <DocumentoUpload
+                  label="Histórico escolar"
+                  onUploaded={(url, nome) => updateDoc('historico_escolar', url, nome)}
+                />
               </div>
             )}
 
@@ -312,6 +329,15 @@ export default function MatriculaPage() {
                     <p className="text-sm text-[#c7d5db]"><strong>Nome:</strong> {form.responsavel_nome || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>E-mail:</strong> {form.responsavel_email || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Telefone:</strong> {form.responsavel_telefone || '—'}</p>
+                  </div>
+                  <div className="border-t border-white/[.08] pt-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Documentos anexados</p>
+                    {(['rg_aluno', 'cpf_responsavel', 'comprovante_residencia', 'historico_escolar'] as const).map((k) => (
+                      <p key={k} className="text-sm text-[#c7d5db]">
+                        {k === 'rg_aluno' && 'RG/Certidão do aluno'}{k === 'cpf_responsavel' && 'CPF do responsável'}{k === 'comprovante_residencia' && 'Comprovante de residência'}{k === 'historico_escolar' && 'Histórico escolar'}:
+                        {' '}{docs[k]?.nome || <span className="text-[#5e7a94]">Não anexado</span>}
+                      </p>
+                    ))}
                   </div>
                 </div>
 
