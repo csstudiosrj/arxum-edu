@@ -43,6 +43,17 @@ export type FaturaResponsavel = {
   pago_em: string | null
 }
 
+export type EventoResponsavel = {
+  id: string
+  titulo: string
+  descricao: string | null
+  tipo: string
+  data_evento: string
+  hora_evento: string | null
+  publico: string
+  serie: string | null
+}
+
 async function getEmailUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -119,6 +130,48 @@ export async function getMinhasFaturas(): Promise<FaturaResponsavel[]> {
 
     if (error) return []
     return (data || []) as FaturaResponsavel[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function getMeusEventos(): Promise<EventoResponsavel[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
+    if (!escola) return []
+
+    // Busca as séries dos filhos deste responsável para filtrar eventos por público
+    const { data: inscricoes } = await admin
+      .from('inscricoes')
+      .select('aluno_serie')
+      .eq('responsavel_email', email)
+
+    const series = (inscricoes || []).map((i) => i.aluno_serie).filter(Boolean) as string[]
+
+    const hoje = new Date().toISOString().split('T')[0]
+
+    const { data, error } = await admin
+      .from('eventos')
+      .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie')
+      .eq('escola_id', escola.id)
+      .eq('ativo', true)
+      .gte('data_evento', hoje)
+      .order('data_evento', { ascending: true })
+      .limit(10)
+
+    if (error) return []
+
+    // Filtra: mostra eventos "todos" ou eventos com público que bate com a série do filho
+    return ((data || []) as EventoResponsavel[]).filter((e) => {
+      if (e.publico === 'todos') return true
+      if (e.serie && series.some((s) => s.toLowerCase().includes(e.serie!.toLowerCase()))) return true
+      if (e.serie && series.some((s) => e.serie!.toLowerCase().includes(s.toLowerCase()))) return true
+      return false
+    })
   } catch (e) {
     return []
   }
