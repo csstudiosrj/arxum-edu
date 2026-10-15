@@ -1,36 +1,25 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
+import { NextResponse, type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
-  const { pathname } = request.nextUrl;
+  const hostname = request.headers.get('host') || ''
+  const { pathname } = request.nextUrl
 
-  // Lógica para o subdomínio edu.csstudios.site
+  // Subdomínio edu.csstudios.site: aplica o basePath /edu quando necessário
   if (hostname === 'edu.csstudios.site') {
-    // A raiz do subdomínio deve mostrar a landing page.
-    // O basePath já lida com o resto.
-    if (pathname === '/') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/arxum'; // A landing page interna continua em /arxum
-      return NextResponse.rewrite(url);
+    const hasEduPrefix = pathname === '/edu' || pathname.startsWith('/edu/')
+    if (!hasEduPrefix) {
+      const url = request.nextUrl.clone()
+      url.pathname = pathname === '/' ? '/edu' : `/edu${pathname}`
+      return NextResponse.rewrite(url)
     }
-    // Outros caminhos (ex: /login) são tratados normalmente.
   }
 
-  // A função updateSession já cuida da proteção de rotas.
-  return await updateSession(request);
+  return await updateSession(request)
 }
 
 export const config = {
   matcher: [
-    /*
-     * Corresponde a todos os caminhos, exceto os que começam com:
-     * - /_next/static (arquivos estáticos)
-     * - /_next/image (imagens otimizadas)
-     * - /favicon.ico (arquivo de favicon)
-     * - /edu/_next/static (arquivos estáticos sob o basePath)
-     * - /edu/_next/image (imagens otimizadas sob o basePath)
-     */
     '/((?!_next/static|_next/image|favicon.ico|edu/_next/static|edu/_next/image).*)',
   ],
-};
+}
