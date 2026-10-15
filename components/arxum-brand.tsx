@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export function ArxumBrand({ light = false }: { light?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-1.5" aria-label="ARXUM Edu, início">
+    <Link href="/arxum" className="flex items-center gap-1.5" aria-label="ARXUM Edu, início">
       <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
         ARXUM
       </span>
