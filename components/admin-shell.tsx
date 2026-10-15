@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, Users, WalletCards, X } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -14,6 +14,7 @@ const schoolItems = [
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
+  ['Notas', '/admin/notas', TrendingUp],
   ['Financeiro', '/admin/financeiro', WalletCards],
   ['Comunicação', '/admin/comunicacao', Bell],
   ['Agenda', '/admin/agenda', Calendar],

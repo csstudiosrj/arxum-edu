@@ -66,6 +66,20 @@ export type AutorizacaoResponsavel = {
   observacao: string | null
 }
 
+export type NotaBoletim = {
+  disciplina: string
+  periodo: string
+  nota: number | null
+  faltas: number
+}
+
+export type BoletimAluno = {
+  aluno_nome: string
+  notas: NotaBoletim[]
+  media: number | null
+  total_faltas: number
+}
+
 async function getEmailUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -236,6 +250,43 @@ export async function getMinhasAutorizacoes(): Promise<AutorizacaoResponsavel[]>
       resposta: respostaPorAut[a.id]?.resposta || null,
       observacao: respostaPorAut[a.id]?.observacao || null,
     })) as AutorizacaoResponsavel[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function getMeuBoletim(): Promise<BoletimAluno[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('notas')
+      .select('aluno_nome, disciplina, periodo, nota, faltas')
+      .eq('responsavel_email', email)
+
+    if (error || !data) return []
+
+    const porAluno: Record<string, BoletimAluno> = {}
+    data.forEach((n) => {
+      if (!porAluno[n.aluno_nome]) {
+        porAluno[n.aluno_nome] = { aluno_nome: n.aluno_nome, notas: [], media: null, total_faltas: 0 }
+      }
+      porAluno[n.aluno_nome].notas.push({
+        disciplina: n.disciplina,
+        periodo: n.periodo,
+        nota: n.nota,
+        faltas: n.faltas,
+      })
+      porAluno[n.aluno_nome].total_faltas += n.faltas || 0
+    })
+
+    return Object.values(porAluno).map((b) => {
+      const notasValidas = b.notas.filter((n) => n.nota !== null)
+      const media = notasValidas.length > 0 ? notasValidas.reduce((s, n) => s + (n.nota || 0), 0) / notasValidas.length : null
+      return { ...b, media }
+    })
   } catch (e) {
     return []
   }
