@@ -1,7 +1,20 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || ''
+  const { pathname } = request.nextUrl
+
+  // Subdomínio da software house aponta para a landing do produto
+  if (hostname === 'edu.csstudios.site') {
+    if (pathname === '/') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/arxum'
+      return NextResponse.rewrite(url)
+    }
+    // Qualquer outro caminho continua funcionando igual (/login, /matricula, etc)
+  }
+
   return await updateSession(request)
 }
 
