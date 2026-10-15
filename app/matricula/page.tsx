@@ -58,7 +58,7 @@ export default function MatriculaPage() {
       .from('matriculas')
       .insert([{
         ...formData,
-        status: 'Inscrito' // Status inicial conforme o PRD
+        status: 'Inscrito'
       }])
 
     setIsSubmitting(false)
@@ -127,7 +127,6 @@ export default function MatriculaPage() {
             {step === 0 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Dados do aluno</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Comece contando um pouco sobre quem vai estudar conosco.</p>
                 <div className="mt-7 grid gap-5 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <Field label="Nome completo" name="aluno_nome" value={formData.aluno_nome} onChange={handleChange} placeholder="Nome do aluno" />
@@ -166,7 +165,6 @@ export default function MatriculaPage() {
             {step === 1 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Dados do responsável</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Precisamos de um contato para acompanhar a inscrição.</p>
                 <div className="mt-7 grid gap-5 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <Field label="Nome completo" name="resp_nome" value={formData.resp_nome} onChange={handleChange} placeholder="Nome do responsável" />
@@ -184,7 +182,6 @@ export default function MatriculaPage() {
             {step === 2 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Endereço e emergência</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Onde podemos encontrar sua família?</p>
                 <div className="mt-7 grid gap-5 sm:grid-cols-2">
                   <Field label="CEP" name="cep" value={formData.cep} onChange={handleChange} placeholder="00000-000" />
                   <Field label="Número" name="numero" value={formData.numero} onChange={handleChange} placeholder="123" />
@@ -202,13 +199,12 @@ export default function MatriculaPage() {
             {step === 3 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Documentos</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Envie os documentos necessários para análise.</p>
                 <div className="mt-7 flex flex-col gap-3">
                   {[
-                    { label: 'RG do aluno', key: 'doc_rg_aluno' },
-                    { label: 'CPF do responsável', key: 'doc_cpf_resp' },
-                    { label: 'Comprovante de residência', key: 'doc_residencia' },
-                    { label: 'Histórico escolar', key: 'doc_historico' }
+                    { label: 'RG do Aluno', key: 'doc_rg_aluno' },
+                    { label: 'CPF do Responsável', key: 'doc_cpf_resp' },
+                    { label: 'Comprovante de Residência', key: 'doc_residencia' },
+                    { label: 'Histórico Escolar', key: 'doc_historico' }
                   ].map((item) => (
                     <div key={item.key} className="flex items-center gap-4 rounded-xl border border-dashed border-white/15 bg-[#0b1115] p-4">
                       <div className="grid size-10 place-items-center rounded-lg bg-[#0d9488]/10 text-[#0d9488]">
@@ -220,12 +216,10 @@ export default function MatriculaPage() {
                           {formData[item.key as keyof typeof formData] ? 'Enviado' : 'Pendente'}
                         </p>
                       </div>
-                      
-                      {/* UPLOADTHING REAL AQUI */}
                       <div className="w-32">
                         <UploadButton
-                          endpoint="imageUploader" // Certifique-se que este endpoint existe no seu core.ts do UploadThing
-                          onClientUploadComplete={(res) => {
+                          endpoint="imageUploader"
+                          onClientUploadComplete={(res: { url: string }[]) => {
                             if (res && res[0]) {
                               setFormData(prev => ({ ...prev, [item.key]: res[0].url }))
                             }
@@ -251,7 +245,6 @@ export default function MatriculaPage() {
             {step === 4 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Anamnese</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Conte o que a escola precisa saber para acolher seu filho.</p>
                 <div className="mt-7 flex flex-col gap-5">
                   {[
                     { label: 'Alergias', key: 'alergias' },
@@ -278,7 +271,6 @@ export default function MatriculaPage() {
             {step === 5 && (
               <div>
                 <h2 className="font-syne text-xl font-bold text-white">Revise sua inscrição</h2>
-                <p className="mt-1 text-sm text-[#8196a2]">Confira os dados antes de enviar para a escola.</p>
                 <div className="mt-7 flex flex-col gap-3">
                   {['Dados do aluno', 'Dados do responsável', 'Endereço e emergência', 'Documentos'].map((item, idx) => (
                     <div key={item} className="flex items-center justify-between rounded-lg border border-white/[.08] bg-[#0b1115] p-4">
@@ -326,7 +318,6 @@ export default function MatriculaPage() {
                 </button>
               )}
             </div>
-
           </div>
         </section>
       </div>
