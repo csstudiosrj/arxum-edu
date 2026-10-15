@@ -1,14 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, MoreHorizontal, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, UserRound, Users, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, MoreHorizontal, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, type LucideIcon } from 'lucide-react'
 import { ArxumBrand } from '@/components/arxum-brand'
 
-const menu = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']] as const
-const children = [['Lucas Oliveira','9º Ano A','LO','bg-[#d9a27d]'],['Sofia Oliveira','4º Ano B','SO','bg-[#b8d2b1]']]
-const events = [['18','OUT','Prova de Matemática','Lucas · 9º Ano A',BookOpen],['21','OUT','Reunião de pais','Auditório principal',Users],['25','OUT','Passeio pedagógico','Sofia · 4º Ano B',CalendarDays],['02','NOV','Feira de Ciências','Quadra da escola',SparkIcon]]
-const notices = [['Secretaria','Rematrícula 2027: primeira chamada','Confira o calendário e os documentos necessários para garantir a vaga.','Hoje',true],['Coordenação','Semana de avaliações','As avaliações do segundo bimestre começam na próxima segunda-feira.','Ontem',true],['Financeiro','Boleto de outubro disponível','A fatura já está disponível para consulta e pagamento no portal.','12 out',false]]
-function SparkIcon({size=18,className=''}) { return <span className={className}><span style={{fontSize:size}}>✦</span></span> }
+type IconType = LucideIcon | ((props: { size?: number; className?: string }) => React.ReactElement)
+type MenuItem = [LucideIcon, string]
+type Child = [string, string, string, string]
+type EventItem = [string, string, string, string, IconType]
+type Notice = [string, string, string, string, boolean]
+
+function SparkIcon({ size = 18, className = '' }: { size?: number; className?: string }) {
+  return <span className={className}><span style={{ fontSize: size }}>✦</span></span>
+}
+
+const menu: MenuItem[] = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']]
+const children: Child[] = [['Lucas Oliveira','9º Ano A','LO','bg-[#d9a27d]'],['Sofia Oliveira','4º Ano B','SO','bg-[#b8d2b1]']]
+const events: EventItem[] = [['18','OUT','Prova de Matemática','Lucas · 9º Ano A',BookOpen],['21','OUT','Reunião de pais','Auditório principal',Users],['25','OUT','Passeio pedagógico','Sofia · 4º Ano B',CalendarDays],['02','NOV','Feira de Ciências','Quadra da escola',SparkIcon]]
+const notices: Notice[] = [['Secretaria','Rematrícula 2027: primeira chamada','Confira o calendário e os documentos necessários para garantir a vaga.','Hoje',true],['Coordenação','Semana de avaliações','As avaliações do segundo bimestre começam na próxima segunda-feira.','Ontem',true],['Financeiro','Boleto de outubro disponível','A fatura já está disponível para consulta e pagamento no portal.','12 out',false]]
 
 function Sidebar(){return <aside className="hidden w-64 shrink-0 border-r border-[#dbe5e8] bg-white lg:flex lg:flex-col"><div className="p-6"><ArxumBrand light/></div><div className="px-3"><p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[.16em] text-[#8aa0ad]">Área do responsável</p>{menu.map(([Icon,label],i)=><Link key={label} href="#" className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0?'bg-[#e6faf3] text-[#087f5b]':'text-[#617783] hover:bg-[#f4f7f8]'}`}><Icon size={18}/>{label}</Link>)}</div><div className="mt-auto border-t border-[#dbe5e8] p-4"><button className="flex items-center gap-3 px-3 py-2 text-sm text-[#617783]"><LogOut size={17}/>Sair</button></div></aside>}
 
