@@ -8,7 +8,11 @@ export function ArxumBrand({ light = false }: { light?: boolean }) {
       <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
         ARXUM
       </span>
-      <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
+      <span
+        className={`font-syne text-lg font-black tracking-[-.03em] ${
+          light ? 'text-[#07090c]' : 'text-white'
+        }`}
+      >
         Edu
       </span>
     </Link>

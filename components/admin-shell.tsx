@@ -1,23 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart3, Bell, BookOpen, Building2, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, Menu, Settings, SlidersHorizontal, Users, WalletCards, X } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, Building2, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Users, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 
 type AdminMode = 'school' | 'super'
 
 const schoolItems = [
-  ['Visão geral', '/dashboard', LayoutDashboard], ['Matrículas', '/matricula', FileText], ['Formulários', '/admin/formularios', SlidersHorizontal], ['Alunos', '#', Users], ['Financeiro', '#', WalletCards], ['Comunicação', '#', Bell], ['EscolaFlix', '/eduflix', BookOpen], ['Loja', '#', CircleDollarSign], ['Configurações', '#', Settings],
+  ['Visão geral', '/dashboard', LayoutDashboard], ['Matrículas', '/admin/matriculas', FileText], ['Formulários', '/admin/formularios', SlidersHorizontal], ['Alunos', '/admin/alunos', Users], ['Financeiro', '/admin/financeiro', WalletCards], ['Comunicação', '/admin/comunicacao', Bell], ['EduFlix', '/admin/eduflix', BookOpen], ['Loja', '/admin/loja', CircleDollarSign], ['Configurações', '/admin/configuracoes', Settings],
 ] as const
-const superItems = [['Visão geral', '/super-admin', LayoutDashboard], ['Escolas', '#', Building2], ['Planos', '#', WalletCards], ['Faturamento', '#', CircleDollarSign], ['Suporte', '#', Headphones], ['Métricas', '#', BarChart3], ['Configurações', '#', Settings]] as const
+const superItems = [['Visão geral', '/super-admin', LayoutDashboard], ['Escolas', '/super-admin/escolas', Building2], ['Planos', '/super-admin/planos', WalletCards], ['Faturamento', '/super-admin/faturamento', CircleDollarSign], ['Suporte', '/super-admin/suporte', Headphones], ['Métricas', '/super-admin/metricas', BarChart3], ['Configurações', '/super-admin/configuracoes', Settings]] as const
 
 export function AdminShell({ children, mode = 'school', active = 'Visão geral' }: { children: React.ReactNode; mode?: AdminMode; active?: string }) {
   const [open, setOpen] = useState(false)
   const items = mode === 'super' ? superItems : schoolItems
   return <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]">
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white px-4 py-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-      <div className="flex items-center justify-between px-2"><ArxumBrand light={false} />{mode === 'super' && <span className="rounded-md bg-[#ccfbf1] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#0f766e]">Admin</span>}<button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button></div>
+      <div className="flex items-center justify-between px-2"><ArxumBrand light={true} />{mode === 'super' && <span className="rounded-md bg-[#ccfbf1] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#0f766e]">Admin</span>}<button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button></div>
       <div className="mt-8 flex flex-1 flex-col gap-1">{items.map(([label, href, Icon]) => <Link key={label} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active === label ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`}><Icon className="size-[18px]" />{label}</Link>)}</div>
       <div className="border-t border-[#e5ecee] pt-4"><div className="flex items-center gap-3 rounded-lg px-3 py-2"><div className="grid size-8 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">MS</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">Marina Silva</p><p className="truncate text-xs text-[#82939a]">{mode === 'super' ? 'Super admin' : 'Administradora'}</p></div><ChevronDown className="size-4 text-[#8da0a8]" /></div><button className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#82939a] hover:bg-[#f1f5f6]"><LogOut className="size-[18px]" />Sair</button></div>
     </aside>
