@@ -1,0 +1,63 @@
+'use server'
+
+import { createAdminClient } from '@/lib/supabase/admin'
+
+export type InscricaoInput = {
+  aluno_nome: string
+  aluno_data_nascimento: string
+  aluno_serie: string
+  aluno_turno: string
+  aluno_escola_origem: string
+  responsavel_nome: string
+  responsavel_cpf: string
+  responsavel_email: string
+  responsavel_telefone: string
+  responsavel_parentesco: string
+  endereco_cep: string
+  endereco_rua: string
+  endereco_numero: string
+  endereco_complemento: string
+  endereco_bairro: string
+  endereco_cidade: string
+  endereco_estado: string
+  emergencia_nome: string
+  emergencia_telefone: string
+  emergencia_parentesco: string
+  anamnese_alergias: string
+  anamnese_condicoes: string
+  anamnese_medicamentos: string
+  anamnese_plano_saude: string
+}
+
+export async function submitInscricao(data: InscricaoInput) {
+  try {
+    const supabase = createAdminClient()
+
+    const { data: escola } = await supabase
+      .from('escolas')
+      .select('id')
+      .eq('slug', 'colegio-horizonte')
+      .single()
+
+    if (!escola) {
+      return { success: false, error: 'Escola não encontrada.' }
+    }
+
+    const { data: inscricao, error } = await supabase
+      .from('inscricoes')
+      .insert({
+        escola_id: escola.id,
+        ...data,
+      })
+      .select('protocolo')
+      .single()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, protocolo: inscricao.protocolo }
+  } catch (e) {
+    return { success: false, error: 'Erro ao enviar inscrição. Tente novamente.' }
+  }
+}

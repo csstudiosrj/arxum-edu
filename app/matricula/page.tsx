@@ -1,326 +1,363 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, FileText, CheckCircle2, Loader2 } from 'lucide-react'
-import { ArxumBrand } from '@/components/arxum-brand'
-import { createClient } from '@/lib/supabase/client'
-import { UploadButton } from '@uploadthing/react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, ArrowLeft, Check, User, MapPin, Heart, FileText, ClipboardCheck } from 'lucide-react'
+import { PublicHeader, PublicFooter } from '@/components/arxum-brand'
+import { submitInscricao, type InscricaoInput } from './actions'
 
-const steps = ['Dados do aluno', 'Dados do responsável', 'Endereço e emergência', 'Documentos', 'Anamnese', 'Revisão']
+const steps = [
+  { num: 1, label: 'Dados do aluno', icon: User },
+  { num: 2, label: 'Responsável', icon: User },
+  { num: 3, label: 'Endereço e emergência', icon: MapPin },
+  { num: 4, label: 'Documentos', icon: FileText },
+  { num: 5, label: 'Anamnese', icon: Heart },
+  { num: 6, label: 'Revisão', icon: ClipboardCheck },
+]
 
-function Field({ label, placeholder, type = 'text', name, value, onChange }: { label: string; placeholder?: string; type?: string; name: string; value: string; onChange: (e: any) => void }) { 
-  return (
-    <label className="flex flex-col gap-2 text-sm font-medium text-[#c7d5db]">
-      {label}
-      <input 
-        type={type} 
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder} 
-        className="h-11 rounded-lg border border-white/10 bg-[#0b1115] px-3 text-sm text-white outline-none placeholder:text-[#526773] focus:border-[#0d9488]" 
-      />
-    </label>
-  ) 
+const series = [
+  'Berçário', 'Maternal', 'Pré-escola',
+  '1º Ano Fundamental', '2º Ano Fundamental', '3º Ano Fundamental', '4º Ano Fundamental', '5º Ano Fundamental',
+  '6º Ano Fundamental', '7º Ano Fundamental', '8º Ano Fundamental', '9º Ano Fundamental',
+  '1º Ano Ensino Médio', '2º Ano Ensino Médio', '3º Ano Ensino Médio',
+]
+
+const turnos = ['Manhã', 'Tarde', 'Integral']
+const parentescos = ['Mãe', 'Pai', 'Avó/Avô', 'Tio/Tia', 'Responsável legal', 'Outro']
+
+const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+
+const initialForm: InscricaoInput = {
+  aluno_nome: '',
+  aluno_data_nascimento: '',
+  aluno_serie: '',
+  aluno_turno: '',
+  aluno_escola_origem: '',
+  responsavel_nome: '',
+  responsavel_cpf: '',
+  responsavel_email: '',
+  responsavel_telefone: '',
+  responsavel_parentesco: '',
+  endereco_cep: '',
+  endereco_rua: '',
+  endereco_numero: '',
+  endereco_complemento: '',
+  endereco_bairro: '',
+  endereco_cidade: '',
+  endereco_estado: '',
+  emergencia_nome: '',
+  emergencia_telefone: '',
+  emergencia_parentesco: '',
+  anamnese_alergias: '',
+  anamnese_condicoes: '',
+  anamnese_medicamentos: '',
+  anamnese_plano_saude: '',
 }
 
-export default function MatriculaPage() { 
-  const [step, setStep] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-  const supabase = createClient()
+function Field({ label, value, onChange, type = 'text', placeholder = '', required = false }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">
+        {label} {required && <span className="text-[#dc2626]">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+      />
+    </div>
+  )
+}
 
-  const [formData, setFormData] = useState({
-    aluno_nome: '', aluno_nascimento: '', serie: '', turno: 'Manhã', escola_origem: '',
-    resp_nome: '', resp_cpf: '', resp_telefone: '', resp_email: '', resp_parentesco: '',
-    cep: '', numero: '', rua: '', bairro: '', cidade: '', contato_emergencia: '', tel_emergencia: '',
-    doc_rg_aluno: '', doc_cpf_resp: '', doc_residencia: '', doc_historico: '',
-    alergias: '', condicoes_medicas: '', medicamentos: '', plano_saude: '',
-    aceite_termos: false
-  })
+function Select({ label, value, onChange, options, required = false }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]; required?: boolean
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">
+        {label} {required && <span className="text-[#dc2626]">*</span>}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]"
+      >
+        <option value="">Selecione</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  )
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    setFormData(prev => ({ ...prev, [name]: val }))
+function TextArea({ label, value, onChange, placeholder = '', rows = 3 }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">{label}</label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+      />
+    </div>
+  )
+}
+
+export default function MatriculaPage() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState<InscricaoInput>(initialForm)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  function update<K extends keyof InscricaoInput>(key: K, value: InscricaoInput[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleSubmit = async () => {
-    if (!formData.aceite_termos) {
-      alert("Você precisa declarar que as informações são verdadeiras.")
+  function validateStep(): string | null {
+    if (step === 1) {
+      if (!form.aluno_nome.trim()) return 'Informe o nome do aluno.'
+      if (!form.aluno_data_nascimento) return 'Informe a data de nascimento.'
+      if (!form.aluno_serie) return 'Selecione a série pretendida.'
+      if (!form.aluno_turno) return 'Selecione o turno.'
+    }
+    if (step === 2) {
+      if (!form.responsavel_nome.trim()) return 'Informe o nome do responsável.'
+      if (!form.responsavel_email.trim()) return 'Informe o e-mail do responsável.'
+      if (!form.responsavel_telefone.trim()) return 'Informe o telefone do responsável.'
+    }
+    return null
+  }
+
+  function next() {
+    const err = validateStep()
+    if (err) {
+      setError(err)
+      return
+    }
+    setError('')
+    setStep((s) => Math.min(s + 1, 6))
+  }
+
+  function back() {
+    setError('')
+    setStep((s) => Math.max(s - 1, 1))
+  }
+
+  async function submit() {
+    setLoading(true)
+    setError('')
+    const result = await submitInscricao(form)
+    setLoading(false)
+
+    if (!result.success) {
+      setError(result.error || 'Erro ao enviar inscrição.')
       return
     }
 
-    setIsSubmitting(true)
-    
-    const { error } = await supabase
-      .from('matriculas')
-      .insert([{
-        ...formData,
-        status: 'Inscrito'
-      }])
-
-    setIsSubmitting(false)
-
-    if (error) {
-      console.error("Erro ao salvar matrícula:", error)
-      alert("Ocorreu um erro ao enviar sua inscrição. Tente novamente.")
-    } else {
-      setIsSuccess(true)
-    }
-  }
-
-  if (isSuccess) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#070b0f] p-6 text-center text-[#e7f1f5]">
-        <div className="mb-6 grid size-20 place-items-center rounded-full bg-[#0d9488]/20 text-[#0d9488]">
-          <CheckCircle2 className="size-10" />
-        </div>
-        <h1 className="font-syne text-3xl font-bold text-white">Inscrição Recebida!</h1>
-        <p className="mt-4 max-w-md text-[#8196a2]">
-          Sua solicitação de matrícula foi enviada com sucesso. A escola analisará os documentos e entrará em contato em breve.
-        </p>
-        <Link href="/" className="mt-8 rounded-lg bg-[#0d9488] px-6 py-3 text-sm font-semibold text-[#061015] hover:bg-[#14b8a6]">
-          Voltar para o início
-        </Link>
-      </main>
-    )
+    router.push(`/matricula/sucesso?protocolo=${result.protocolo}`)
   }
 
   return (
-    <main className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
-      <header className="border-b border-white/[.08] px-6 py-5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <ArxumBrand />
-          <Link href="/" className="text-sm text-[#8196a2] hover:text-white">Sair</Link>
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+      <PublicHeader />
+      <main className="mx-auto max-w-6xl px-6 py-12 lg:px-8">
+        <div className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">
+            Colégio Horizonte
+          </p>
+          <h1 className="mt-3 font-syne text-4xl font-bold tracking-[-.04em] text-white">
+            Matrícula Online
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
+            Sua inscrição será analisada pela escola antes da efetivação da matrícula.
+          </p>
         </div>
-      </header>
-      
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[240px_1fr] lg:gap-20 lg:py-16">
-        <aside>
-          <p className="font-syne text-base font-bold text-white">Etapas</p>
-          <div className="mt-6 flex gap-4 overflow-x-auto pb-3 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
-            {steps.map((item, index) => (
-              <button 
-                key={item} 
-                onClick={() => index <= step && setStep(index)} 
-                className={`flex shrink-0 items-center gap-3 text-left text-sm lg:w-full ${index === step ? 'text-white' : index < step ? 'text-[#0d9488]' : 'text-[#617783]'}`}
-              >
-                <span className={`grid size-7 place-items-center rounded-full border text-xs font-semibold ${index === step ? 'border-[#0d9488] bg-[#0d9488] text-[#061015]' : index < step ? 'border-[#0d9488] text-[#0d9488]' : 'border-white/15'}`}>
-                  {index < step ? <Check className="size-3.5" /> : index + 1}
-                </span>
-                {item}
-              </button>
-            ))}
-          </div>
-          <p className="mt-10 hidden text-xs leading-5 text-[#617783] lg:block">Você pode salvar e continuar depois. Seus dados ficam protegidos.</p>
-        </aside>
 
-        <section className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">Inscrição escolar</p>
-          <h1 className="mt-3 font-syne text-3xl font-bold tracking-[-.05em] text-white">Matrícula Online</h1>
-          <p className="mt-2 text-sm text-[#8196a2]">Sua inscrição será analisada pela escola antes da efetivação da matrícula.</p>
-          
-          <div className="mt-8 rounded-2xl border border-white/[.08] bg-[#111820] p-6 sm:p-8">
-            
-            {step === 0 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Dados do aluno</h2>
-                <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Field label="Nome completo" name="aluno_nome" value={formData.aluno_nome} onChange={handleChange} placeholder="Nome do aluno" />
-                  </div>
-                  <Field label="Data de nascimento" name="aluno_nascimento" value={formData.aluno_nascimento} onChange={handleChange} type="date" />
-                  <label className="flex flex-col gap-2 text-sm font-medium text-[#c7d5db]">
-                    Série pretendida
-                    <div className="relative">
-                      <select name="serie" value={formData.serie} onChange={handleChange} className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-[#0b1115] px-3 text-sm text-[#8196a2] outline-none focus:border-[#0d9488]">
-                        <option value="">Selecione a série</option>
-                        <option value="Educação Infantil">Educação Infantil</option>
-                        <option value="1º ano do Fundamental">1º ano do Fundamental</option>
-                        <option value="1º ano do Ensino Médio">1º ano do Ensino Médio</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-3.5 size-4 text-[#617783]" />
-                    </div>
-                  </label>
-                  <div className="sm:col-span-2">
-                    <p className="mb-3 text-sm font-medium text-[#c7d5db]">Turno</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['Manhã', 'Tarde', 'Integral'].map((item) => (
-                        <label key={item} className={`flex cursor-pointer items-center justify-center rounded-lg border p-3 text-sm ${formData.turno === item ? 'border-[#0d9488] bg-[#0d9488]/10 text-[#14b8a6]' : 'border-white/10 text-[#8196a2]'}`}>
-                          <input type="radio" name="turno" value={item} checked={formData.turno === item} onChange={handleChange} className="sr-only" />
-                          {item}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field label="Escola de origem" name="escola_origem" value={formData.escola_origem} onChange={handleChange} placeholder="Nome da escola atual (opcional)" />
-                  </div>
-                </div>
-              </div>
-            )}
+        <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+          <aside>
+            <div className="rounded-xl border border-white/[.08] bg-[#0e151a] p-5">
+              <h2 className="mb-5 text-sm font-semibold text-white">Etapas</h2>
+              <ol className="space-y-3">
+                {steps.map((s) => {
+                  const done = step > s.num
+                  const active = step === s.num
+                  const Icon = s.icon
+                  return (
+                    <li key={s.num} className="flex items-center gap-3">
+                      <div className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition ${
+                        done ? 'bg-[#0d9488] text-white' :
+                        active ? 'bg-[#0d9488] text-white' :
+                        'bg-[#1a232b] text-[#5e7a94]'
+                      }`}>
+                        {done ? <Check className="size-4" /> : <Icon className="size-4" />}
+                      </div>
+                      <span className={`text-sm ${active ? 'font-semibold text-white' : done ? 'text-[#c7d5db]' : 'text-[#5e7a94]'}`}>
+                        {s.label}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          </aside>
 
+          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6 lg:p-8">
             {step === 1 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Dados do responsável</h2>
-                <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Field label="Nome completo" name="resp_nome" value={formData.resp_nome} onChange={handleChange} placeholder="Nome do responsável" />
-                  </div>
-                  <Field label="CPF" name="resp_cpf" value={formData.resp_cpf} onChange={handleChange} placeholder="000.000.000-00" />
-                  <Field label="Telefone" name="resp_telefone" value={formData.resp_telefone} onChange={handleChange} placeholder="(00) 00000-0000" />
-                  <div className="sm:col-span-2">
-                    <Field label="E-mail" name="resp_email" value={formData.resp_email} onChange={handleChange} placeholder="responsavel@email.com" type="email" />
-                  </div>
-                  <Field label="Parentesco" name="resp_parentesco" value={formData.resp_parentesco} onChange={handleChange} placeholder="Mãe, pai, responsável" />
+              <div className="space-y-4">
+                <h2 className="mb-6 font-syne text-xl font-bold text-white">Dados do aluno</h2>
+                <Field label="Nome completo do aluno" value={form.aluno_nome} onChange={(v) => update('aluno_nome', v)} required placeholder="Como consta na certidão" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Data de nascimento" type="date" value={form.aluno_data_nascimento} onChange={(v) => update('aluno_data_nascimento', v)} required />
+                  <Select label="Série pretendida" value={form.aluno_serie} onChange={(v) => update('aluno_serie', v)} options={series} required />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select label="Turno" value={form.aluno_turno} onChange={(v) => update('aluno_turno', v)} options={turnos} required />
+                  <Field label="Escola de origem" value={form.aluno_escola_origem} onChange={(v) => update('aluno_escola_origem', v)} placeholder="Opcional" />
                 </div>
               </div>
             )}
 
             {step === 2 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Endereço e emergência</h2>
-                <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <Field label="CEP" name="cep" value={formData.cep} onChange={handleChange} placeholder="00000-000" />
-                  <Field label="Número" name="numero" value={formData.numero} onChange={handleChange} placeholder="123" />
-                  <div className="sm:col-span-2">
-                    <Field label="Rua" name="rua" value={formData.rua} onChange={handleChange} placeholder="Nome da rua" />
-                  </div>
-                  <Field label="Bairro" name="bairro" value={formData.bairro} onChange={handleChange} placeholder="Bairro" />
-                  <Field label="Cidade" name="cidade" value={formData.cidade} onChange={handleChange} placeholder="Cidade" />
-                  <Field label="Contato de emergência" name="contato_emergencia" value={formData.contato_emergencia} onChange={handleChange} placeholder="Nome completo" />
-                  <Field label="Telefone de emergência" name="tel_emergencia" value={formData.tel_emergencia} onChange={handleChange} placeholder="(00) 00000-0000" />
+              <div className="space-y-4">
+                <h2 className="mb-6 font-syne text-xl font-bold text-white">Dados do responsável</h2>
+                <Field label="Nome completo" value={form.responsavel_nome} onChange={(v) => update('responsavel_nome', v)} required />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="CPF" value={form.responsavel_cpf} onChange={(v) => update('responsavel_cpf', v)} placeholder="000.000.000-00" />
+                  <Select label="Parentesco" value={form.responsavel_parentesco} onChange={(v) => update('responsavel_parentesco', v)} options={parentescos} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="E-mail" type="email" value={form.responsavel_email} onChange={(v) => update('responsavel_email', v)} required placeholder="seu@email.com" />
+                  <Field label="Telefone / WhatsApp" value={form.responsavel_telefone} onChange={(v) => update('responsavel_telefone', v)} required placeholder="(21) 90000-0000" />
                 </div>
               </div>
             )}
 
             {step === 3 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Documentos</h2>
-                <div className="mt-7 flex flex-col gap-3">
-                  {[
-                    { label: 'RG do Aluno', key: 'doc_rg_aluno' },
-                    { label: 'CPF do Responsável', key: 'doc_cpf_resp' },
-                    { label: 'Comprovante de Residência', key: 'doc_residencia' },
-                    { label: 'Histórico Escolar', key: 'doc_historico' }
-                  ].map((item) => (
-                    <div key={item.key} className="flex items-center gap-4 rounded-xl border border-dashed border-white/15 bg-[#0b1115] p-4">
-                      <div className="grid size-10 place-items-center rounded-lg bg-[#0d9488]/10 text-[#0d9488]">
-                        <FileText className="size-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">{item.label}</p>
-                        <p className="mt-1 text-xs text-[#617783]">
-                          {formData[item.key as keyof typeof formData] ? 'Enviado' : 'Pendente'}
-                        </p>
-                      </div>
-                      <div className="w-32">
-                        <UploadButton
-                          endpoint="imageUploader"
-                          onClientUploadComplete={(res: { url: string }[]) => {
-                            if (res && res[0]) {
-                              setFormData(prev => ({ ...prev, [item.key]: res[0].url }))
-                            }
-                          }}
-                          onUploadError={(error: Error) => {
-                            alert(`Erro no upload: ${error.message}`)
-                          }}
-                          appearance={{
-                            button: "bg-transparent border border-white/10 text-[#8196a2] text-xs h-9 px-3 hover:border-[#0d9488] hover:text-[#0d9488] w-full",
-                            allowedContent: "hidden"
-                          }}
-                          content={{
-                            button: formData[item.key as keyof typeof formData] ? "Trocar" : "Enviar"
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-4">
+                <h2 className="mb-6 font-syne text-xl font-bold text-white">Endereço e contato de emergência</h2>
+                <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                  <Field label="CEP" value={form.endereco_cep} onChange={(v) => update('endereco_cep', v)} placeholder="00000-000" />
+                  <Field label="Rua / Logradouro" value={form.endereco_rua} onChange={(v) => update('endereco_rua', v)} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                  <Field label="Número" value={form.endereco_numero} onChange={(v) => update('endereco_numero', v)} />
+                  <Field label="Complemento" value={form.endereco_complemento} onChange={(v) => update('endereco_complemento', v)} placeholder="Apto, bloco, etc. (opcional)" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Bairro" value={form.endereco_bairro} onChange={(v) => update('endereco_bairro', v)} />
+                  <Field label="Cidade" value={form.endereco_cidade} onChange={(v) => update('endereco_cidade', v)} />
+                  <Select label="Estado" value={form.endereco_estado} onChange={(v) => update('endereco_estado', v)} options={estados} />
+                </div>
+                <div className="mt-6 border-t border-white/[.08] pt-6">
+                  <h3 className="mb-4 text-sm font-semibold text-white">Contato de emergência</h3>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Nome" value={form.emergencia_nome} onChange={(v) => update('emergencia_nome', v)} />
+                    <Field label="Telefone" value={form.emergencia_telefone} onChange={(v) => update('emergencia_telefone', v)} />
+                    <Select label="Parentesco" value={form.emergencia_parentesco} onChange={(v) => update('emergencia_parentesco', v)} options={parentescos} />
+                  </div>
                 </div>
               </div>
             )}
 
             {step === 4 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Anamnese</h2>
-                <div className="mt-7 flex flex-col gap-5">
-                  {[
-                    { label: 'Alergias', key: 'alergias' },
-                    { label: 'Condições médicas', key: 'condicoes_medicas' },
-                    { label: 'Medicamentos de uso contínuo', key: 'medicamentos' }
-                  ].map((item) => (
-                    <label key={item.key} className="flex flex-col gap-2 text-sm font-medium text-[#c7d5db]">
-                      {item.label}
-                      <textarea 
-                        name={item.key}
-                        value={formData[item.key as keyof typeof formData] as string}
-                        onChange={handleChange}
-                        rows={3} 
-                        placeholder="Digite aqui..." 
-                        className="resize-none rounded-lg border border-white/10 bg-[#0b1115] p-3 text-sm text-white outline-none placeholder:text-[#526773] focus:border-[#0d9488]" 
-                      />
-                    </label>
+              <div className="space-y-4">
+                <h2 className="mb-2 font-syne text-xl font-bold text-white">Documentos</h2>
+                <p className="mb-6 text-sm leading-6 text-[#8aa0ad]">
+                  Os documentos poderão ser enviados após a efetivação da matrícula, pela área restrita do responsável. Você não precisa anexá-los agora.
+                </p>
+                <div className="space-y-3">
+                  {['RG ou Certidão de nascimento do aluno', 'CPF do responsável', 'Comprovante de residência', 'Histórico escolar'].map((doc) => (
+                    <div key={doc} className="flex items-center gap-3 rounded-lg border border-white/[.08] bg-[#0b1115] px-4 py-3">
+                      <FileText className="size-4 text-[#0d9488]" />
+                      <span className="text-sm text-[#c7d5db]">{doc}</span>
+                      <span className="ml-auto text-xs text-[#5e7a94]">Pendente</span>
+                    </div>
                   ))}
-                  <Field label="Plano de saúde" name="plano_saude" value={formData.plano_saude} onChange={handleChange} placeholder="Nome do plano (opcional)" />
                 </div>
               </div>
             )}
 
             {step === 5 && (
-              <div>
-                <h2 className="font-syne text-xl font-bold text-white">Revise sua inscrição</h2>
-                <div className="mt-7 flex flex-col gap-3">
-                  {['Dados do aluno', 'Dados do responsável', 'Endereço e emergência', 'Documentos'].map((item, idx) => (
-                    <div key={item} className="flex items-center justify-between rounded-lg border border-white/[.08] bg-[#0b1115] p-4">
-                      <span className="text-sm text-white">{item}</span>
-                      <button onClick={() => setStep(idx)} className="text-xs font-medium text-[#0d9488]">Editar</button>
-                    </div>
-                  ))}
+              <div className="space-y-4">
+                <h2 className="mb-6 font-syne text-xl font-bold text-white">Anamnese</h2>
+                <TextArea label="Alergias" value={form.anamnese_alergias} onChange={(v) => update('anamnese_alergias', v)} placeholder="Alimentos, medicamentos, etc. Deixe em branco se não houver." />
+                <TextArea label="Condições médicas" value={form.anamnese_condicoes} onChange={(v) => update('anamnese_condicoes', v)} placeholder="Asma, diabetes, etc." />
+                <TextArea label="Medicamentos de uso contínuo" value={form.anamnese_medicamentos} onChange={(v) => update('anamnese_medicamentos', v)} placeholder="Se houver" />
+                <Field label="Plano de saúde" value={form.anamnese_plano_saude} onChange={(v) => update('anamnese_plano_saude', v)} placeholder="Nome do plano e número da carteirinha" />
+              </div>
+            )}
+
+            {step === 6 && (
+              <div className="space-y-6">
+                <h2 className="font-syne text-xl font-bold text-white">Revisão</h2>
+
+                <div className="space-y-4 rounded-lg border border-white/[.08] bg-[#0b1115] p-5">
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Dados do aluno</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Nome:</strong> {form.aluno_nome || '—'}</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Nascimento:</strong> {form.aluno_data_nascimento || '—'}</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Série:</strong> {form.aluno_serie || '—'}</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Turno:</strong> {form.aluno_turno || '—'}</p>
+                  </div>
+                  <div className="border-t border-white/[.08] pt-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Responsável</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Nome:</strong> {form.responsavel_nome || '—'}</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>E-mail:</strong> {form.responsavel_email || '—'}</p>
+                    <p className="text-sm text-[#c7d5db]"><strong>Telefone:</strong> {form.responsavel_telefone || '—'}</p>
+                  </div>
                 </div>
-                <label className="mt-7 flex items-start gap-3 text-sm text-[#a7bac4] cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    name="aceite_termos"
-                    checked={formData.aceite_termos}
-                    onChange={handleChange}
-                    className="mt-0.5 accent-[#0d9488]" 
-                  />
-                  Declaro que as informações são verdadeiras.
+
+                <label className="flex items-start gap-3 text-sm text-[#c7d5db]">
+                  <input type="checkbox" required className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]" />
+                  <span>Declaro que as informações fornecidas são verdadeiras e autorizo a escola a utilizá-las para fins de análise da inscrição, conforme a LGPD.</span>
                 </label>
               </div>
             )}
 
-            <div className="mt-10 flex items-center justify-between border-t border-white/[.08] pt-6">
-              <button disabled={step === 0 || isSubmitting} onClick={() => setStep(step - 1)} className="flex items-center gap-2 text-sm font-medium text-[#8196a2] disabled:opacity-30">
-                <ArrowLeft className="size-4" />
-                Voltar
+            {error && (
+              <p className="mt-6 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-8 flex items-center justify-between gap-3 border-t border-white/[.08] pt-6">
+              <button
+                onClick={back}
+                disabled={step === 1 || loading}
+                className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-[#c7d5db] transition hover:border-white/30 disabled:opacity-30"
+              >
+                <ArrowLeft className="size-4" /> Voltar
               </button>
-              <div className="text-xs text-[#617783]">Etapa {step + 1} de 6</div>
-              
-              {step === 5 ? (
-                <button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-[#061015] hover:bg-[#14b8a6] disabled:opacity-70"
+              <span className="hidden text-xs text-[#5e7a94] sm:block">Etapa {step} de 6</span>
+              {step < 6 ? (
+                <button
+                  onClick={next}
+                  className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
                 >
-                  {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Enviar inscrição'}
-                  {!isSubmitting && <ArrowRight className="size-4" />}
+                  Avançar <ArrowRight className="size-4" />
                 </button>
               ) : (
-                <button 
-                  onClick={() => setStep(step + 1)} 
-                  className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-[#061015] hover:bg-[#14b8a6]"
+                <button
+                  onClick={submit}
+                  disabled={loading}
+                  className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
                 >
-                  Avançar
-                  <ArrowRight className="size-4" />
+                  {loading ? 'Enviando...' : 'Enviar inscrição'} <ArrowRight className="size-4" />
                 </button>
               )}
             </div>
-          </div>
-        </section>
-      </div>
-    </main>
+          </section>
+        </div>
+      </main>
+      <PublicFooter />
+    </div>
   )
 }
