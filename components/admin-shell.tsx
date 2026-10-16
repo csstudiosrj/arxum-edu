@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, Image as ImageIcon, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
+import { getNomeEscolaAtual } from '@/lib/auth/escola-atual'
 
 type AdminMode = 'school' | 'super'
 
@@ -41,8 +42,23 @@ const superItems = [
 export function AdminShell({ children, mode = 'school', active = 'Visão geral' }: { children: React.ReactNode; mode?: AdminMode; active?: string }) {
   const [open, setOpen] = useState(false)
   const [saindo, setSaindo] = useState(false)
+  const [nomeEscola, setNomeEscola] = useState('Carregando...')
   const router = useRouter()
   const items = mode === 'super' ? superItems : schoolItems
+
+  useEffect(() => {
+    if (mode === 'super') {
+      setNomeEscola('Painel ARXUM')
+      return
+    }
+    let ativo = true
+    getNomeEscolaAtual().then((nome) => {
+      if (ativo) setNomeEscola(nome)
+    })
+    return () => {
+      ativo = false
+    }
+  }, [mode])
 
   async function handleLogout() {
     setSaindo(true)
@@ -92,7 +108,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
     <div className="lg:pl-[248px]">
       <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
         <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
-        <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{mode === 'super' ? 'Painel ARXUM' : 'Colégio Horizonte'}</div>
+        <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
         <div className="ml-auto flex items-center gap-4">
           <button className="relative rounded-lg p-2 text-[#71838b] hover:bg-[#f1f5f6]" aria-label="Notificações">
             <Bell className="size-[19px]" />
