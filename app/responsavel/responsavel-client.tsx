@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
+import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
 import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida } from './actions'
@@ -173,7 +174,6 @@ export function ResponsavelClient({
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
 
-  // Persiste o filho ativo em localStorage
   useEffect(() => {
     if (!filhos.length) return
     const salvo = typeof window !== 'undefined' ? localStorage.getItem('arxum_filho_ativo') : null
@@ -214,7 +214,6 @@ export function ResponsavelClient({
   function abrirAutorizacao(a: AutorizacaoResponsavel) {
     setAutorizacaoAberta(a)
     setObservacao(a.observacao || '')
-    // Pré-seleciona o filho ativo
     setAlunoResposta(filhoAtivo?.nome || filhos[0]?.nome || '')
   }
 
@@ -309,10 +308,7 @@ export function ResponsavelClient({
             )}
 
             <button className="hidden rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783] sm:block"><Search size={18}/></button>
-            <button className="relative rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783]">
-              <Bell size={18}/>
-              {naoLidos > 0 && <span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]"/>}
-            </button>
+            <SinoNotificacoesLoader papel="responsavel" />
           </div>
         </header>
 
@@ -596,7 +592,6 @@ export function ResponsavelClient({
       </main>
     </div>
 
-    {/* Modais - mantidos iguais, com ajuste apenas no de autorização */}
     {ocorrenciaAberta && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/40" onClick={() => setOcorrenciaAberta(null)} />
@@ -756,7 +751,6 @@ export function ResponsavelClient({
           <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{autorizacaoAberta.descricao}</p>
 
-            {/* Seletor de aluno quando há mais de um filho */}
             {filhos.length > 1 && (
               <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
                 <label className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#536871]">

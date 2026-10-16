@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
+import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
 import type { MarcaEscola } from '@/lib/auth/marca'
 
@@ -116,7 +117,8 @@ export function ProfessorShell({
         <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
           <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{escolaNome}</div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-4">
+            <SinoNotificacoesLoader papel="professor" />
             <div className="grid size-9 place-items-center rounded-full bg-[#0d9488] text-xs font-bold text-white">
               {iniciais}
             </div>

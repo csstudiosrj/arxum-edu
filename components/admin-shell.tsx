@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
+import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
 import { getNomeEscolaAtual } from '@/lib/auth/escola-atual'
 
@@ -110,10 +111,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
         <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
         <div className="ml-auto flex items-center gap-4">
-          <button className="relative rounded-lg p-2 text-[#71838b] hover:bg-[#f1f5f6]" aria-label="Notificações">
-            <Bell className="size-[19px]" />
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#0d9488]" />
-          </button>
+          {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <div className="p-2"><Bell className="size-[19px] text-[#71838b]" /></div>}
           <div className="grid size-9 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">MS</div>
         </div>
       </header>
