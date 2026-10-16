@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Save, Check, Type,
-  LayoutTemplate, ExternalLink, Trash2, Plus, Image as ImageIcon,
+  LayoutTemplate, ExternalLink, Trash2, Plus, Image as ImageIcon, RefreshCw,
 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { BannerUpload } from '@/components/banner-upload'
 import { FONTES_PARES } from '@/lib/fonts'
-import { BLOCO_LABELS, type ConteudoHome, type BannerHero } from '@/lib/cms/defaults'
+import { BLOCO_LABELS, gerarSlug, type ConteudoHome, type BannerHero } from '@/lib/cms/defaults'
 import { salvarConteudoHome, atualizarFontePar } from '@/lib/cms/actions'
 
 type Props = {
@@ -481,15 +481,32 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
 }
 
 function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['noticias']; onChange: (d: Partial<ConteudoHome['blocos']['noticias']>) => void }) {
-  function editarItem(id: string, dados: Partial<{ data: string; titulo: string; categoria: string; imagem_url: string }>) {
+  function editarItem(id: string, dados: Partial<{ slug: string; data: string; titulo: string; categoria: string; resumo: string; corpo: string; imagem_url: string }>) {
     onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) })
   }
   function adicionarItem() {
     const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '')
-    onChange({ itens: [...bloco.itens, { id: gerarId(), data: hoje, titulo: 'Nova notícia', categoria: 'Geral', imagem_url: '' }] })
+    onChange({
+      itens: [
+        ...bloco.itens,
+        {
+          id: gerarId(),
+          slug: '',
+          data: hoje,
+          titulo: 'Nova notícia',
+          categoria: 'Geral',
+          resumo: '',
+          corpo: '',
+          imagem_url: '',
+        },
+      ],
+    })
   }
   function removerItem(id: string) {
     onChange({ itens: bloco.itens.filter((i) => i.id !== id) })
+  }
+  function regerarSlug(id: string, titulo: string) {
+    editarItem(id, { slug: gerarSlug(titulo) })
   }
 
   return (
@@ -547,6 +564,7 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                     className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
                   />
                 </div>
+
                 <input
                   type="text"
                   value={n.titulo}
@@ -554,6 +572,41 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                   placeholder="Título da notícia"
                   className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
                 />
+
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={n.slug}
+                    onChange={(e) => editarItem(n.id, { slug: e.target.value })}
+                    placeholder="URL amigável (slug)"
+                    className="flex-1 rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => regerarSlug(n.id, n.titulo)}
+                    className="inline-flex items-center gap-1 rounded border border-[#b8c9ce] bg-white px-2 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                    title="Gerar slug a partir do título"
+                  >
+                    <RefreshCw className="size-3" /> Gerar
+                  </button>
+                </div>
+
+                <textarea
+                  value={n.resumo}
+                  onChange={(e) => editarItem(n.id, { resumo: e.target.value })}
+                  rows={2}
+                  placeholder="Resumo curto (aparece no card da home)"
+                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                />
+
+                <textarea
+                  value={n.corpo}
+                  onChange={(e) => editarItem(n.id, { corpo: e.target.value })}
+                  rows={6}
+                  placeholder="Conteúdo completo da notícia (aparece na página de detalhe)"
+                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs leading-5 text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                />
+
                 <div className="mt-2">
                   <BannerUpload urlAtual={n.imagem_url} onUploaded={(url) => editarItem(n.id, { imagem_url: url })} />
                 </div>

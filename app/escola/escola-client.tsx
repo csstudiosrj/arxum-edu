@@ -7,7 +7,6 @@ import { HeroCarrossel } from '@/components/hero-carrossel'
 import { getFontePar } from '@/lib/fonts'
 import type { ConteudoHome } from '@/lib/cms/defaults'
 
-// Ícones disponíveis para os segmentos e diferenciais
 const ICONES_DISPONIVEIS: LucideIcon[] = [
   Sparkles, BookOpen, FlaskConical, Lightbulb, HeartHandshake, Medal, Landmark,
 ]
@@ -17,15 +16,7 @@ function iconePor(key: string, lista: LucideIcon[]): LucideIcon {
   return lista[soma % lista.length]
 }
 
-// ── Bloco Hero ──────────────────────────────────────────────────────
-
-function BlocoHero({
-  bloco,
-  base,
-}: {
-  bloco: ConteudoHome['blocos']['hero']
-  base: string
-}) {
+function BlocoHero({ bloco, base }: { bloco: ConteudoHome['blocos']['hero']; base: string }) {
   const temBanners = bloco.banners.length > 0
 
   return (
@@ -38,9 +29,7 @@ function BlocoHero({
           )}
         </h1>
         {bloco.subtitulo && (
-          <p className="mt-7 max-w-lg text-lg leading-8 text-[#8aa0ad]">
-            {bloco.subtitulo}
-          </p>
+          <p className="mt-7 max-w-lg text-lg leading-8 text-[#8aa0ad]">{bloco.subtitulo}</p>
         )}
         <div className="mt-9 flex flex-wrap gap-3">
           {bloco.cta_primario_label && (
@@ -93,8 +82,6 @@ function BlocoHero({
   )
 }
 
-// ── Bloco Segmentos ─────────────────────────────────────────────────
-
 function BlocoSegmentos({ bloco }: { bloco: ConteudoHome['blocos']['segmentos'] }) {
   return (
     <section id="segmentos" className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
@@ -127,15 +114,7 @@ function BlocoSegmentos({ bloco }: { bloco: ConteudoHome['blocos']['segmentos'] 
   )
 }
 
-// ── Bloco Diferenciais ──────────────────────────────────────────────
-
-function BlocoDiferenciais({
-  bloco,
-  escolaNome,
-}: {
-  bloco: ConteudoHome['blocos']['diferenciais']
-  escolaNome: string
-}) {
+function BlocoDiferenciais({ bloco, escolaNome }: { bloco: ConteudoHome['blocos']['diferenciais']; escolaNome: string }) {
   const titulo = bloco.titulo.includes('{escola}')
     ? bloco.titulo.replace('{escola}', escolaNome)
     : bloco.titulo
@@ -168,9 +147,11 @@ function BlocoDiferenciais({
   )
 }
 
-// ── Bloco Notícias ──────────────────────────────────────────────────
+function BlocoNoticias({ bloco, base }: { bloco: ConteudoHome['blocos']['noticias']; base: string }) {
+  const noticias = bloco.itens.slice(0, bloco.quantidade)
 
-function BlocoNoticias({ bloco }: { bloco: ConteudoHome['blocos']['noticias'] }) {
+  if (noticias.length === 0) return null
+
   return (
     <section id="noticias" className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
       <div className="flex items-end justify-between">
@@ -180,41 +161,56 @@ function BlocoNoticias({ bloco }: { bloco: ConteudoHome['blocos']['noticias'] })
           )}
           <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-.04em] text-white">{bloco.titulo}</h2>
         </div>
-        <a href="#noticias" className="hidden text-sm text-[#0d9488] sm:block">
+        <Link href={`${base}/noticias`} className="hidden text-sm text-[#0d9488] hover:text-[#14b8a6] sm:block">
           Ver todas <ArrowRight className="ml-1 inline size-4" />
-        </a>
+        </Link>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-3">
-        {[
-          { date: '12 OUT 2026', title: 'Como a tecnologia amplia o jeito de aprender' },
-          { date: '28 SET 2026', title: 'Novas salas de criação são inauguradas' },
-          { date: '15 SET 2026', title: 'Famílias participam da Semana da Comunidade' },
-        ].slice(0, bloco.quantidade).map((n, index) => (
-          <article key={n.title} className="overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a]">
-            <div className={`h-36 ${index === 0 ? 'bg-gradient-to-br from-[#154b45] to-[#132733]' : index === 1 ? 'bg-gradient-to-br from-[#26334c] to-[#141d2b]' : 'bg-gradient-to-br from-[#403b28] to-[#20291f]'}`} />
-            <div className="p-5">
-              <p className="text-[10px] font-semibold tracking-widest text-[#0d9488]">{n.date}</p>
-              <h3 className="mt-3 font-heading text-lg font-bold leading-6 text-white">{n.title}</h3>
-              <a href="#noticias" className="mt-5 inline-block text-sm font-medium text-[#0d9488]">
-                Ler mais <ArrowRight className="ml-1 inline size-3.5" />
-              </a>
-            </div>
-          </article>
-        ))}
+        {noticias.map((n, index) => {
+          const slug = n.slug || n.id
+          return (
+            <Link
+              key={n.id}
+              href={`${base}/noticias/${slug}`}
+              className="group overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-[#0d9488]/50"
+            >
+              <div className={`relative h-36 ${n.imagem_url ? '' : index === 0 ? 'bg-gradient-to-br from-[#154b45] to-[#132733]' : index === 1 ? 'bg-gradient-to-br from-[#26334c] to-[#141d2b]' : 'bg-gradient-to-br from-[#403b28] to-[#20291f]'}`}>
+                {n.imagem_url && (
+                  <img src={n.imagem_url} alt={n.titulo} className="h-full w-full object-cover transition group-hover:scale-105" />
+                )}
+              </div>
+              <div className="p-5">
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-semibold tracking-widest text-[#0d9488]">{n.data}</p>
+                  {n.categoria && (
+                    <span className="rounded-full border border-[#0d9488]/30 px-2 py-0.5 text-[10px] font-semibold text-[#14b8a6]">
+                      {n.categoria}
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-3 font-heading text-lg font-bold leading-6 text-white">{n.titulo}</h3>
+                {n.resumo && (
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#8196a2]">{n.resumo}</p>
+                )}
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0d9488]">
+                  Ler mais <ArrowRight className="size-3.5" />
+                </span>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+
+      <div className="mt-8 text-center sm:hidden">
+        <Link href={`${base}/noticias`} className="inline-flex items-center gap-2 text-sm font-semibold text-[#0d9488]">
+          Ver todas as notícias <ArrowRight className="size-4" />
+        </Link>
       </div>
     </section>
   )
 }
 
-// ── Bloco CTA Final ─────────────────────────────────────────────────
-
-function BlocoCtaFinal({
-  bloco,
-  base,
-}: {
-  bloco: ConteudoHome['blocos']['cta_final']
-  base: string
-}) {
+function BlocoCtaFinal({ bloco, base }: { bloco: ConteudoHome['blocos']['cta_final']; base: string }) {
   return (
     <section className="mx-6 mb-20 rounded-2xl border border-[#0d9488]/20 bg-[#0d2727] px-6 py-16 text-center lg:mx-auto lg:max-w-7xl">
       {bloco.eyebrow && (
@@ -232,8 +228,6 @@ function BlocoCtaFinal({
     </section>
   )
 }
-
-// ── Componente principal ────────────────────────────────────────────
 
 export function EscolaClient({
   escolaNome,
@@ -255,10 +249,7 @@ export function EscolaClient({
   } as React.CSSProperties
 
   return (
-    <div
-      className="min-h-screen bg-[#070b0f] text-[#e7f1f5]"
-      style={estiloFontes}
-    >
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloFontes}>
       <PublicHeader slug={slug} />
 
       <main>
@@ -274,7 +265,7 @@ export function EscolaClient({
             case 'diferenciais':
               return <BlocoDiferenciais key={key} bloco={bloco as ConteudoHome['blocos']['diferenciais']} escolaNome={escolaNome} />
             case 'noticias':
-              return <BlocoNoticias key={key} bloco={bloco as ConteudoHome['blocos']['noticias']} />
+              return <BlocoNoticias key={key} bloco={bloco as ConteudoHome['blocos']['noticias']} base={base} />
             case 'cta_final':
               return <BlocoCtaFinal key={key} bloco={bloco as ConteudoHome['blocos']['cta_final']} base={base} />
             default:

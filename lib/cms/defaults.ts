@@ -47,9 +47,12 @@ export type BannerHero = {
   
   export type Noticia = {
     id: string
+    slug: string
     data: string
     titulo: string
     categoria: string
+    resumo: string
+    corpo: string
     imagem_url: string
   }
   
@@ -89,6 +92,16 @@ export type BannerHero = {
   }
   
   export const ORDEM_PADRAO = ['hero', 'segmentos', 'diferenciais', 'noticias', 'cta_final']
+  
+  export function gerarSlug(texto: string): string {
+    return texto
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60)
+  }
   
   export const CONTEUDO_HOME_PADRAO: ConteudoHome = {
     ordem: [...ORDEM_PADRAO],
@@ -133,9 +146,36 @@ export type BannerHero = {
         titulo: 'Últimas notícias',
         quantidade: 3,
         itens: [
-          { id: 'n1', data: '12 OUT 2026', titulo: 'Como a tecnologia amplia o jeito de aprender', categoria: 'Pedagógico', imagem_url: '' },
-          { id: 'n2', data: '28 SET 2026', titulo: 'Novas salas de criação são inauguradas', categoria: 'Estrutura', imagem_url: '' },
-          { id: 'n3', data: '15 SET 2026', titulo: 'Famílias participam da Semana da Comunidade', categoria: 'Comunidade', imagem_url: '' },
+          {
+            id: 'n1',
+            slug: 'como-a-tecnologia-amplia-o-jeito-de-aprender',
+            data: '12 OUT 2026',
+            titulo: 'Como a tecnologia amplia o jeito de aprender',
+            categoria: 'Pedagógico',
+            resumo: 'Ferramentas digitais estão transformando a sala de aula em um espaço de experimentação.',
+            corpo: 'A tecnologia deixou de ser um acessório na educação e passou a fazer parte do cotidiano dos alunos.\n\nNeste ano, nossa escola incorporou novas ferramentas digitais que ampliam as possibilidades de pesquisa, criação e colaboração. Os alunos do Fundamental II têm acesso a laboratórios móveis, e os do Ensino Médio trabalham com projetos de programação e robótica.\n\nO resultado já pode ser sentido em sala: mais engajamento, mais perguntas e mais vontade de aprender.',
+            imagem_url: '',
+          },
+          {
+            id: 'n2',
+            slug: 'novas-salas-de-criacao',
+            data: '28 SET 2026',
+            titulo: 'Novas salas de criação são inauguradas',
+            categoria: 'Estrutura',
+            resumo: 'Espaços dedicados a arte, música e experimentação foram abertos neste semestre.',
+            corpo: 'A escola ganhou duas novas salas de criação: uma voltada para artes visuais e música, e outra para experimentação científica.\n\nOs ambientes foram desenhados para estimular a curiosidade e a autonomia dos alunos, com materiais acessíveis e estações de trabalho flexíveis.',
+            imagem_url: '',
+          },
+          {
+            id: 'n3',
+            slug: 'semana-da-comunidade',
+            data: '15 SET 2026',
+            titulo: 'Famílias participam da Semana da Comunidade',
+            categoria: 'Comunidade',
+            resumo: 'Evento reuniu pais, alunos e educadores em atividades integradas.',
+            corpo: 'Durante a Semana da Comunidade, famílias e educadores participaram juntos de oficinas, rodas de conversa e apresentações.\n\nFoi um momento de aproximação e troca que reforçou o vínculo entre a escola e as famílias.',
+            imagem_url: '',
+          },
         ],
       },
       cta_final: {
