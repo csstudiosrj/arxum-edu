@@ -83,6 +83,50 @@ export type BannerHero = {
     }
   }
   
+  // ── Páginas internas ───────────────────────────────────────────────
+  
+  export type ItemGaleria = {
+    id: string
+    url: string
+    legenda: string
+  }
+  
+  export type PaginaAEscola = {
+    eyebrow: string
+    titulo: string
+    subtitulo: string
+    texto: string
+    imagem_url: string
+    galeria: ItemGaleria[]
+  }
+  
+  export type ItemEstrutura = {
+    id: string
+    titulo: string
+    descricao: string
+    imagem_url: string
+  }
+  
+  export type PaginaEstrutura = {
+    eyebrow: string
+    titulo: string
+    subtitulo: string
+    itens: ItemEstrutura[]
+  }
+  
+  export type PaginaContato = {
+    eyebrow: string
+    titulo: string
+    subtitulo: string
+    mensagem_sucesso: string
+  }
+  
+  export type ConteudoPaginas = {
+    a_escola: PaginaAEscola
+    estrutura: PaginaEstrutura
+    contato: PaginaContato
+  }
+  
   export const BLOCO_LABELS: Record<string, string> = {
     hero: 'Hero (topo)',
     segmentos: 'Segmentos',
@@ -114,7 +158,7 @@ export type BannerHero = {
         cta_primario_label: 'Matrícula Online',
         cta_primario_href: '/matricula',
         cta_secundario_label: 'Conheça a escola',
-        cta_secundario_href: '#a-escola',
+        cta_secundario_href: '/a-escola',
         banners: [],
         intervalo_segundos: 5,
       },
@@ -188,6 +232,36 @@ export type BannerHero = {
     },
   }
   
+  export const CONTEUDO_PAGINAS_PADRAO: ConteudoPaginas = {
+    a_escola: {
+      eyebrow: 'Nossa história',
+      titulo: 'Uma escola feita de pessoas',
+      subtitulo: 'Educação que olha para cada aluno como único.',
+      texto: 'Nascemos com a missão de oferecer uma educação que une excelência acadêmica e cuidado humano.\n\nAqui, cada criança é vista em sua individualidade. Nossos educadores acompanham o desenvolvimento de perto, respeitando o ritmo de cada um e estimulando a curiosidade.\n\nAcreditamos que aprender é construir junto. Famílias, alunos e professores formam uma comunidade que se apoia e cresce em conjunto.',
+      imagem_url: '',
+      galeria: [],
+    },
+    estrutura: {
+      eyebrow: 'Nossos espaços',
+      titulo: 'Estrutura pensada para aprender',
+      subtitulo: 'Ambientes que convidam à descoberta, ao movimento e à criação.',
+      itens: [
+        { id: 'biblioteca', titulo: 'Biblioteca', descricao: 'Acervo atualizado, espaços de leitura e estações de estudo.', imagem_url: '' },
+        { id: 'laboratorio', titulo: 'Laboratório de Ciências', descricao: 'Experimentos de química, física e biologia com equipamento completo.', imagem_url: '' },
+        { id: 'quadra', titulo: 'Quadra poliesportiva', descricao: 'Espaço coberto para esportes, educação física e eventos.', imagem_url: '' },
+        { id: 'arte', titulo: 'Ateliê de Artes', descricao: 'Sala dedicada a pintura, escultura e projetos criativos.', imagem_url: '' },
+        { id: 'musica', titulo: 'Sala de Música', descricao: 'Instrumentos, isolamento acústico e prática em grupo.', imagem_url: '' },
+        { id: 'refeitorio', titulo: 'Refeitório', descricao: 'Alimentação balanceada em ambiente acolhedor.', imagem_url: '' },
+      ],
+    },
+    contato: {
+      eyebrow: 'Fale conosco',
+      titulo: 'Estamos à disposição',
+      subtitulo: 'Preencha o formulário e retornaremos em até 1 dia útil.',
+      mensagem_sucesso: 'Mensagem enviada! Em breve entraremos em contato.',
+    },
+  }
+  
   export function normalizarConteudo(conteudo: unknown): ConteudoHome {
     const base = JSON.parse(JSON.stringify(CONTEUDO_HOME_PADRAO)) as ConteudoHome
     if (!conteudo || typeof conteudo !== 'object') return base
@@ -211,6 +285,23 @@ export type BannerHero = {
       }
       if (c.blocos.cta_final) base.blocos.cta_final = { ...base.blocos.cta_final, ...c.blocos.cta_final }
     }
+  
+    return base
+  }
+  
+  export function normalizarPaginas(conteudo: unknown): ConteudoPaginas {
+    const base = JSON.parse(JSON.stringify(CONTEUDO_PAGINAS_PADRAO)) as ConteudoPaginas
+    if (!conteudo || typeof conteudo !== 'object') return base
+  
+    const c = conteudo as Partial<ConteudoPaginas>
+    if (c.a_escola) base.a_escola = { ...base.a_escola, ...c.a_escola }
+    if (c.estrutura) {
+      base.estrutura = { ...base.estrutura, ...c.estrutura }
+      if (!Array.isArray(base.estrutura.itens)) {
+        base.estrutura.itens = CONTEUDO_PAGINAS_PADRAO.estrutura.itens
+      }
+    }
+    if (c.contato) base.contato = { ...base.contato, ...c.contato }
   
     return base
   }
