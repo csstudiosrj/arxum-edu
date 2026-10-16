@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, type LucideIcon } from 'lucide-react'
-import { useState } from 'react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, type LucideIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
 import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
 
@@ -89,6 +89,12 @@ const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> 
   { key: 'historico_escolar', label: 'Histórico escolar' },
 ]
 
+function iniciaisDe(nome: string): string {
+  const partes = nome.trim().split(' ')
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
 function Sidebar({ onLogout, saindo, marca }: { onLogout: () => void; saindo: boolean; marca: MarcaEscola | null }) {
   const temBranding = marca?.usaBranding && marca.logoUrl
 
@@ -139,7 +145,7 @@ function corNota(nota: number | null): string {
 }
 
 export function ResponsavelClient({
-  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias, marca,
+  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias, filhos, marca,
 }: {
   inscricoes: InscricaoResponsavel[]
   comunicados: ComunicadoResponsavel[]
@@ -149,6 +155,7 @@ export function ResponsavelClient({
   boletins: BoletimAluno[]
   albuns: AlbumResponsavel[]
   ocorrencias: OcorrenciaResponsavel[]
+  filhos: Filho[]
   marca: MarcaEscola | null
 }) {
   const router = useRouter()
@@ -162,6 +169,34 @@ export function ResponsavelClient({
   const [ocorrenciaAberta, setOcorrenciaAberta] = useState<OcorrenciaResponsavel | null>(null)
   const [observacao, setObservacao] = useState('')
   const [enviandoResposta, setEnviandoResposta] = useState(false)
+  const [filhoAtivo, setFilhoAtivo] = useState<Filho | null>(filhos[0] || null)
+  const [dropdownAberto, setDropdownAberto] = useState(false)
+  const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
+
+  // Persiste o filho ativo em localStorage
+  useEffect(() => {
+    if (!filhos.length) return
+    const salvo = typeof window !== 'undefined' ? localStorage.getItem('arxum_filho_ativo') : null
+    if (salvo) {
+      const encontrado = filhos.find((f) => f.id === salvo)
+      if (encontrado) {
+        setFilhoAtivo(encontrado)
+        setAlunoResposta(encontrado.nome)
+        return
+      }
+    }
+    setFilhoAtivo(filhos[0])
+    setAlunoResposta(filhos[0].nome)
+  }, [filhos])
+
+  function selecionarFilho(f: Filho) {
+    setFilhoAtivo(f)
+    setAlunoResposta(f.nome)
+    setDropdownAberto(false)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arxum_filho_ativo', f.id)
+    }
+  }
 
   async function handleLogout() {
     setSaindo(true)
@@ -179,6 +214,8 @@ export function ResponsavelClient({
   function abrirAutorizacao(a: AutorizacaoResponsavel) {
     setAutorizacaoAberta(a)
     setObservacao(a.observacao || '')
+    // Pré-seleciona o filho ativo
+    setAlunoResposta(filhoAtivo?.nome || filhos[0]?.nome || '')
   }
 
   async function abrirOcorrencia(o: OcorrenciaResponsavel) {
@@ -190,8 +227,13 @@ export function ResponsavelClient({
 
   async function handleResponder(resposta: 'autorizado' | 'recusado') {
     if (!autorizacaoAberta) return
+    if (!alunoResposta) {
+      alert('Selecione o aluno.')
+      return
+    }
+
     setEnviandoResposta(true)
-    const result = await responderAutorizacao(autorizacaoAberta.id, resposta, observacao)
+    const result = await responderAutorizacao(autorizacaoAberta.id, alunoResposta, resposta, observacao)
     setEnviandoResposta(false)
     if (result.success) {
       setAutorizacaoAberta(null); setObservacao(''); router.refresh()
@@ -213,17 +255,64 @@ export function ResponsavelClient({
       <Sidebar onLogout={handleLogout} saindo={saindo} marca={marca} />
       <main className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-[#dbe5e8] bg-white px-5 py-4 md:px-8">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-[#8aa0ad] capitalize">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <h1 className="font-syne text-xl font-bold text-[#18313c]">Olá, responsável</h1>
           </div>
           <div className="flex items-center gap-3">
+            {filhos.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownAberto(!dropdownAberto)}
+                  className="flex items-center gap-2 rounded-lg border border-[#dbe5e8] bg-[#f7fafb] px-3 py-2 transition hover:border-[#0d9488]"
+                >
+                  <div className="grid size-7 place-items-center rounded-full bg-[#0d9488] text-[10px] font-bold text-white">
+                    {iniciaisDe(filhoAtivo?.nome || '')}
+                  </div>
+                  <div className="hidden text-left sm:block">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Vendo por</p>
+                    <p className="text-xs font-semibold text-[#243942]">{filhoAtivo?.nome || 'Selecionar'}</p>
+                  </div>
+                  <ChevronDown className="size-4 text-[#82939a]" />
+                </button>
+
+                {dropdownAberto && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setDropdownAberto(false)} />
+                    <div className="absolute right-0 top-full z-40 mt-2 w-64 rounded-xl border border-[#dbe5e8] bg-white p-2 shadow-xl">
+                      <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Selecionar filho</p>
+                      {filhos.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => selecionarFilho(f)}
+                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${filhoAtivo?.id === f.id ? 'bg-[#f0fbf8]' : 'hover:bg-[#f7fafb]'}`}
+                        >
+                          <div className="grid size-8 place-items-center rounded-full bg-[#0d9488] text-[10px] font-bold text-white">
+                            {iniciaisDe(f.nome)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-[#243942]">{f.nome}</p>
+                            <p className="truncate text-xs text-[#82939a]">{f.serie || '—'}{f.turno ? ` · ${f.turno}` : ''}</p>
+                          </div>
+                          {filhoAtivo?.id === f.id && <CheckCircle2 className="size-4 text-[#0d9488]" />}
+                        </button>
+                      ))}
+                      <div className="mt-2 border-t border-[#edf1f2] pt-2">
+                        <Link href="/matricula" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#0d9488] hover:bg-[#f0fbf8]">
+                          <Users className="size-3.5" /> Adicionar outro filho
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <button className="hidden rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783] sm:block"><Search size={18}/></button>
             <button className="relative rounded-lg border border-[#dbe5e8] bg-[#f7fafb] p-2.5 text-[#617783]">
               <Bell size={18}/>
               {naoLidos > 0 && <span className="absolute right-1 top-1 size-2 rounded-full bg-[#dc2626]"/>}
             </button>
-            <div className="grid size-9 place-items-center rounded-full bg-[#173b4a] text-sm font-bold text-white">MO</div>
           </div>
         </header>
 
@@ -231,7 +320,41 @@ export function ResponsavelClient({
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-[.15em] text-[#0d9488]">Visão geral</p>
             <h2 className="mt-1 font-syne text-3xl font-bold tracking-[-.04em]">Tudo em um só lugar</h2>
+            {filhoAtivo && (
+              <p className="mt-2 text-sm text-[#82939a]">
+                Exibindo dados de <strong className="text-[#18313c]">{filhoAtivo.nome}</strong>. Use o seletor acima para trocar de filho.
+              </p>
+            )}
           </div>
+
+          {filhos.length > 1 && (
+            <section className="mb-8">
+              <h3 className="mb-4 font-syne text-lg font-bold">Meus filhos</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filhos.map((f) => {
+                  const ativo = filhoAtivo?.id === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => selecionarFilho(f)}
+                      className={`flex items-center gap-3 rounded-xl border-2 bg-white p-4 text-left transition ${
+                        ativo ? 'border-[#0d9488] bg-[#f0fbf8]' : 'border-[#dbe5e8] hover:border-[#0d9488]/40'
+                      }`}
+                    >
+                      <div className={`grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${ativo ? 'bg-[#0d9488]' : 'bg-[#173b4a]'}`}>
+                        {iniciaisDe(f.nome)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[#243942]">{f.nome}</p>
+                        <p className="mt-0.5 truncate text-xs text-[#82939a]">{f.serie || '—'}{f.turno ? ` · ${f.turno}` : ''}</p>
+                      </div>
+                      {ativo && <CheckCircle2 className="size-5 shrink-0 text-[#0d9488]" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
           {autorizacoesPendentes.length > 0 && (
             <section className="mb-10">
@@ -473,6 +596,7 @@ export function ResponsavelClient({
       </main>
     </div>
 
+    {/* Modais - mantidos iguais, com ajuste apenas no de autorização */}
     {ocorrenciaAberta && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/40" onClick={() => setOcorrenciaAberta(null)} />
@@ -631,7 +755,47 @@ export function ResponsavelClient({
           </header>
           <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{autorizacaoAberta.descricao}</p>
-            <div className="mt-5"><label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label><textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: Meu filho não poderá participar..." rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" /></div>
+
+            {/* Seletor de aluno quando há mais de um filho */}
+            {filhos.length > 1 && (
+              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#536871]">
+                  <UserCheck className="size-3.5" /> Aluno desta autorização
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {filhos.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setAlunoResposta(f.nome)}
+                      className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${
+                        alunoResposta === f.nome ? 'border-[#0d9488] bg-[#ccfbf1]' : 'border-[#d5e0e3] bg-white hover:border-[#0d9488]'
+                      }`}
+                    >
+                      <div className={`grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white ${alunoResposta === f.nome ? 'bg-[#0d9488]' : 'bg-[#173b4a]'}`}>
+                        {iniciaisDe(f.nome)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-[#243942]">{f.nome}</p>
+                        <p className="truncate text-[10px] text-[#82939a]">{f.serie || '—'}</p>
+                      </div>
+                      {alunoResposta === f.nome && <CheckCircle2 className="size-4 shrink-0 text-[#0d9488]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filhos.length === 1 && (
+              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
+                <p className="text-xs text-[#82939a]">Esta resposta será registrada para <strong className="text-[#243942]">{filhos[0].nome}</strong>.</p>
+              </div>
+            )}
+
+            <div className="mt-5">
+              <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label>
+              <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: Meu filho não poderá participar..." rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+            </div>
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
             <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar</button>

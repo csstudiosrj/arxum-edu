@@ -103,21 +103,37 @@ export type OcorrenciaResponsavel = {
   criado_em: string
 }
 
+export type Filho = {
+  id: string
+  nome: string
+  serie: string | null
+  turno: string | null
+}
+
 async function getEmailUsuario(): Promise<string | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.email || null
 }
 
-async function getNomePrimeiroAluno(email: string): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('alunos')
-    .select('nome')
-    .eq('responsavel_email', email)
-    .limit(1)
-    .maybeSingle()
-  return data?.nome || null
+export async function getMeusFilhos(): Promise<Filho[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('alunos')
+      .select('id, nome, serie, turno')
+      .eq('responsavel_email', email)
+      .eq('status', 'ativo')
+      .order('nome', { ascending: true })
+
+    if (error) return []
+    return (data || []) as Filho[]
+  } catch (e) {
+    return []
+  }
 }
 
 export async function getMinhasInscricoes(): Promise<InscricaoResponsavel[]> {
@@ -324,22 +340,40 @@ export async function marcarOcorrenciaLida(ocorrenciaId: string) {
   }
 }
 
-export async function responderAutorizacao(autorizacaoId: string, resposta: 'autorizado' | 'recusado', observacao: string) {
+export async function responderAutorizacao(
+  autorizacaoId: string,
+  alunoNome: string,
+  resposta: 'autorizado' | 'recusado',
+  observacao: string
+) {
   try {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
 
-    const nomeAluno = await getNomePrimeiroAluno(email)
-    if (!nomeAluno) return { success: false, error: 'Nenhum aluno vinculado a este e-mail.' }
+    if (!alunoNome) {
+      return { success: false, error: 'Selecione o aluno.' }
+    }
 
     const admin = createAdminClient()
+
+    // Confirma que o aluno pertence a este responsável
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('id, nome')
+      .eq('responsavel_email', email)
+      .eq('nome', alunoNome)
+      .maybeSingle()
+
+    if (!aluno) {
+      return { success: false, error: 'Aluno não vinculado a este responsável.' }
+    }
 
     const { data: existente } = await admin
       .from('autorizacoes_respostas')
       .select('id')
       .eq('autorizacao_id', autorizacaoId)
       .eq('responsavel_email', email)
-      .eq('aluno_nome', nomeAluno)
+      .eq('aluno_nome', aluno.nome)
       .maybeSingle()
 
     if (existente) {
@@ -351,7 +385,7 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
       const { error } = await admin.from('autorizacoes_respostas').insert({
         autorizacao_id: autorizacaoId,
         responsavel_email: email,
-        aluno_nome: nomeAluno,
+        aluno_nome: aluno.nome,
         resposta,
         observacao: observacao || null,
       })
@@ -377,7 +411,7 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
           notificarRespostaAutorizacao({
             para: escola.email_contato,
             escolaNome: escola.nome,
-            alunoNome: nomeAluno,
+            alunoNome: aluno.nome,
             titulo: aut.titulo,
             resposta,
             observacao: observacao || null,
@@ -385,7 +419,7 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
         }
       }
     } catch (e) {
-      console.error('Erro ao notificar escola sobre resposta:', e)
+      console.error('Erro ao notificar escola:', e)
     }
 
     revalidatePath('/responsavel')
