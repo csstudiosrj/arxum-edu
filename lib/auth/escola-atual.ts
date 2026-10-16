@@ -34,7 +34,6 @@ export async function getEscolaDoUsuario(): Promise<EscolaCompleta | null> {
       .maybeSingle()
 
     if (!perfil?.escola_id) return null
-
     return await getEscolaPorId(perfil.escola_id)
   } catch (e) {
     console.error('Erro ao buscar escola do usuário:', e)
@@ -46,6 +45,16 @@ export async function getEscolaPorId(id: string): Promise<EscolaCompleta | null>
   try {
     const admin = createAdminClient()
     const { data } = await admin.from('escolas').select('*').eq('id', id).maybeSingle()
+    return (data || null) as EscolaCompleta | null
+  } catch (e) {
+    return null
+  }
+}
+
+export async function getEscolaPorSlug(slug: string): Promise<EscolaCompleta | null> {
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin.from('escolas').select('*').eq('slug', slug).maybeSingle()
     return (data || null) as EscolaCompleta | null
   } catch (e) {
     return null
@@ -64,6 +73,10 @@ export async function getEscolaPadrao(): Promise<EscolaCompleta | null> {
   } catch (e) {
     return null
   }
+}
+
+export async function getEscolaDaRequisicao(): Promise<EscolaCompleta | null> {
+  return await getEscolaPadrao()
 }
 
 export async function getNomeEscolaAtual(): Promise<string> {

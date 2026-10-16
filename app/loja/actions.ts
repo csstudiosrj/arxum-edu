@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type ProdutoLoja = {
@@ -31,10 +32,10 @@ export type PedidoResponsavel = {
 
 export async function getProdutosLoja(): Promise<ProdutoLoja[]> {
   try {
-    const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
+    const escola = await getEscolaDaRequisicao()
     if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('produtos')
       .select('id, nome, descricao, categoria, preco_centavos, estoque')
@@ -57,9 +58,10 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
 
     if (itens.length === 0) return { success: false, error: 'Carrinho vazio.' }
 
-    const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
+    const escola = await getEscolaDaRequisicao()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
 
     const { data: perfil } = await admin
       .from('perfis')
@@ -110,19 +112,29 @@ export async function getMeusPedidos(): Promise<PedidoResponsavel[]> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) return []
 
+    const escola = await getEscolaDaRequisicao()
+    if (!escola) return []
+
     const admin = createAdminClient()
     const { data: pedidos, error } = await admin
       .from('pedidos')
       .select('id, total_centavos, status, observacao, criado_em')
       .eq('responsavel_email', user.email)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error || !pedidos) return []
 
-    const { data: itens } = await admin
-      .from('pedido_itens')
-      .select('pedido_id, produto_nome, quantidade, preco_unitario_centavos')
-      .in('pedido_id', pedidos.map((p) => p.id))
+    const idsPedidos = pedidos.map((p) => p.id)
+
+    let itens: Array<{ pedido_id: string; produto_nome: string; quantidade: number; preco_unitario_centavos: number }> = []
+    if (idsPedidos.length > 0) {
+      const { data } = await admin
+        .from('pedido_itens')
+        .select('pedido_id, produto_nome, quantidade, preco_unitario_centavos')
+        .in('pedido_id', idsPedidos)
+      itens = (data || []) as typeof itens
+    }
 
     return pedidos.map((p) => ({
       id: p.id,
@@ -130,7 +142,7 @@ export async function getMeusPedidos(): Promise<PedidoResponsavel[]> {
       status: p.status,
       observacao: p.observacao,
       criado_em: p.criado_em,
-      itens: (itens || [])
+      itens: itens
         .filter((i) => i.pedido_id === p.id)
         .map((i) => ({
           produto_nome: i.produto_nome,

@@ -1,25 +1,12 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host') || ''
-  const { pathname } = request.nextUrl
-
-  // Subdomínio edu.csstudios.site: aplica o basePath /edu quando necessário
-  if (hostname === 'edu.csstudios.site') {
-    const hasEduPrefix = pathname === '/edu' || pathname.startsWith('/edu/')
-    if (!hasEduPrefix) {
-      const url = request.nextUrl.clone()
-      url.pathname = pathname === '/' ? '/edu' : `/edu${pathname}`
-      return NextResponse.rewrite(url)
-    }
-  }
-
   return await updateSession(request)
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|edu/_next/static|edu/_next/image).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

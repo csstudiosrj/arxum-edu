@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 
 export type InscricaoInput = {
   aluno_nome: string
@@ -38,17 +39,12 @@ export type DocumentosInput = {
 
 export async function submitInscricao(data: InscricaoInput, documentos: DocumentosInput = {}) {
   try {
-    const supabase = createAdminClient()
-
-    const { data: escola } = await supabase
-      .from('escolas')
-      .select('id')
-      .eq('slug', 'colegio-horizonte')
-      .single()
-
+    const escola = await getEscolaDaRequisicao()
     if (!escola) {
       return { success: false, error: 'Escola não encontrada.' }
     }
+
+    const supabase = createAdminClient()
 
     const { data: inscricao, error } = await supabase
       .from('inscricoes')
@@ -68,4 +64,9 @@ export async function submitInscricao(data: InscricaoInput, documentos: Document
   } catch (e) {
     return { success: false, error: 'Erro ao enviar inscrição. Tente novamente.' }
   }
+}
+
+export async function getNomeEscolaPublica(): Promise<string> {
+  const escola = await getEscolaDaRequisicao()
+  return escola?.nome || 'Escola'
 }

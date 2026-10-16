@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 import { EduflixClient } from './eduflix-client'
 
 export const dynamic = 'force-dynamic'
@@ -14,16 +15,13 @@ export type VideoaulaPublica = {
   visualizacoes: number
 }
 
-async function getVideoaulas(): Promise<VideoaulaPublica[]> {
+async function getVideoaulas(escolaId: string): Promise<VideoaulaPublica[]> {
   try {
     const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-    if (!escola) return []
-
     const { data, error } = await admin
       .from('videoaulas')
       .select('id, titulo, descricao, disciplina, serie, duracao_minutos, video_url, visualizacoes')
-      .eq('escola_id', escola.id)
+      .eq('escola_id', escolaId)
       .eq('publicado', true)
       .order('criado_em', { ascending: false })
 
@@ -35,6 +33,7 @@ async function getVideoaulas(): Promise<VideoaulaPublica[]> {
 }
 
 export default async function EduflixPage() {
-  const videoaulas = await getVideoaulas()
+  const escola = await getEscolaDaRequisicao()
+  const videoaulas = escola ? await getVideoaulas(escola.id) : []
   return <EduflixClient videoaulas={videoaulas} />
 }

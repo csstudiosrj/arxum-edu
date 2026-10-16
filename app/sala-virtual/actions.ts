@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Aula = {
@@ -31,20 +32,26 @@ async function getEmailUsuario(): Promise<string | null> {
   return user?.email || null
 }
 
+async function getEscolaIdRequisicao(): Promise<string | null> {
+  const escola = await getEscolaDaRequisicao()
+  return escola?.id || null
+}
+
 export async function getModulosComProgresso(): Promise<Modulo[]> {
   try {
     const email = await getEmailUsuario()
     if (!email) return []
 
-    const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-    if (!escola) return []
+    const escolaId = await getEscolaIdRequisicao()
+    if (!escolaId) return []
 
-    // Busca aluno vinculado ao e-mail
+    const admin = createAdminClient()
+
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
+      .eq('escola_id', escolaId)
       .limit(1)
       .maybeSingle()
 
@@ -53,18 +60,34 @@ export async function getModulosComProgresso(): Promise<Modulo[]> {
     const { data: mods, error: erroMods } = await admin
       .from('modulos')
       .select('id, titulo, descricao, disciplina, serie, ordem')
-      .eq('escola_id', escola.id)
+      .eq('escola_id', escolaId)
       .eq('publicado', true)
       .order('ordem', { ascending: true })
 
     if (erroMods || !mods) return []
 
-    const { data: todasAulas } = await admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos, ordem')
-      .in('modulo_id', mods.map((m) => m.id))
-      .eq('publicado', true)
-      .order('ordem', { ascending: true })
+    const idsMods = mods.map((m) => m.id)
+
+    let todasAulas: Array<{
+      id: string
+      modulo_id: string
+      titulo: string
+      descricao: string | null
+      tipo: string
+      conteudo_url: string | null
+      duracao_minutos: number | null
+      ordem: number
+    }> = []
+
+    if (idsMods.length > 0) {
+      const { data } = await admin
+        .from('aulas')
+        .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos, ordem')
+        .in('modulo_id', idsMods)
+        .eq('publicado', true)
+        .order('ordem', { ascending: true })
+      todasAulas = (data || []) as typeof todasAulas
+    }
 
     const { data: progressos } = await admin
       .from('aulas_progresso')
@@ -83,7 +106,7 @@ export async function getModulosComProgresso(): Promise<Modulo[]> {
       descricao: m.descricao,
       disciplina: m.disciplina,
       serie: m.serie,
-      aulas: (todasAulas || [])
+      aulas: todasAulas
         .filter((a) => a.modulo_id === m.id)
         .map((a) => ({
           id: a.id,
@@ -108,11 +131,15 @@ export async function salvarAnotacao(aulaId: string, anotacao: string) {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
 
+    const escolaId = await getEscolaIdRequisicao()
+    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
+      .eq('escola_id', escolaId)
       .limit(1)
       .maybeSingle()
 
@@ -154,11 +181,15 @@ export async function marcarConcluida(aulaId: string, concluida: boolean) {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
 
+    const escolaId = await getEscolaIdRequisicao()
+    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
+      .eq('escola_id', escolaId)
       .limit(1)
       .maybeSingle()
 
