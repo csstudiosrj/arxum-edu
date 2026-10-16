@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -14,6 +14,7 @@ const schoolItems = [
   ['Visão geral', '/dashboard', LayoutDashboard],
   ['Relatórios', '/admin/relatorios', BarChart3],
   ['Site', '/admin/site', Globe],
+  ['Personalização', '/admin/personalizacao', Palette],
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
@@ -36,6 +37,7 @@ const superItems = [
   ['Visão geral', '/super-admin', LayoutDashboard],
   ['Escolas', '/super-admin/escolas', Building2],
   ['Planos', '/super-admin/planos', WalletCards],
+  ['Add-ons', '/super-admin/addons', Palette],
   ['Faturamento', '/super-admin/faturamento', CircleDollarSign],
   ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
