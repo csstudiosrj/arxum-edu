@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { enviarConfirmacaoCadastro } from '@/lib/emails/cadastro'
 
 export type CadastroInput = {
   escola_nome: string
@@ -60,20 +61,21 @@ export async function cadastrarEscola(data: CadastroInput) {
         nome: data.escola_nome,
         slug: slugFinal,
         plano: data.plano,
+        status_assinatura: 'trial',
       })
-      .select('id, slug')
+      .select('id, slug, nome')
       .single()
 
     if (erroEscola || !escola) {
       return { success: false, error: erroEscola?.message || 'Erro ao criar escola.' }
     }
 
-    // 4. Criar usuário no Auth
+    // 4. Criar usuário no Auth — sem auto-confirmar (exige verificação por e-mail)
     const { data: authUser, error: erroAuth } = await admin.auth.admin.createUser({
       email: data.admin_email,
       password: data.admin_senha,
-      email_confirm: true,
-      user_metadata: { nome: data.admin_nome },
+      email_confirm: false,
+      user_metadata: { nome: data.admin_nome, papel: 'admin_escola' },
     })
 
     if (erroAuth || !authUser.user) {
@@ -81,7 +83,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: erroAuth?.message || 'Erro ao criar usuário.' }
     }
 
-    // 5. Vincular perfil à escola (o trigger já criou o perfil)
+    // 5. Vincular perfil à escola
     const { error: erroPerfil } = await admin
       .from('perfis')
       .update({
@@ -98,20 +100,109 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Erro ao vincular perfil à escola.' }
     }
 
-    // 6. Fazer login automático
-    const supabase = await createClient()
-    const { error: erroLogin } = await supabase.auth.signInWithPassword({
+    // 6. Gerar link de confirmação
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'signup',
       email: data.admin_email,
       password: data.admin_senha,
+      options: { redirectTo: 'https://arxum.com.br/dashboard' },
     })
 
-    if (erroLogin) {
-      return { success: true, redirect: '/login', aviso: 'Conta criada! Faça login para continuar.' }
+    if (erroLink || !linkData?.properties?.action_link) {
+      return {
+        success: true,
+        proximo_passo: 'confirmar_email',
+        email: data.admin_email,
+        slug: escola.slug,
+        aviso: 'Conta criada, mas houve falha ao gerar o link de confirmação. Contate o suporte.',
+      }
     }
 
-    return { success: true, redirect: '/dashboard' }
+    // 7. Enviar e-mail de confirmação via Resend
+    const envio = await enviarConfirmacaoCadastro({
+      para: data.admin_email,
+      nome: data.admin_nome,
+      escolaNome: escola.nome,
+      linkConfirmacao: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return {
+        success: true,
+        proximo_passo: 'confirmar_email',
+        email: data.admin_email,
+        slug: escola.slug,
+        aviso: 'Conta criada. Houve problema ao enviar o e-mail, mas você pode tentar reenviar na próxima tela.',
+      }
+    }
+
+    return {
+      success: true,
+      proximo_passo: 'confirmar_email',
+      email: data.admin_email,
+      slug: escola.slug,
+    }
   } catch (e) {
+    console.error('Erro no cadastro:', e)
     return { success: false, error: 'Erro inesperado. Tente novamente.' }
+  }
+}
+
+export async function reenviarConfirmacao(email: string) {
+  try {
+    const admin = createAdminClient()
+
+    const { data: usuarios } = await admin.auth.admin.listUsers()
+    const user = (usuarios?.users || []).find((u) => u.email === email)
+
+    if (!user) return { success: false, error: 'Conta não encontrada.' }
+    if (user.email_confirmed_at) {
+      return { success: false, error: 'Este e-mail já foi confirmado.' }
+    }
+
+    const { data: perfil } = await admin
+      .from('perfis')
+      .select('nome, escola_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const { data: escola } = perfil?.escola_id
+      ? await admin.from('escolas').select('nome').eq('id', perfil.escola_id).maybeSingle()
+      : { data: null }
+
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'signup',
+      email: user.email!,
+      password: 'temp-' + Math.random().toString(36).slice(2),
+      options: { redirectTo: 'https://arxum.com.br/dashboard' },
+    })
+
+    // O Supabase não permite regerar senha sem reenviar. Uma alternativa é usar `inviteUserByEmail`.
+    if (erroLink || !linkData?.properties?.action_link) {
+      // Fallback: convite por e-mail (funciona para confirmar conta)
+      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, {
+        redirectTo: 'https://arxum.com.br/dashboard',
+      })
+      if (erroInvite) {
+        return { success: false, error: 'Não foi possível reenviar agora. Tente novamente em alguns minutos.' }
+      }
+      return { success: true }
+    }
+
+    const envio = await enviarConfirmacaoCadastro({
+      para: user.email!,
+      nome: perfil?.nome || 'Administrador',
+      escolaNome: escola?.nome || 'Sua escola',
+      linkConfirmacao: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return { success: false, error: 'Erro ao enviar e-mail.' }
+    }
+
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao reenviar.' }
   }
 }
 

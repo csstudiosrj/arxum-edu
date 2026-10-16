@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Phone, FileText, Check, Loader2, CheckCircle2 } from 'lucide-react'
-import { cadastrarEscola, verificarSlug } from './actions'
+import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Phone, FileText, Check, Loader2, CheckCircle2, RefreshCw } from 'lucide-react'
+import { cadastrarEscola, reenviarConfirmacao } from './actions'
 
 const planos = [
   { key: 'semente', label: 'Semente', preco: 'R$ 199/mês', desc: 'Até 100 alunos' },
@@ -40,8 +39,13 @@ function formatarTelefone(v: string): string {
   return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
 }
 
+type Estado = 'formulario' | 'aguardando_email'
+
 export function CadastroClient() {
-  const router = useRouter()
+  const [estado, setEstado] = useState<Estado>('formulario')
+  const [emailCadastrado, setEmailCadastrado] = useState('')
+  const [escolaNomeCadastrada, setEscolaNomeCadastrada] = useState('')
+
   const [plano, setPlano] = useState('raiz')
   const [escolaNome, setEscolaNome] = useState('')
   const [escolaCnpj, setEscolaCnpj] = useState('')
@@ -52,7 +56,8 @@ export function CadastroClient() {
   const [aceitou, setAceitou] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
-  const [sucesso, setSucesso] = useState(false)
+  const [reenviando, setReenviando] = useState(false)
+  const [reenviado, setReenviado] = useState(false)
 
   const slugSugerido = slugify(escolaNome)
 
@@ -67,14 +72,6 @@ export function CadastroClient() {
     if (!aceitou) return setErro('Você precisa aceitar os termos.')
 
     setEnviando(true)
-
-    // Verificar se slug está disponível
-    const slugLivre = await verificarSlug(slugSugerido)
-    if (!slugLivre) {
-      setEnviando(false)
-      setErro('Já existe uma escola com esse nome. Tente adicionar uma palavra diferente.')
-      return
-    }
 
     const result = await cadastrarEscola({
       escola_nome: escolaNome,
@@ -93,28 +90,77 @@ export function CadastroClient() {
       return
     }
 
-    setSucesso(true)
-    setTimeout(() => {
-      router.push(result.redirect || '/dashboard')
-      router.refresh()
-    }, 2000)
+    if (result.proximo_passo === 'confirmar_email' && result.email) {
+      setEmailCadastrado(result.email)
+      setEscolaNomeCadastrada(escolaNome)
+      setEstado('aguardando_email')
+      return
+    }
+
+    setErro('Fluxo inesperado. Contate o suporte.')
   }
 
-  if (sucesso) {
+  async function handleReenviar() {
+    setReenviando(true)
+    setReenviado(false)
+    const r = await reenviarConfirmacao(emailCadastrado)
+    setReenviando(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao reenviar.')
+      return
+    }
+    setReenviado(true)
+    setTimeout(() => setReenviado(false), 5000)
+  }
+
+  // ── Tela de aguardando confirmação ─────────────────────────────
+  if (estado === 'aguardando_email') {
     return (
       <main className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 lg:px-8">
         <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
-          <CheckCircle2 className="size-8" />
+          <Mail className="size-8" />
         </div>
-        <h1 className="mt-6 text-center font-syne text-4xl font-bold tracking-[-.04em] text-white">Conta criada!</h1>
+        <h1 className="mt-6 text-center font-syne text-4xl font-bold tracking-[-.04em] text-white">
+          Confirme seu e-mail
+        </h1>
         <p className="mt-4 max-w-md text-center text-sm leading-6 text-[#8aa0ad]">
-          Estamos preparando tudo para você. Em instantes você será redirecionado para o painel da sua escola.
+          Enviamos um link de confirmação para <strong className="text-[#e7f1f5]">{emailCadastrado}</strong>.
+          Clique no link para ativar a conta da <strong className="text-[#e7f1f5]">{escolaNomeCadastrada}</strong>.
         </p>
-        <div className="mt-8"><Loader2 className="size-6 animate-spin text-[#0d9488]" /></div>
+
+        <div className="mt-8 w-full rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#5e7a94]">Próximos passos</p>
+          <ol className="mt-3 space-y-3 text-sm text-[#c7d5db]">
+            <li className="flex gap-3"><span className="text-[#0d9488]">1.</span> Abra o e-mail que enviamos para {emailCadastrado}.</li>
+            <li className="flex gap-3"><span className="text-[#0d9488]">2.</span> Clique em "Confirmar e-mail".</li>
+            <li className="flex gap-3"><span className="text-[#0d9488]">3.</span> Você será redirecionado para o painel da escola.</li>
+          </ol>
+          <p className="mt-4 text-xs leading-5 text-[#82939a]">
+            Não recebeu? Verifique a pasta de spam ou clique abaixo para reenviar.
+          </p>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <button
+            onClick={handleReenviar}
+            disabled={reenviando || reenviado}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-[#c7d5db] transition hover:border-[#0d9488] hover:text-white disabled:opacity-50"
+          >
+            {reenviando ? <Loader2 className="size-4 animate-spin" /> : reenviado ? <CheckCircle2 className="size-4 text-[#0d9488]" /> : <RefreshCw className="size-4" />}
+            {reenviando ? 'Reenviando...' : reenviado ? 'E-mail reenviado!' : 'Reenviar e-mail'}
+          </button>
+          <Link
+            href="/login"
+            className="text-xs text-[#5e7a94] transition hover:text-white"
+          >
+            Voltar para o login
+          </Link>
+        </div>
       </main>
     )
   }
 
+  // ── Formulário ─────────────────────────────────────────────────
   return (
     <main className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-20">
       <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -127,7 +173,7 @@ export function CadastroClient() {
           Crie a conta da sua escola
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
-          Preencha os dados abaixo. Sua escola estará pronta para uso em menos de 2 minutos.
+          Preencha os dados abaixo. Vamos enviar um e-mail para confirmar sua conta.
         </p>
       </div>
 
