@@ -45,11 +45,20 @@ export type BannerHero = {
     itens: ItemDiferencial[]
   }
   
+  export type Noticia = {
+    id: string
+    data: string
+    titulo: string
+    categoria: string
+    imagem_url: string
+  }
+  
   export type BlocoNoticias = {
     ativo: boolean
     eyebrow: string
     titulo: string
     quantidade: number
+    itens: Noticia[]
   }
   
   export type BlocoCtaFinal = {
@@ -111,7 +120,7 @@ export type BannerHero = {
       diferenciais: {
         ativo: true,
         eyebrow: 'Nossa diferença',
-        titulo: 'Por que escolher nossa escola',
+        titulo: 'Por que escolher a {escola}',
         itens: [
           { id: 'cuidado', titulo: 'Cuidado que educa', descricao: 'Ambientes seguros, acolhedores e atentos a cada fase.' },
           { id: 'excelencia', titulo: 'Excelência acadêmica', descricao: 'Uma jornada de aprendizagem conectada ao mundo real.' },
@@ -123,6 +132,11 @@ export type BannerHero = {
         eyebrow: 'Fique por dentro',
         titulo: 'Últimas notícias',
         quantidade: 3,
+        itens: [
+          { id: 'n1', data: '12 OUT 2026', titulo: 'Como a tecnologia amplia o jeito de aprender', categoria: 'Pedagógico', imagem_url: '' },
+          { id: 'n2', data: '28 SET 2026', titulo: 'Novas salas de criação são inauguradas', categoria: 'Estrutura', imagem_url: '' },
+          { id: 'n3', data: '15 SET 2026', titulo: 'Famílias participam da Semana da Comunidade', categoria: 'Comunidade', imagem_url: '' },
+        ],
       },
       cta_final: {
         ativo: true,
@@ -149,7 +163,12 @@ export type BannerHero = {
       if (c.blocos.hero) base.blocos.hero = { ...base.blocos.hero, ...c.blocos.hero }
       if (c.blocos.segmentos) base.blocos.segmentos = { ...base.blocos.segmentos, ...c.blocos.segmentos }
       if (c.blocos.diferenciais) base.blocos.diferenciais = { ...base.blocos.diferenciais, ...c.blocos.diferenciais }
-      if (c.blocos.noticias) base.blocos.noticias = { ...base.blocos.noticias, ...c.blocos.noticias }
+      if (c.blocos.noticias) {
+        base.blocos.noticias = { ...base.blocos.noticias, ...c.blocos.noticias }
+        if (!Array.isArray(base.blocos.noticias.itens) || base.blocos.noticias.itens.length === 0) {
+          base.blocos.noticias.itens = CONTEUDO_HOME_PADRAO.blocos.noticias.itens
+        }
+      }
       if (c.blocos.cta_final) base.blocos.cta_final = { ...base.blocos.cta_final, ...c.blocos.cta_final }
     }
   
