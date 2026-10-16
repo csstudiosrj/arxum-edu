@@ -352,3 +352,239 @@ export async function excluirPlano(id: string) {
     return { success: false, error: 'Erro ao excluir plano.' }
   }
 }
+
+// ── FATURAMENTO ─────────────────────────────────────────────────────
+
+export type Faturamento = {
+  id: string
+  escola_id: string | null
+  escola_nome: string
+  descricao: string
+  valor_centavos: number
+  vencimento: string
+  status: string
+  plano: string | null
+  periodo_referencia: string | null
+  pago_em: string | null
+  observacoes: string | null
+  criado_em: string
+}
+
+export async function getFaturamento(): Promise<Faturamento[]> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('faturamento_escolas')
+      .select('*')
+      .order('vencimento', { ascending: false })
+
+    if (error) return []
+    return (data || []) as Faturamento[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function getEscolasParaFatura(): Promise<Array<{ id: string; nome: string; plano: string }>> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('escolas')
+      .select('id, nome, plano')
+      .eq('status_assinatura', 'ativa')
+      .order('nome', { ascending: true })
+
+    if (error) return []
+    return (data || []) as Array<{ id: string; nome: string; plano: string }>
+  } catch (e) {
+    return []
+  }
+}
+
+export async function criarFaturamento(data: {
+  escola_id: string
+  descricao: string
+  valor_centavos: number
+  vencimento: string
+  periodo_referencia: string
+  observacoes: string
+}) {
+  try {
+    const admin = createAdminClient()
+
+    const { data: escola } = await admin
+      .from('escolas')
+      .select('nome, plano')
+      .eq('id', data.escola_id)
+      .maybeSingle()
+
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const { error } = await admin.from('faturamento_escolas').insert({
+      escola_id: data.escola_id,
+      escola_nome: escola.nome,
+      descricao: data.descricao,
+      valor_centavos: data.valor_centavos,
+      vencimento: data.vencimento,
+      plano: escola.plano,
+      periodo_referencia: data.periodo_referencia || null,
+      observacoes: data.observacoes || null,
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/faturamento')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao criar faturamento.' }
+  }
+}
+
+export async function atualizarStatusFaturamento(id: string, novoStatus: string) {
+  try {
+    const admin = createAdminClient()
+    const payload: Record<string, any> = {
+      status: novoStatus,
+      atualizado_em: new Date().toISOString(),
+    }
+    if (novoStatus === 'pago') {
+      payload.pago_em = new Date().toISOString()
+    }
+    const { error } = await admin.from('faturamento_escolas').update(payload).eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/faturamento')
+    revalidatePath('/super-admin')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar.' }
+  }
+}
+
+export async function excluirFaturamento(id: string) {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from('faturamento_escolas').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/faturamento')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir.' }
+  }
+}
+
+// ── SUPORTE ─────────────────────────────────────────────────────────
+
+export type Ticket = {
+  id: string
+  escola_id: string | null
+  escola_nome: string
+  assunto: string
+  descricao: string | null
+  prioridade: string
+  status: string
+  categoria: string
+  aberto_por: string | null
+  atribuido_a: string | null
+  resposta: string | null
+  resolvido_em: string | null
+  criado_em: string
+  atualizado_em: string
+}
+
+export async function getTickets(): Promise<Ticket[]> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('tickets_suporte')
+      .select('*')
+      .order('criado_em', { ascending: false })
+
+    if (error) return []
+    return (data || []) as Ticket[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function criarTicket(data: {
+  escola_id: string
+  assunto: string
+  descricao: string
+  prioridade: string
+  categoria: string
+}) {
+  try {
+    const admin = createAdminClient()
+
+    const { data: escola } = await admin
+      .from('escolas')
+      .select('nome')
+      .eq('id', data.escola_id)
+      .maybeSingle()
+
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const { error } = await admin.from('tickets_suporte').insert({
+      escola_id: data.escola_id,
+      escola_nome: escola.nome,
+      assunto: data.assunto,
+      descricao: data.descricao || null,
+      prioridade: data.prioridade,
+      categoria: data.categoria,
+      aberto_por: 'ARXUM',
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/suporte')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao criar ticket.' }
+  }
+}
+
+export async function atualizarTicket(id: string, data: {
+  status?: string
+  prioridade?: string
+  resposta?: string
+  atribuido_a?: string | null
+}) {
+  try {
+    const admin = createAdminClient()
+    const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
+
+    if (data.status !== undefined) {
+      payload.status = data.status
+      if (data.status === 'resolvido' || data.status === 'fechado') {
+        payload.resolvido_em = new Date().toISOString()
+      }
+    }
+    if (data.prioridade !== undefined) payload.prioridade = data.prioridade
+    if (data.resposta !== undefined) payload.resposta = data.resposta
+    if (data.atribuido_a !== undefined) payload.atribuido_a = data.atribuido_a
+
+    const { error } = await admin.from('tickets_suporte').update(payload).eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/suporte')
+    revalidatePath('/super-admin')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar ticket.' }
+  }
+}
+
+export async function excluirTicket(id: string) {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from('tickets_suporte').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/suporte')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir.' }
+  }
+}
