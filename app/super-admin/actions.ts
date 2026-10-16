@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
+// ── MÉTRICAS ────────────────────────────────────────────────────────
+
 export type MetricasSaaS = {
   escolasAtivas: number
   escolasTrial: number
@@ -18,13 +20,6 @@ export type MetricasSaaS = {
   novosEsteMes: number
 }
 
-const precosPlanos: Record<string, number> = {
-  semente: 19900,
-  raiz: 39900,
-  copa: 69900,
-  rede: 0,
-}
-
 export async function getMetricasSaaS(): Promise<MetricasSaaS> {
   const vazio: MetricasSaaS = {
     escolasAtivas: 0, escolasTrial: 0, escolasSuspensas: 0, escolasTotal: 0,
@@ -37,44 +32,41 @@ export async function getMetricasSaaS(): Promise<MetricasSaaS> {
 
     const { data: escolas, error } = await admin
       .from('escolas')
-      .select('id, nome, slug, plano, criado_em')
+      .select('id, nome, slug, plano, status_assinatura, criado_em')
 
     if (error || !escolas) return vazio
 
-    const { data: alunos } = await admin
-      .from('alunos')
-      .select('escola_id')
+    const { data: planos } = await admin.from('planos').select('slug, preco_centavos')
+    const precosPlanos: Record<string, number> = {}
+    ;(planos || []).forEach((p) => { precosPlanos[p.slug] = p.preco_centavos })
 
+    const { data: alunos } = await admin.from('alunos').select('escola_id')
     const alunosPorEscola: Record<string, number> = {}
     ;(alunos || []).forEach((a) => {
-      if (a.escola_id) {
-        alunosPorEscola[a.escola_id] = (alunosPorEscola[a.escola_id] || 0) + 1
+      if (a.escola_id) alunosPorEscola[a.escola_id] = (alunosPorEscola[a.escola_id] || 0) + 1
+    })
+
+    const agora = new Date()
+    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+
+    const ativas = escolas.filter((e) => e.status_assinatura === 'ativa').length
+    const trial = escolas.filter((e) => e.status_assinatura === 'trial').length
+    const suspensas = escolas.filter((e) => e.status_assinatura === 'suspensa' || e.status_assinatura === 'cancelada').length
+
+    const distMap: Record<string, { total: number; mrrCentavos: number }> = {}
+    escolas.forEach((e) => {
+      if (!distMap[e.plano]) distMap[e.plano] = { total: 0, mrrCentavos: 0 }
+      distMap[e.plano].total += 1
+      if (e.status_assinatura === 'ativa') {
+        distMap[e.plano].mrrCentavos += precosPlanos[e.plano] || 0
       }
     })
 
-    const totalAlunos = (alunos || []).length
-
-    const agora = new Date()
-    const mesAtual = agora.getMonth()
-    const anoAtual = agora.getFullYear()
-    const inicioMes = new Date(anoAtual, mesAtual, 1)
-
-    const escolasAtivas = escolas.filter((e) => e.plano !== 'rede' || true).length
-    const escolasTrial = 0
-    const escolasSuspensas = 0
-
-    const distribuicaoPlanosMap: Record<string, { total: number; mrrCentavos: number }> = {}
-    escolas.forEach((e) => {
-      if (!distribuicaoPlanosMap[e.plano]) distribuicaoPlanosMap[e.plano] = { total: 0, mrrCentavos: 0 }
-      distribuicaoPlanosMap[e.plano].total += 1
-      distribuicaoPlanosMap[e.plano].mrrCentavos += precosPlanos[e.plano] || 0
-    })
-
-    const distribuicaoPlanos = Object.entries(distribuicaoPlanosMap)
+    const distribuicaoPlanos = Object.entries(distMap)
       .map(([plano, v]) => ({ plano, total: v.total, mrrCentavos: v.mrrCentavos }))
       .sort((a, b) => b.total - a.total)
 
-    const mrrCentavos = Object.values(distribuicaoPlanosMap).reduce((s, v) => s + v.mrrCentavos, 0)
+    const mrrCentavos = Object.values(distMap).reduce((s, v) => s + v.mrrCentavos, 0)
 
     const escolasRecentes = [...escolas]
       .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
@@ -90,7 +82,6 @@ export async function getMetricasSaaS(): Promise<MetricasSaaS> {
 
     const novosEsteMes = escolas.filter((e) => new Date(e.criado_em) >= inicioMes).length
 
-    // Tickets
     const { data: tickets } = await admin
       .from('tickets_suporte')
       .select('id, escola_nome, assunto, prioridade, status, criado_em')
@@ -100,12 +91,12 @@ export async function getMetricasSaaS(): Promise<MetricasSaaS> {
     const ticketsUrgentes = (tickets || []).filter((t) => t.prioridade === 'urgente' || t.prioridade === 'alta').length
 
     return {
-      escolasAtivas,
-      escolasTrial,
-      escolasSuspensas,
+      escolasAtivas: ativas,
+      escolasTrial: trial,
+      escolasSuspensas: suspensas,
       escolasTotal: escolas.length,
       mrrCentavos,
-      alunosTotal: totalAlunos,
+      alunosTotal: (alunos || []).length,
       distribuicaoPlanos,
       escolasRecentes,
       ticketsAbertos,
@@ -114,19 +105,29 @@ export async function getMetricasSaaS(): Promise<MetricasSaaS> {
       novosEsteMes,
     }
   } catch (e) {
-    console.error('Erro ao gerar métricas SaaS:', e)
+    console.error('Erro ao gerar métricas:', e)
     return vazio
   }
 }
+
+// ── ESCOLAS ─────────────────────────────────────────────────────────
 
 export type EscolaSuper = {
   id: string
   nome: string
   slug: string
   plano: string
+  status_assinatura: string
+  data_vencimento: string | null
+  observacoes_admin: string | null
+  contato_responsavel: string | null
+  whatsapp: string | null
+  email_contato: string | null
+  cidade: string | null
+  estado: string | null
   criado_em: string
   alunos: number
-  faturas: number
+  usuarios: number
   mrrCentavos: number
 }
 
@@ -136,53 +137,218 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
 
     const { data: escolas, error } = await admin
       .from('escolas')
-      .select('id, nome, slug, plano, criado_em')
+      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em')
       .order('nome', { ascending: true })
 
     if (error || !escolas) return []
 
+    const { data: planos } = await admin.from('planos').select('slug, preco_centavos')
+    const precos: Record<string, number> = {}
+    ;(planos || []).forEach((p) => { precos[p.slug] = p.preco_centavos })
+
     const { data: alunos } = await admin.from('alunos').select('escola_id')
-    const { data: faturas } = await admin.from('faturas').select('escola_id')
+    const { data: perfis } = await admin.from('perfis').select('escola_id')
 
     const alunosPorEscola: Record<string, number> = {}
-    ;(alunos || []).forEach((a) => {
-      if (a.escola_id) alunosPorEscola[a.escola_id] = (alunosPorEscola[a.escola_id] || 0) + 1
-    })
+    ;(alunos || []).forEach((a) => { if (a.escola_id) alunosPorEscola[a.escola_id] = (alunosPorEscola[a.escola_id] || 0) + 1 })
 
-    const faturasPorEscola: Record<string, number> = {}
-    ;(faturas || []).forEach((f) => {
-      if (f.escola_id) faturasPorEscola[f.escola_id] = (faturasPorEscola[f.escola_id] || 0) + 1
-    })
+    const usuariosPorEscola: Record<string, number> = {}
+    ;(perfis || []).forEach((p) => { if (p.escola_id) usuariosPorEscola[p.escola_id] = (usuariosPorEscola[p.escola_id] || 0) + 1 })
 
     return escolas.map((e) => ({
-      id: e.id,
-      nome: e.nome,
-      slug: e.slug,
-      plano: e.plano,
-      criado_em: e.criado_em,
+      ...e,
       alunos: alunosPorEscola[e.id] || 0,
-      faturas: faturasPorEscola[e.id] || 0,
-      mrrCentavos: precosPlanos[e.plano] || 0,
-    }))
+      usuarios: usuariosPorEscola[e.id] || 0,
+      mrrCentavos: e.status_assinatura === 'ativa' ? (precos[e.plano] || 0) : 0,
+    })) as EscolaSuper[]
   } catch (e) {
     return []
   }
 }
 
-export async function atualizarPlanoEscola(escolaId: string, novoPlano: string) {
+export async function atualizarEscola(id: string, data: {
+  plano?: string
+  status_assinatura?: string
+  data_vencimento?: string | null
+  observacoes_admin?: string | null
+  contato_responsavel?: string | null
+  whatsapp?: string | null
+}) {
   try {
     const admin = createAdminClient()
-    const { error } = await admin
-      .from('escolas')
-      .update({ plano: novoPlano, atualizado_em: new Date().toISOString() })
-      .eq('id', escolaId)
+    const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
 
+    if (data.plano !== undefined) payload.plano = data.plano
+    if (data.status_assinatura !== undefined) payload.status_assinatura = data.status_assinatura
+    if (data.data_vencimento !== undefined) payload.data_vencimento = data.data_vencimento
+    if (data.observacoes_admin !== undefined) payload.observacoes_admin = data.observacoes_admin
+    if (data.contato_responsavel !== undefined) payload.contato_responsavel = data.contato_responsavel
+    if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp
+
+    const { error } = await admin.from('escolas').update(payload).eq('id', id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/super-admin')
     revalidatePath('/super-admin/escolas')
     return { success: true }
   } catch (e) {
+    return { success: false, error: 'Erro ao atualizar escola.' }
+  }
+}
+
+export async function excluirEscola(id: string) {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin.from('escolas').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin')
+    revalidatePath('/super-admin/escolas')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir escola.' }
+  }
+}
+
+// ── PLANOS ──────────────────────────────────────────────────────────
+
+export type Plano = {
+  id: string
+  slug: string
+  nome: string
+  descricao: string | null
+  preco_centavos: number
+  max_alunos: number | null
+  max_unidades: number | null
+  recursos: string[]
+  destaque: boolean
+  ativo: boolean
+  ordem: number
+  total_escolas?: number
+}
+
+export async function getPlanos(): Promise<Plano[]> {
+  try {
+    const admin = createAdminClient()
+
+    const { data, error } = await admin
+      .from('planos')
+      .select('*')
+      .order('ordem', { ascending: true })
+
+    if (error || !data) return []
+
+    const { data: escolas } = await admin.from('escolas').select('plano')
+    const contagem: Record<string, number> = {}
+    ;(escolas || []).forEach((e) => { contagem[e.plano] = (contagem[e.plano] || 0) + 1 })
+
+    return data.map((p) => ({
+      ...p,
+      recursos: Array.isArray(p.recursos) ? p.recursos : [],
+      total_escolas: contagem[p.slug] || 0,
+    })) as Plano[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function criarPlano(data: {
+  slug: string
+  nome: string
+  descricao: string
+  preco_centavos: number
+  max_alunos: number | null
+  max_unidades: number | null
+  recursos: string[]
+  destaque: boolean
+}) {
+  try {
+    const admin = createAdminClient()
+
+    if (!data.slug.trim()) return { success: false, error: 'Informe o slug.' }
+    if (!data.nome.trim()) return { success: false, error: 'Informe o nome.' }
+
+    const { data: existente } = await admin.from('planos').select('id').eq('slug', data.slug).maybeSingle()
+    if (existente) return { success: false, error: 'Já existe um plano com esse slug.' }
+
+    const { data: maxOrdem } = await admin.from('planos').select('ordem').order('ordem', { ascending: false }).limit(1).maybeSingle()
+    const proximaOrdem = (maxOrdem?.ordem || 0) + 1
+
+    const { error } = await admin.from('planos').insert({
+      slug: data.slug,
+      nome: data.nome,
+      descricao: data.descricao || null,
+      preco_centavos: data.preco_centavos,
+      max_alunos: data.max_alunos,
+      max_unidades: data.max_unidades,
+      recursos: data.recursos,
+      destaque: data.destaque,
+      ordem: proximaOrdem,
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/planos')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao criar plano.' }
+  }
+}
+
+export async function atualizarPlano(id: string, data: {
+  nome: string
+  descricao: string
+  preco_centavos: number
+  max_alunos: number | null
+  max_unidades: number | null
+  recursos: string[]
+  destaque: boolean
+  ativo: boolean
+}) {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('planos')
+      .update({
+        nome: data.nome,
+        descricao: data.descricao || null,
+        preco_centavos: data.preco_centavos,
+        max_alunos: data.max_alunos,
+        max_unidades: data.max_unidades,
+        recursos: data.recursos,
+        destaque: data.destaque,
+        ativo: data.ativo,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/planos')
+    return { success: true }
+  } catch (e) {
     return { success: false, error: 'Erro ao atualizar plano.' }
+  }
+}
+
+export async function excluirPlano(id: string) {
+  try {
+    const admin = createAdminClient()
+
+    const { data: plano } = await admin.from('planos').select('slug').eq('id', id).maybeSingle()
+    if (!plano) return { success: false, error: 'Plano não encontrado.' }
+
+    const { count } = await admin.from('escolas').select('*', { count: 'exact', head: true }).eq('plano', plano.slug)
+    if (count && count > 0) {
+      return { success: false, error: `Existem ${count} escolas usando esse plano. Mude o plano delas antes de excluir.` }
+    }
+
+    const { error } = await admin.from('planos').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/super-admin/planos')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir plano.' }
   }
 }
