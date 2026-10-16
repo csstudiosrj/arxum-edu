@@ -21,36 +21,38 @@ export function pagarmeConfigurado(): boolean {
 
 // ── Tipos ──────────────────────────────────────────────────────────
 export type PagarmeEndereco = {
-  line_1: string         // "Rua X, 123, Bairro"
-  zip_code: string       // "12345678" (só dígitos)
+  line_1: string
+  zip_code: string
   city: string
-  state: string          // "RJ"
-  country: string        // "BR"
+  state: string
+  country: string
 }
 
 export type PagarmeTelefone = {
-  country_code: string   // "55"
-  area_code: string      // "21"
-  number: string         // "900000000" (só dígitos)
+  country_code: string
+  area_code: string
+  number: string
 }
 
 export type DadosRecebedor = {
   nome: string
   email: string
-  documento: string             // CNPJ ou CPF só dígitos
+  documento: string
   tipo: 'individual' | 'company'
   telefone: PagarmeTelefone
   endereco: PagarmeEndereco
   banco: {
-    codigo: string              // "341", "237", "001" etc
+    codigo: string
     agencia: string
+    agenciaDigito?: string       // opcional — algumas contas não têm
     conta: string
     digito: string
     tipo: 'checking' | 'savings'
     titular_nome: string
     titular_documento: string
+    titular_tipo?: 'individual' | 'company'
   }
-  siteUrl?: string              // opcional
+  siteUrl?: string
 }
 
 // ── Recebedores (escolas no marketplace) ──────────────────────────
@@ -74,20 +76,21 @@ export async function criarRecebedor(dados: DadosRecebedor) {
         ...(dados.siteUrl ? { site_url: dados.siteUrl } : {}),
         phone: dados.telefone,
         address: dados.endereco,
-        bank_account: {
+        default_bank_account: {
           holder_name: dados.banco.titular_nome,
-          holder_type: dados.tipo,
+          holder_type: dados.banco.titular_tipo || dados.tipo,
           holder_document: dados.banco.titular_documento,
           bank: dados.banco.codigo,
           branch_number: dados.banco.agencia,
+          ...(dados.banco.agenciaDigito ? { branch_check_digit: dados.banco.agenciaDigito } : {}),
           account_number: dados.banco.conta,
           account_check_digit: dados.banco.digito,
           type: dados.banco.tipo,
         },
         transfer_settings: {
           transfer_enabled: true,
-          transfer_interval: 'daily',
-          transfer_day: 1,
+          transfer_interval: 'Daily',
+          transfer_day: 0,
         },
         automatic_anticipation_settings: {
           enabled: false,
@@ -186,15 +189,15 @@ export async function criarOuAtualizarCliente(params: {
 // ── Pedidos (orders com split) ────────────────────────────────────
 export type SplitRule = {
   recipientId: string
-  amount?: number            // centavos
-  percentage?: number        // 0-100
+  amount?: number
+  percentage?: number
   chargeRemainder?: boolean
   chargeProcessingFee?: boolean
   liable?: boolean
 }
 
 export type ItemPedido = {
-  amount: number             // centavos
+  amount: number
   description: string
   quantity: number
   code?: string
@@ -320,11 +323,8 @@ export async function obterPedido(orderId: string) {
 }
 
 // ── Cálculo de split ──────────────────────────────────────────────
-// Faturas: ARXUM recebe a % do total via `percentage`. Escola é a
-// liable + charge_processing_fee + charge_remainder, então absorve a
-// taxa do Pagar.me (não sobra pro ARXUM nem pro responsável).
 export function calcularSplitFatura(params: {
-  taxaArxumBps: number         // 200 = 2%
+  taxaArxumBps: number
   recipientEscolaId: string
   recipientArxumId: string
 }): SplitRule[] {
@@ -345,12 +345,10 @@ export function calcularSplitFatura(params: {
   ]
 }
 
-// Loja: produto X% pra ARXUM + R$ 0,99 de taxa de serviço pro ARXUM.
-// Escola recebe o resto e absorve a taxa do Pagar.me.
 export function calcularSplitLoja(params: {
   valorProdutosCentavos: number
   taxaServicoCentavos: number
-  taxaArxumBps: number         // 300 = 3%
+  taxaArxumBps: number
   recipientEscolaId: string
   recipientArxumId: string
 }): { split: SplitRule[]; totalCobradoCentavos: number } {
