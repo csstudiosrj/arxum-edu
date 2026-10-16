@@ -19,25 +19,31 @@ const SLUGS_RESERVADOS = new Set([
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Ignora assets e API
   if (
-    pathname.startsWith('/edu/_next') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api')
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
   ) {
-    return NextResponse.next()
+    return await updateSession(request)
   }
 
-  // Detecta /edu/{slug}/...  ou  /edu/{slug}
   const match = pathname.match(/^\/edu\/([^/]+)(\/.*)?$/)
   if (match) {
     const slug = match[1]
-    const resto = match[2] || ''
+    const resto = match[2]
+
     if (!SLUGS_RESERVADOS.has(slug)) {
-      const url = request.nextUrl.clone()
-      url.pathname = `/edu${resto || ''}`
       const requestHeaders = new Headers(request.headers)
       requestHeaders.set('x-escola-slug', slug)
+
+      if (!resto || resto === '/') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/escola'
+        return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+      }
+
+      const url = request.nextUrl.clone()
+      url.pathname = resto
       return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
     }
   }

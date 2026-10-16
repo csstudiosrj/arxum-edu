@@ -19,30 +19,41 @@ export function ArxumBrand({ light = false }: { light?: boolean }) {
   )
 }
 
-export function PublicHeader() {
+export function PublicHeader({ slug }: { slug?: string }) {
+  const base = slug ? `/edu/${slug}` : ''
+
   return (
     <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-      <ArxumBrand />
+      <Link href={base || '/'} className="flex items-center gap-1.5" aria-label="Início">
+        <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
+          ARXUM
+        </span>
+        <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
+          Edu
+        </span>
+      </Link>
       <nav className="hidden items-center gap-7 text-sm text-[#8aa0ad] lg:flex">
-        {['A Escola', 'Segmentos', 'Estrutura', 'Notícias', 'Contato'].map((item) => (
-          <a
-            key={item}
-            href={`#${item.toLowerCase().replace('í', 'i').replace(' ', '-')}`}
-            className="transition hover:text-white"
-          >
-            {item}
+        {[
+          { label: 'A Escola', href: '#a-escola' },
+          { label: 'Segmentos', href: '#segmentos' },
+          { label: 'Estrutura', href: '#estrutura' },
+          { label: 'Notícias', href: '#noticias' },
+          { label: 'Contato', href: '#contato' },
+        ].map((item) => (
+          <a key={item.label} href={item.href} className="transition hover:text-white">
+            {item.label}
           </a>
         ))}
       </nav>
       <div className="flex items-center gap-2">
         <Link
-          href="/login"
+          href={`${base}/login`}
           className="hidden rounded-lg px-4 py-2 text-sm font-medium text-[#b9cbd4] transition hover:bg-white/5 hover:text-white sm:block"
         >
           Área Restrita
         </Link>
         <Link
-          href="/matricula"
+          href={`${base}/matricula`}
           className="rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
         >
           Matrícula Online
@@ -52,7 +63,9 @@ export function PublicHeader() {
   )
 }
 
-export function PublicFooter() {
+export function PublicFooter({ slug }: { slug?: string }) {
+  const base = slug ? `/edu/${slug}` : ''
+
   return (
     <footer className="border-t border-white/[.08] px-6 py-12 lg:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
@@ -63,16 +76,16 @@ export function PublicFooter() {
           </p>
         </div>
         {[
-          ['Institucional', 'A Escola', 'Estrutura', 'Notícias'],
-          ['Segmentos', 'Educação Infantil', 'Fundamental I', 'Ensino Médio'],
-          ['Contato', 'Fale conosco', 'Área Restrita', 'Instagram'],
-        ].map(([title, ...links]) => (
-          <div key={title}>
+          { titulo: 'Institucional', links: ['A Escola', 'Estrutura', 'Notícias'] },
+          { titulo: 'Segmentos', links: ['Educação Infantil', 'Fundamental I', 'Ensino Médio'] },
+          { titulo: 'Contato', links: ['Fale conosco', 'Área Restrita', 'Instagram'] },
+        ].map((col) => (
+          <div key={col.titulo}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-[.16em] text-[#c7d5db]">
-              {title}
+              {col.titulo}
             </h3>
             <div className="flex flex-col gap-3 text-sm text-[#718895]">
-              {links.map((link) => (
+              {col.links.map((link) => (
                 <a href="#" key={link} className="hover:text-[#0d9488]">
                   {link}
                 </a>
