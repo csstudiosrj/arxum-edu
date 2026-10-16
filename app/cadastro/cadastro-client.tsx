@@ -69,7 +69,7 @@ export function CadastroClient() {
     if (!adminNome.trim()) return setErro('Informe seu nome.')
     if (!adminEmail.trim()) return setErro('Informe seu e-mail.')
     if (adminSenha.length < 8) return setErro('A senha deve ter pelo menos 8 caracteres.')
-    if (!aceitou) return setErro('Você precisa aceitar os termos.')
+    if (!aceitou) return setErro('Você precisa aceitar os termos e a política de privacidade.')
 
     setEnviando(true)
 
@@ -81,6 +81,7 @@ export function CadastroClient() {
       admin_senha: adminSenha,
       admin_telefone: adminTelefone,
       plano,
+      aceite_termos: aceitou,
     })
 
     setEnviando(false)
@@ -149,10 +150,7 @@ export function CadastroClient() {
             {reenviando ? <Loader2 className="size-4 animate-spin" /> : reenviado ? <CheckCircle2 className="size-4 text-[#0d9488]" /> : <RefreshCw className="size-4" />}
             {reenviando ? 'Reenviando...' : reenviado ? 'E-mail reenviado!' : 'Reenviar e-mail'}
           </button>
-          <Link
-            href="/login"
-            className="text-xs text-[#5e7a94] transition hover:text-white"
-          >
+          <Link href="/login" className="text-xs text-[#5e7a94] transition hover:text-white">
             Voltar para o login
           </Link>
         </div>
@@ -370,8 +368,15 @@ export function CadastroClient() {
                 className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]"
               />
               <span>
-                Aceito os <a href="#" className="text-[#0d9488] hover:underline">termos de uso</a> e a{' '}
-                <a href="#" className="text-[#0d9488] hover:underline">política de privacidade</a>.
+                Aceito os{' '}
+                <Link href="/termos-de-uso" target="_blank" className="text-[#0d9488] hover:underline">
+                  termos de uso
+                </Link>{' '}
+                e a{' '}
+                <Link href="/politica-privacidade" target="_blank" className="text-[#0d9488] hover:underline">
+                  política de privacidade
+                </Link>
+                .
               </span>
             </label>
 

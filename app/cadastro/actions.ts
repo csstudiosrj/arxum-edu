@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { enviarConfirmacaoCadastro } from '@/lib/emails/cadastro'
+import { registrarConsentimento } from '@/lib/consentimentos-server'
+import { POLITICA_VERSAO, TERMOS_VERSAO } from '@/lib/consentimentos'
 
 export type CadastroInput = {
   escola_nome: string
@@ -12,6 +14,7 @@ export type CadastroInput = {
   admin_senha: string
   admin_telefone: string
   plano: string
+  aceite_termos: boolean
 }
 
 function gerarSlug(nome: string): string {
@@ -26,6 +29,10 @@ function gerarSlug(nome: string): string {
 
 export async function cadastrarEscola(data: CadastroInput) {
   try {
+    if (!data.aceite_termos) {
+      return { success: false, error: 'É necessário aceitar os termos e a política de privacidade.' }
+    }
+
     const admin = createAdminClient()
 
     // 1. Validar e-mail único
@@ -70,7 +77,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: erroEscola?.message || 'Erro ao criar escola.' }
     }
 
-    // 4. Criar usuário no Auth — sem auto-confirmar (exige verificação por e-mail)
+    // 4. Criar usuário no Auth — sem auto-confirmar
     const { data: authUser, error: erroAuth } = await admin.auth.admin.createUser({
       email: data.admin_email,
       password: data.admin_senha,
@@ -100,7 +107,26 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Erro ao vincular perfil à escola.' }
     }
 
-    // 6. Gerar link de confirmação
+    // 6. Registrar consentimentos (best-effort)
+    //    Política de privacidade + Termos de uso — os dois vêm do mesmo aceite.
+    const consentimentoBase = {
+      escolaId: escola.id,
+      usuarioId: authUser.user.id,
+      responsavelEmail: data.admin_email,
+      alunoNome: null,
+    }
+    await registrarConsentimento({
+      ...consentimentoBase,
+      tipo: 'politica_privacidade',
+      versao: POLITICA_VERSAO,
+    })
+    await registrarConsentimento({
+      ...consentimentoBase,
+      tipo: 'termos_uso',
+      versao: TERMOS_VERSAO,
+    })
+
+    // 7. Gerar link de confirmação
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'signup',
       email: data.admin_email,
@@ -118,7 +144,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       }
     }
 
-    // 7. Enviar e-mail de confirmação via Resend
+    // 8. Enviar e-mail de confirmação via Resend
     const envio = await enviarConfirmacaoCadastro({
       para: data.admin_email,
       nome: data.admin_nome,
@@ -177,9 +203,7 @@ export async function reenviarConfirmacao(email: string) {
       options: { redirectTo: 'https://arxum.com.br/dashboard' },
     })
 
-    // O Supabase não permite regerar senha sem reenviar. Uma alternativa é usar `inviteUserByEmail`.
     if (erroLink || !linkData?.properties?.action_link) {
-      // Fallback: convite por e-mail (funciona para confirmar conta)
       const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, {
         redirectTo: 'https://arxum.com.br/dashboard',
       })

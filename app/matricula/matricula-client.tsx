@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ArrowRight, ArrowLeft, Check, User, MapPin, Heart, FileText, ClipboardCheck } from 'lucide-react'
 import { PublicHeader, PublicFooter } from '@/components/arxum-brand'
 import { DocumentoUpload } from '@/components/documento-upload'
@@ -52,6 +53,8 @@ const initialForm: InscricaoInput = {
   anamnese_condicoes: '',
   anamnese_medicamentos: '',
   anamnese_plano_saude: '',
+  consentimento_politica: false,
+  consentimento_imagem: false,
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder = '', required = false }: {
@@ -154,6 +157,10 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
   }
 
   async function submit() {
+    if (!form.consentimento_politica) {
+      setError('É necessário aceitar a política de privacidade para enviar a inscrição.')
+      return
+    }
     setLoading(true)
     setError('')
     const result = await submitInscricao(form, docs)
@@ -308,16 +315,46 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
                     <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Documentos anexados</p>
                     {(['rg_aluno', 'cpf_responsavel', 'comprovante_residencia', 'historico_escolar'] as const).map((k) => (
                       <p key={k} className="text-sm text-[#c7d5db]">
-                        {k === 'rg_aluno' && 'RG/Certidão do aluno'}{k === 'cpf_responsavel' && 'CPF do responsável'}{k === 'comprovante_residencia' && 'Comprovante de residência'}{k === 'historico_escolar' && 'Histórico escolar'}:
-                        {' '}{docs[k]?.nome || <span className="text-[#5e7a94]">Não anexado</span>}
+                        {k === 'rg_aluno' && 'RG/Certidão do aluno'}{k === 'cpf_responsavel' && 'CPF do responsável'}{k === 'comprovante_residencia' && 'Comprovante de residência'}{k === 'historico_escolar' && 'Histórico escolar'}:{' '}
+                        {docs[k]?.nome || <span className="text-[#5e7a94]">Não anexado</span>}
                       </p>
                     ))}
                   </div>
                 </div>
-                <label className="flex items-start gap-3 text-sm text-[#c7d5db]">
-                  <input type="checkbox" required className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]" />
-                  <span>Declaro que as informações fornecidas são verdadeiras e autorizo a escola a utilizá-las para fins de análise da inscrição, conforme a LGPD.</span>
-                </label>
+
+                <div className="space-y-4 rounded-lg border border-white/[.08] bg-[#0b1115] p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Consentimentos (LGPD)</p>
+
+                  <label className="flex items-start gap-3 text-sm text-[#c7d5db]">
+                    <input
+                      type="checkbox"
+                      checked={form.consentimento_politica}
+                      onChange={(e) => update('consentimento_politica', e.target.checked)}
+                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]"
+                    />
+                    <span>
+                      Li e aceito a{' '}
+                      <Link href="/politica-privacidade" target="_blank" className="text-[#0d9488] hover:underline">
+                        Política de Privacidade
+                      </Link>{' '}
+                      do ARXUM Edu e autorizo o tratamento dos dados informados para fins de análise da inscrição. <span className="text-[#dc2626]">*</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3 text-sm text-[#c7d5db]">
+                    <input
+                      type="checkbox"
+                      checked={form.consentimento_imagem}
+                      onChange={(e) => update('consentimento_imagem', e.target.checked)}
+                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]"
+                    />
+                    <span>
+                      Autorizo o uso da imagem do aluno em fotos e vídeos institucionais da escola
+                      (opcional — você pode autorizar ou recusar; a inscrição será analisada
+                      independentemente desta escolha).
+                    </span>
+                  </label>
+                </div>
               </div>
             )}
 
