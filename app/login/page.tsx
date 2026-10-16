@@ -98,7 +98,9 @@ export default function LoginPage() {
           )}
 
           <div className="flex justify-end">
-            <Link href="#" className="text-xs text-[#0d9488] hover:text-[#14b8a6]">Esqueci minha senha</Link>
+            <Link href="/esqueci-senha" className="text-xs text-[#0d9488] hover:text-[#14b8a6]">
+              Esqueci minha senha
+            </Link>
           </div>
 
           <button
