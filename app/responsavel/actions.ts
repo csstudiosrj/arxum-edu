@@ -117,6 +117,43 @@ async function getEmailUsuario(): Promise<string | null> {
   return user?.email || null
 }
 
+// Descobre a escola do responsável a partir dos alunos vinculados a ele.
+// Se ele tiver múltiplos filhos, usa a escola do primeiro aluno encontrado
+// (todos os filhos de um responsável ficam na mesma escola no modelo atual).
+async function getEscolaDoResponsavel(email: string): Promise<{
+  escolaId: string
+  escolaNome: string
+  series: string[]
+} | null> {
+  try {
+    const admin = createAdminClient()
+    const { data: alunos } = await admin
+      .from('alunos')
+      .select('escola_id, serie')
+      .eq('responsavel_email', email)
+      .eq('status', 'ativo')
+
+    if (!alunos || alunos.length === 0) return null
+
+    const escolaId = alunos[0].escola_id
+    if (!escolaId) return null
+
+    const series = alunos
+      .map((a) => a.serie)
+      .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+
+    const { data: escola } = await admin
+      .from('escolas')
+      .select('nome')
+      .eq('id', escolaId)
+      .maybeSingle()
+
+    return { escolaId, escolaNome: escola?.nome || '', series }
+  } catch (e) {
+    return null
+  }
+}
+
 export async function getMeusFilhos(): Promise<Filho[]> {
   try {
     const email = await getEmailUsuario()
@@ -196,21 +233,22 @@ export async function getMeusEventos(): Promise<EventoResponsavel[]> {
   try {
     const email = await getEmailUsuario()
     if (!email) return []
+
+    const contexto = await getEscolaDoResponsavel(email)
+    if (!contexto) return []
+    const { escolaId, series } = contexto
+
     const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-    if (!escola) return []
-    const { data: inscricoes } = await admin
-      .from('inscricoes').select('aluno_serie').eq('responsavel_email', email)
-    const series = (inscricoes || []).map((i) => i.aluno_serie).filter(Boolean) as string[]
     const hoje = new Date().toISOString().split('T')[0]
     const { data, error } = await admin
       .from('eventos')
       .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie')
-      .eq('escola_id', escola.id)
+      .eq('escola_id', escolaId)
       .eq('ativo', true)
       .gte('data_evento', hoje)
       .order('data_evento', { ascending: true })
       .limit(10)
+
     if (error) return []
     return ((data || []) as EventoResponsavel[]).filter((e) => {
       if (e.publico === 'todos') return true
@@ -225,25 +263,32 @@ export async function getMinhasAutorizacoes(): Promise<AutorizacaoResponsavel[]>
   try {
     const email = await getEmailUsuario()
     if (!email) return []
+
+    const contexto = await getEscolaDoResponsavel(email)
+    if (!contexto) return []
+    const { escolaId } = contexto
+
     const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-    if (!escola) return []
     const { data: auts, error } = await admin
       .from('autorizacoes')
       .select('id, titulo, descricao, tipo, data_evento, prazo_resposta')
-      .eq('escola_id', escola.id)
+      .eq('escola_id', escolaId)
       .eq('ativo', true)
       .order('criado_em', { ascending: false })
       .limit(20)
+
     if (error || !auts) return []
+
     const { data: respostas } = await admin
       .from('autorizacoes_respostas')
       .select('autorizacao_id, resposta, observacao')
       .eq('responsavel_email', email)
+
     const respostaPorAut: Record<string, { resposta: string; observacao: string | null }> = {}
     ;(respostas || []).forEach((r) => {
       respostaPorAut[r.autorizacao_id] = { resposta: r.resposta, observacao: r.observacao }
     })
+
     return auts.map((a) => ({
       id: a.id, titulo: a.titulo, descricao: a.descricao, tipo: a.tipo,
       data_evento: a.data_evento, prazo_resposta: a.prazo_resposta,
@@ -285,21 +330,27 @@ export async function getMeusAlbuns(): Promise<AlbumResponsavel[]> {
   try {
     const email = await getEmailUsuario()
     if (!email) return []
+
+    const contexto = await getEscolaDoResponsavel(email)
+    if (!contexto) return []
+    const { escolaId } = contexto
+
     const admin = createAdminClient()
-    const { data: escola } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-    if (!escola) return []
     const { data: albuns, error } = await admin
       .from('albuns')
       .select('id, titulo, descricao, capa_url, criado_em')
-      .eq('escola_id', escola.id)
+      .eq('escola_id', escolaId)
       .eq('ativo', true)
       .order('criado_em', { ascending: false })
+
     if (error || !albuns) return []
+
     const { data: fotos } = await admin
       .from('fotos')
       .select('id, album_id, url, legenda')
       .in('album_id', albuns.map((a) => a.id))
       .order('ordem', { ascending: true })
+
     return albuns.map((a) => ({
       id: a.id, titulo: a.titulo, descricao: a.descricao, capa_url: a.capa_url, criado_em: a.criado_em,
       fotos: (fotos || [])
