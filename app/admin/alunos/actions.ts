@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { enviarConviteAluno } from '@/lib/emails/convite-aluno'
 import { revalidatePath } from 'next/cache'
 
 export type Aluno = {
@@ -48,6 +49,16 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     const admin = createAdminClient()
 
+    // Busca dados do aluno para personalizar o e-mail
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('nome')
+      .eq('id', alunoId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
+
     // Salva o e-mail no aluno
     const { error: erroUpdate } = await admin
       .from('alunos')
@@ -57,35 +68,72 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (erroUpdate) return { success: false, error: erroUpdate.message }
 
-    // Cria usuário no auth (se não existir)
-    const { data: existente } = await admin.auth.admin.listUsers()
-    const usuarioExiste = (existente?.users || []).some((u) => u.email === emailAluno)
+    // Verifica se já existe usuário com esse e-mail
+    const { data: usuarios } = await admin.auth.admin.listUsers()
+    let usuarioExistente = (usuarios?.users || []).find((u) => u.email === emailAluno)
 
-    if (!usuarioExiste) {
-      const { error: erroAuth } = await admin.auth.admin.createUser({
+    // Se não existe, cria
+    if (!usuarioExistente) {
+      const { data: novoUsuario, error: erroAuth } = await admin.auth.admin.createUser({
         email: emailAluno,
         email_confirm: true,
+        user_metadata: { nome: aluno.nome, papel: 'aluno' },
       })
 
-      if (erroAuth) {
-        return { success: false, error: erroAuth.message }
+      if (erroAuth || !novoUsuario.user) {
+        return { success: false, error: erroAuth?.message || 'Erro ao criar usuário.' }
       }
+
+      usuarioExistente = novoUsuario.user
+
+      // Vincula ao perfil como aluno
+      await admin
+        .from('perfis')
+        .update({
+          escola_id: escola.id,
+          nome: aluno.nome,
+          papel: 'aluno',
+          ativo: true,
+        })
+        .eq('id', usuarioExistente.id)
     }
 
-    // Vincula manualmente (caso o trigger não tenha rodado)
-    const { data: usuario } = await admin.auth.admin.listUsers()
-    const usuarioCriado = (usuario?.users || []).find((u) => u.email === emailAluno)
+    // Vincula o usuário ao registro do aluno
+    await admin
+      .from('alunos')
+      .update({ usuario_id: usuarioExistente.id })
+      .eq('id', alunoId)
 
-    if (usuarioCriado) {
-      await admin
-        .from('alunos')
-        .update({ usuario_id: usuarioCriado.id })
-        .eq('id', alunoId)
+    // Gera o link mágico
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: emailAluno,
+      options: {
+        redirectTo: 'https://arxum.com.br/primeiro-acesso',
+      },
+    })
+
+    if (erroLink || !linkData?.properties?.action_link) {
+      return { success: false, error: erroLink?.message || 'Erro ao gerar link de acesso.' }
+    }
+
+    // Envia o e-mail
+    const envio = await enviarConviteAluno({
+      para: emailAluno,
+      alunoNome: aluno.nome,
+      escolaNome: escola.nome,
+      escolaSlug: escola.slug,
+      linkMagico: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return { success: false, error: envio.error || 'Erro ao enviar e-mail.' }
     }
 
     revalidatePath('/admin/alunos')
     return { success: true }
   } catch (e) {
+    console.error('Erro ao convidar aluno:', e)
     return { success: false, error: 'Erro ao convidar aluno.' }
   }
 }

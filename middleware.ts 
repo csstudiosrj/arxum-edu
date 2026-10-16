@@ -14,6 +14,9 @@ const SLUGS_RESERVADOS = new Set([
   'admin',
   'super-admin',
   'escola',
+  'aluno',
+  'primeiro-acesso',
+  'noticias',
 ])
 
 export async function middleware(request: NextRequest) {
