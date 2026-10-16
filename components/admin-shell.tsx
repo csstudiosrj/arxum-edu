@@ -11,6 +11,7 @@ type AdminMode = 'school' | 'super'
 
 const schoolItems = [
   ['Visão geral', '/dashboard', LayoutDashboard],
+  ['Relatórios', '/admin/relatorios', BarChart3],
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
