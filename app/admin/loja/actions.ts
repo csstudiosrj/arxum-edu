@@ -1,112 +1,164 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { headers } from 'next/headers'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { revalidatePath } from 'next/cache'
 
-export type EscolaCompleta = {
+export type Produto = {
   id: string
   nome: string
-  slug: string
-  plano: string
-  cnpj: string | null
-  endereco: string | null
-  cidade: string | null
-  estado: string | null
-  telefone: string | null
-  email_contato: string | null
-  site: string | null
-  logo_url: string | null
-  cor_primaria: string | null
+  descricao: string | null
+  categoria: string
+  preco_centavos: number
+  estoque: number
+  ativo: boolean
   criado_em: string
 }
 
-const SLUGS_RESERVADOS = ['www', 'app', 'api', 'admin', 'edu', 'root', 'painel']
+export type NovoProduto = {
+  nome: string
+  descricao: string
+  categoria: string
+  preco_centavos: number
+  estoque: number
+}
 
-export async function getEscolaDoUsuario(): Promise<EscolaCompleta | null> {
+export type Pedido = {
+  id: string
+  responsavel_email: string
+  responsavel_nome: string
+  total_centavos: number
+  status: string
+  observacao: string | null
+  criado_em: string
+  itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number }>
+}
+
+export async function getProdutos(): Promise<Produto[]> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.id) return null
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
     const admin = createAdminClient()
-    const { data: perfil } = await admin
-      .from('perfis')
-      .select('escola_id')
-      .eq('id', user.id)
-      .maybeSingle()
+    const { data, error } = await admin
+      .from('produtos')
+      .select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em')
+      .eq('escola_id', escola.id)
+      .order('criado_em', { ascending: false })
 
-    if (!perfil?.escola_id) return null
-
-    return await getEscolaPorId(perfil.escola_id)
+    if (error) return []
+    return (data || []) as Produto[]
   } catch (e) {
-    console.error('Erro ao buscar escola do usuário:', e)
-    return null
+    return []
   }
 }
 
-export async function getEscolaPorId(id: string): Promise<EscolaCompleta | null> {
+export async function getPedidos(): Promise<Pedido[]> {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
     const admin = createAdminClient()
-    const { data } = await admin.from('escolas').select('*').eq('id', id).maybeSingle()
-    return (data || null) as EscolaCompleta | null
+    const { data: pedidos, error } = await admin
+      .from('pedidos')
+      .select('id, responsavel_email, responsavel_nome, total_centavos, status, observacao, criado_em')
+      .eq('escola_id', escola.id)
+      .order('criado_em', { ascending: false })
+
+    if (error || !pedidos) return []
+
+    const idsPedidos = pedidos.map((p) => p.id)
+
+    let itens: Array<{ pedido_id: string; produto_nome: string; quantidade: number; preco_unitario_centavos: number }> = []
+    if (idsPedidos.length > 0) {
+      const { data } = await admin
+        .from('pedido_itens')
+        .select('pedido_id, produto_nome, quantidade, preco_unitario_centavos')
+        .in('pedido_id', idsPedidos)
+      itens = (data || []) as typeof itens
+    }
+
+    return pedidos.map((p) => ({
+      id: p.id,
+      responsavel_email: p.responsavel_email,
+      responsavel_nome: p.responsavel_nome,
+      total_centavos: p.total_centavos,
+      status: p.status,
+      observacao: p.observacao,
+      criado_em: p.criado_em,
+      itens: itens
+        .filter((i) => i.pedido_id === p.id)
+        .map((i) => ({
+          produto_nome: i.produto_nome,
+          quantidade: i.quantidade,
+          preco_unitario_centavos: i.preco_unitario_centavos,
+        })),
+    })) as Pedido[]
   } catch (e) {
-    return null
+    return []
   }
 }
 
-export async function getEscolaPorSlug(slug: string): Promise<EscolaCompleta | null> {
+export async function criarProduto(data: NovoProduto) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { data } = await admin.from('escolas').select('*').eq('slug', slug).maybeSingle()
-    return (data || null) as EscolaCompleta | null
+    const { error } = await admin.from('produtos').insert({
+      escola_id: escola.id,
+      nome: data.nome,
+      descricao: data.descricao || null,
+      categoria: data.categoria,
+      preco_centavos: data.preco_centavos,
+      estoque: data.estoque,
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/loja')
+    return { success: true }
   } catch (e) {
-    return null
+    return { success: false, error: 'Erro ao criar produto.' }
   }
 }
 
-export async function getEscolaPadrao(): Promise<EscolaCompleta | null> {
+export async function atualizarStatusPedido(id: string, novoStatus: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { data } = await admin
-      .from('escolas')
-      .select('*')
-      .eq('slug', 'colegio-horizonte')
-      .maybeSingle()
-    return (data || null) as EscolaCompleta | null
+    const { error } = await admin
+      .from('pedidos')
+      .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/responsavel')
+    return { success: true }
   } catch (e) {
-    return null
+    return { success: false, error: 'Erro ao atualizar.' }
   }
 }
 
-/**
- * Extrai o slug da escola a partir do cabeçalho `x-escola-slug`
- * injetado pelo middleware a partir do subdomínio.
- * Fallback: 'colegio-horizonte'.
- */
-export async function getSlugDaRequisicao(): Promise<string> {
+export async function excluirProduto(id: string) {
   try {
-    const headersList = await headers()
-    const slug = headersList.get('x-escola-slug')
-    if (slug && !SLUGS_RESERVADOS.includes(slug)) return slug
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin.from('produtos').delete().eq('id', id).eq('escola_id', escola.id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/loja')
+    return { success: true }
   } catch (e) {
-    // headers() pode não estar disponível em certos contextos
+    return { success: false, error: 'Erro ao excluir.' }
   }
-  return 'colegio-horizonte'
-}
-
-/**
- * Retorna a escola da requisição com base no subdomínio.
- * Usado pelas páginas públicas (matrícula, eduflix, sala-virtual, loja).
- */
-export async function getEscolaDaRequisicao(): Promise<EscolaCompleta | null> {
-  const slug = await getSlugDaRequisicao()
-  const escola = await getEscolaPorSlug(slug)
-  if (escola) return escola
-  return await getEscolaPadrao()
-}
-
-export async function getNomeEscolaAtual(): Promise<string> {
-  const escola = await getEscolaDoUsuario()
-  return escola?.nome || 'Minha escola'
 }

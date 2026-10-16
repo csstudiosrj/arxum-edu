@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
 
 export type EscolaCompleta = {
   id: string
@@ -61,22 +62,20 @@ export async function getEscolaPorSlug(slug: string): Promise<EscolaCompleta | n
   }
 }
 
-export async function getEscolaPadrao(): Promise<EscolaCompleta | null> {
+/**
+ * Retorna a escola da requisição com base no header `x-escola-slug`
+ * injetado pelo middleware. Se não houver slug, retorna null.
+ * Sem escola = sem página. Não existe fallback.
+ */
+export async function getEscolaDaRequisicao(): Promise<EscolaCompleta | null> {
   try {
-    const admin = createAdminClient()
-    const { data } = await admin
-      .from('escolas')
-      .select('*')
-      .eq('slug', 'colegio-horizonte')
-      .maybeSingle()
-    return (data || null) as EscolaCompleta | null
+    const headersList = await headers()
+    const slug = headersList.get('x-escola-slug')
+    if (!slug) return null
+    return await getEscolaPorSlug(slug)
   } catch (e) {
     return null
   }
-}
-
-export async function getEscolaDaRequisicao(): Promise<EscolaCompleta | null> {
-  return await getEscolaPadrao()
 }
 
 export async function getNomeEscolaAtual(): Promise<string> {

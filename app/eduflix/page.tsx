@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 import { EduflixClient } from './eduflix-client'
@@ -34,6 +35,8 @@ async function getVideoaulas(escolaId: string): Promise<VideoaulaPublica[]> {
 
 export default async function EduflixPage() {
   const escola = await getEscolaDaRequisicao()
-  const videoaulas = escola ? await getVideoaulas(escola.id) : []
+  if (!escola) notFound()
+
+  const videoaulas = await getVideoaulas(escola.id)
   return <EduflixClient videoaulas={videoaulas} />
 }

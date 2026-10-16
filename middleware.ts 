@@ -1,7 +1,47 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+const SLUGS_RESERVADOS = new Set([
+  'arxum',
+  'login',
+  'cadastro',
+  'matricula',
+  'eduflix',
+  'sala-virtual',
+  'loja',
+  'responsavel',
+  'dashboard',
+  'admin',
+  'super-admin',
+  'escola',
+])
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Ignora assets e API
+  if (
+    pathname.startsWith('/edu/_next') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api')
+  ) {
+    return NextResponse.next()
+  }
+
+  // Detecta /edu/{slug}/...  ou  /edu/{slug}
+  const match = pathname.match(/^\/edu\/([^/]+)(\/.*)?$/)
+  if (match) {
+    const slug = match[1]
+    const resto = match[2] || ''
+    if (!SLUGS_RESERVADOS.has(slug)) {
+      const url = request.nextUrl.clone()
+      url.pathname = `/edu${resto || ''}`
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-escola-slug', slug)
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+    }
+  }
+
   return await updateSession(request)
 }
 

@@ -65,8 +65,3 @@ export async function submitInscricao(data: InscricaoInput, documentos: Document
     return { success: false, error: 'Erro ao enviar inscrição. Tente novamente.' }
   }
 }
-
-export async function getNomeEscolaPublica(): Promise<string> {
-  const escola = await getEscolaDaRequisicao()
-  return escola?.nome || 'Escola'
-}

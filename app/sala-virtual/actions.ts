@@ -32,18 +32,13 @@ async function getEmailUsuario(): Promise<string | null> {
   return user?.email || null
 }
 
-async function getEscolaIdRequisicao(): Promise<string | null> {
-  const escola = await getEscolaDaRequisicao()
-  return escola?.id || null
-}
-
 export async function getModulosComProgresso(): Promise<Modulo[]> {
   try {
     const email = await getEmailUsuario()
     if (!email) return []
 
-    const escolaId = await getEscolaIdRequisicao()
-    if (!escolaId) return []
+    const escola = await getEscolaDaRequisicao()
+    if (!escola) return []
 
     const admin = createAdminClient()
 
@@ -51,7 +46,7 @@ export async function getModulosComProgresso(): Promise<Modulo[]> {
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .limit(1)
       .maybeSingle()
 
@@ -60,7 +55,7 @@ export async function getModulosComProgresso(): Promise<Modulo[]> {
     const { data: mods, error: erroMods } = await admin
       .from('modulos')
       .select('id, titulo, descricao, disciplina, serie, ordem')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .eq('publicado', true)
       .order('ordem', { ascending: true })
 
@@ -131,15 +126,15 @@ export async function salvarAnotacao(aulaId: string, anotacao: string) {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
 
-    const escolaId = await getEscolaIdRequisicao()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDaRequisicao()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .limit(1)
       .maybeSingle()
 
@@ -181,15 +176,15 @@ export async function marcarConcluida(aulaId: string, concluida: boolean) {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
 
-    const escolaId = await getEscolaIdRequisicao()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDaRequisicao()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
       .eq('responsavel_email', email)
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .limit(1)
       .maybeSingle()
 
