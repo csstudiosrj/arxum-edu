@@ -59,16 +59,17 @@ const cardsAtivos: CardAtivo[] = [
     icon: Palette,
     cor: '#7c3aed',
   },
-]
-
-const cardsDesenvolvimento: CardDesenvolvimento[] = [
   {
-    tipo: 'dev',
+    tipo: 'ativo',
     titulo: 'Notificações',
-    descricao: 'Régua de cobrança, lembretes automáticos, e-mail e WhatsApp para responsáveis. Primeira versão com e-mail já em desenho.',
+    descricao: 'Escolha quais avisos automáticos a escola envia e por quais canais (e-mail ativo, WhatsApp e push em breve).',
+    href: '/admin/configuracoes/notificacoes',
     icon: Bell,
     cor: '#d97706',
   },
+]
+
+const cardsDesenvolvimento: CardDesenvolvimento[] = [
   {
     tipo: 'dev',
     titulo: 'Segurança e LGPD',
@@ -350,7 +351,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
               Recursos ativos da sua escola
             </h3>
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
             {cardsAtivos.map((c) => {
               const Icon = c.icon
               return (
