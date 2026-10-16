@@ -15,6 +15,7 @@ type MenuItem = readonly [string, string, LucideIcon]
 
 const menu: MenuItem[] = [
   ['Início', '/professor', Home],
+  ['Sala virtual', '/professor/sala-virtual', BookOpen],
   ['Lançar notas', '/professor/notas', TrendingUp],
   ['Ocorrências', '/professor/ocorrencias', AlertCircle],
   ['Alunos', '/professor/alunos', Users],
