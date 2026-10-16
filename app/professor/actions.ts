@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getProfessorDoUsuario } from '@/lib/auth/professor-atual'
+import { notificarNotaLancada, notificarOcorrencia } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type AlunoResumo = {
@@ -113,6 +115,29 @@ export async function lancarNotaProfessor(data: {
 
     if (error) return { success: false, error: error.message }
 
+    // Notifica o responsável — respeitando a config da escola.
+    try {
+      if (data.responsavel_email) {
+        enviarSeAtivo({
+          escolaId: prof.escola_id,
+          evento: 'nota',
+          enviar: () =>
+            notificarNotaLancada({
+              para: data.responsavel_email,
+              escolaNome: prof.escola_nome,
+              escolaSlug: prof.escola_slug,
+              alunoNome: data.aluno_nome,
+              disciplina: data.disciplina,
+              periodo: data.periodo,
+              nota: data.nota,
+              faltas: data.faltas,
+            }),
+        }).catch((e) => console.error('[email nota professor]', data.responsavel_email, e))
+      }
+    } catch (e) {
+      console.error('Erro ao disparar e-mail de nota:', e)
+    }
+
     revalidatePath('/professor/notas')
     revalidatePath('/admin/notas')
     revalidatePath('/aluno/boletim')
@@ -171,6 +196,29 @@ export async function criarOcorrenciaProfessor(data: {
     })
 
     if (error) return { success: false, error: error.message }
+
+    // Notifica o responsável — respeitando a config da escola.
+    try {
+      if (data.responsavel_email) {
+        enviarSeAtivo({
+          escolaId: prof.escola_id,
+          evento: 'ocorrencia',
+          enviar: () =>
+            notificarOcorrencia({
+              para: data.responsavel_email,
+              escolaNome: prof.escola_nome,
+              escolaSlug: prof.escola_slug,
+              alunoNome: data.aluno_nome,
+              titulo: data.titulo,
+              tipo: data.tipo,
+              gravidade: data.gravidade,
+              descricao: data.descricao,
+            }),
+        }).catch((e) => console.error('[email ocorrencia professor]', data.responsavel_email, e))
+      }
+    } catch (e) {
+      console.error('Erro ao disparar e-mail de ocorrência:', e)
+    }
 
     revalidatePath('/professor/ocorrencias')
     revalidatePath('/admin/ocorrencias')

@@ -2,8 +2,9 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
-import { revalidatePath } from 'next/cache'
 import { enviarEmailStatusMatricula } from '@/lib/emails/status-matricula'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
+import { revalidatePath } from 'next/cache'
 
 export type DocumentosMatricula = {
   rg_aluno?: { url: string; nome: string } | null
@@ -133,12 +134,17 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
     }
 
     try {
-      await enviarEmailStatusMatricula({
-        para: inscricao.responsavel_email,
-        alunoNome: inscricao.aluno_nome,
-        protocolo: inscricao.protocolo,
-        novoStatus,
-        escolaNome: escola.nome,
+      await enviarSeAtivo({
+        escolaId: escola.id,
+        evento: 'matricula_status',
+        enviar: () =>
+          enviarEmailStatusMatricula({
+            para: inscricao.responsavel_email,
+            alunoNome: inscricao.aluno_nome,
+            protocolo: inscricao.protocolo,
+            novoStatus,
+            escolaNome: escola.nome,
+          }),
       })
     } catch (e) {
       console.error('[email] Falha ao enviar, mas status foi atualizado:', e)

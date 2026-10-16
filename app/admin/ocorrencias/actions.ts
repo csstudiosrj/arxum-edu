@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { notificarOcorrencia } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type Ocorrencia = {
@@ -103,6 +105,29 @@ export async function criarOcorrencia(data: NovaOcorrencia) {
     })
 
     if (error) return { success: false, error: error.message }
+
+    // Notifica o responsável — respeitando a config da escola.
+    try {
+      if (data.responsavel_email) {
+        enviarSeAtivo({
+          escolaId: escola.id,
+          evento: 'ocorrencia',
+          enviar: () =>
+            notificarOcorrencia({
+              para: data.responsavel_email,
+              escolaNome: escola.nome,
+              escolaSlug: escola.slug,
+              alunoNome: data.aluno_nome,
+              titulo: data.titulo,
+              tipo: data.tipo,
+              gravidade: data.gravidade,
+              descricao: data.descricao,
+            }),
+        }).catch((e) => console.error('[email ocorrencia]', data.responsavel_email, e))
+      }
+    } catch (e) {
+      console.error('Erro ao disparar e-mail de ocorrência:', e)
+    }
 
     revalidatePath('/admin/ocorrencias')
     revalidatePath('/responsavel')

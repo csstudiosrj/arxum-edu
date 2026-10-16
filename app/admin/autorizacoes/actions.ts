@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { notificarAutorizacaoPendente } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type Autorizacao = {
@@ -106,7 +107,7 @@ export async function criarAutorizacao(data: NovaAutorizacao) {
 
     if (error) return { success: false, error: error.message }
 
-    // Notifica responsáveis com alunos ativos
+    // Notifica responsáveis com alunos ativos — respeitando a config da escola.
     try {
       const { data: alunos } = await admin
         .from('alunos')
@@ -118,13 +119,18 @@ export async function criarAutorizacao(data: NovaAutorizacao) {
 
       Promise.all(
         emailsUnicos.map((email) =>
-          notificarAutorizacaoPendente({
-            para: email,
-            escolaNome: escola.nome,
-            escolaSlug: escola.slug,
-            titulo: data.titulo,
-            descricao: data.descricao || null,
-            prazo: formatarDataBR(data.prazo_resposta),
+          enviarSeAtivo({
+            escolaId: escola.id,
+            evento: 'autorizacao',
+            enviar: () =>
+              notificarAutorizacaoPendente({
+                para: email,
+                escolaNome: escola.nome,
+                escolaSlug: escola.slug,
+                titulo: data.titulo,
+                descricao: data.descricao || null,
+                prazo: formatarDataBR(data.prazo_resposta),
+              }),
           }).catch((e) => console.error('[email autorização]', email, e))
         )
       ).catch(() => {})

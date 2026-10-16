@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { notificarFaturaGerada } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type Fatura = {
@@ -21,6 +23,23 @@ export type NovaFatura = {
   descricao: string
   valor_centavos: number
   vencimento: string
+}
+
+function formatarMoeda(centavos: number): string {
+  return (centavos / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+function formatarDataBR(iso: string): string {
+  try {
+    return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR')
+  } catch {
+    return iso
+  }
 }
 
 export async function getFaturas(): Promise<Fatura[]> {
@@ -67,6 +86,28 @@ export async function criarFatura(data: NovaFatura) {
     })
 
     if (error) return { success: false, error: error.message }
+
+    // Notifica o responsável — respeitando a config da escola.
+    try {
+      if (data.responsavel_email) {
+        enviarSeAtivo({
+          escolaId: escola.id,
+          evento: 'fatura',
+          enviar: () =>
+            notificarFaturaGerada({
+              para: data.responsavel_email,
+              escolaNome: escola.nome,
+              escolaSlug: escola.slug,
+              alunoNome: data.aluno_nome,
+              descricao: data.descricao,
+              valor: formatarMoeda(data.valor_centavos),
+              vencimento: formatarDataBR(data.vencimento),
+            }),
+        }).catch((e) => console.error('[email fatura]', data.responsavel_email, e))
+      }
+    } catch (e) {
+      console.error('Erro ao disparar e-mail de fatura:', e)
+    }
 
     revalidatePath('/admin/financeiro')
     revalidatePath('/responsavel')

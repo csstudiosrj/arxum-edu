@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { notificarNotaLancada } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type Nota = {
@@ -92,6 +94,29 @@ export async function lancarNota(data: NovaNota) {
       )
 
     if (error) return { success: false, error: error.message }
+
+    // Notifica o responsável — respeitando a config da escola.
+    try {
+      if (data.responsavel_email) {
+        enviarSeAtivo({
+          escolaId: escola.id,
+          evento: 'nota',
+          enviar: () =>
+            notificarNotaLancada({
+              para: data.responsavel_email,
+              escolaNome: escola.nome,
+              escolaSlug: escola.slug,
+              alunoNome: data.aluno_nome,
+              disciplina: data.disciplina,
+              periodo: data.periodo,
+              nota: data.nota,
+              faltas: data.faltas,
+            }),
+        }).catch((e) => console.error('[email nota]', data.responsavel_email, e))
+      }
+    } catch (e) {
+      console.error('Erro ao disparar e-mail de nota:', e)
+    }
 
     revalidatePath('/admin/notas')
     revalidatePath('/responsavel')

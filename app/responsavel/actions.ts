@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notificarRespostaAutorizacao } from '@/lib/emails/notificacoes'
+import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
 
 export type DocumentosMatricula = {
@@ -392,7 +393,7 @@ export async function responderAutorizacao(
       if (error) return { success: false, error: error.message }
     }
 
-    // Notifica a escola por e-mail
+    // Notifica a escola por e-mail — respeitando a config da escola.
     try {
       const { data: aut } = await admin
         .from('autorizacoes')
@@ -408,13 +409,18 @@ export async function responderAutorizacao(
           .maybeSingle()
 
         if (escola?.email_contato) {
-          notificarRespostaAutorizacao({
-            para: escola.email_contato,
-            escolaNome: escola.nome,
-            alunoNome: aluno.nome,
-            titulo: aut.titulo,
-            resposta,
-            observacao: observacao || null,
+          enviarSeAtivo({
+            escolaId: aut.escola_id,
+            evento: 'resposta_autorizacao',
+            enviar: () =>
+              notificarRespostaAutorizacao({
+                para: escola.email_contato!,
+                escolaNome: escola.nome,
+                alunoNome: aluno.nome,
+                titulo: aut.titulo,
+                resposta,
+                observacao: observacao || null,
+              }),
           }).catch((e) => console.error('[email resposta autorização]', e))
         }
       }
