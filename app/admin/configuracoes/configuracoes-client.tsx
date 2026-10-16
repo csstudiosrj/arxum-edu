@@ -1,20 +1,102 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { School, Users, Palette, Bell, CreditCard, Shield, Globe, ChevronRight, Save, Loader2, Check } from 'lucide-react'
+import {
+  School, Users, Palette, Bell, CreditCard, Shield, Globe,
+  Save, Loader2, Check, ArrowRight, Sparkles, Wrench, Lock,
+  type LucideIcon,
+} from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import type { EscolaCompleta } from '@/lib/auth/escola-atual'
-import { salvarDadosEscola } from './actions'
+import { salvarDadosEscola, solicitarRecursoFuturo } from './actions'
 
-const secoesExtras = [
-  { titulo: 'Usuários e permissões', descricao: 'Equipe, papéis e controle de acesso', icon: Users, cor: '#3b82f6' },
-  { titulo: 'Aparência e identidade', descricao: 'Cores, logo e personalização visual', icon: Palette, cor: '#7c3aed' },
-  { titulo: 'Notificações', descricao: 'E-mail, WhatsApp e push para responsáveis', icon: Bell, cor: '#d97706' },
-  { titulo: 'Financeiro e pagamentos', descricao: 'Pagar.me, PIX, boleto e régua de cobrança', icon: CreditCard, cor: '#065f46' },
-  { titulo: 'Segurança e LGPD', descricao: 'Políticas, retenção e consentimentos', icon: Shield, cor: '#dc2626' },
-  { titulo: 'Domínio e integrações', descricao: 'Domínio próprio, API e webhooks', icon: Globe, cor: '#0e7490' },
+// ── TIPOS DOS CARDS DO HUB ──────────────────────────────────────────
+
+type CardAtivo = {
+  tipo: 'ativo'
+  titulo: string
+  descricao: string
+  href: string
+  icon: LucideIcon
+  cor: string
+}
+
+type CardDesenvolvimento = {
+  tipo: 'dev'
+  titulo: string
+  descricao: string
+  icon: LucideIcon
+  cor: string
+}
+
+type CardEspera = {
+  tipo: 'espera'
+  titulo: string
+  descricao: string
+  motivo: string
+  icon: LucideIcon
+  cor: string
+}
+
+// ── DADOS DOS CARDS ─────────────────────────────────────────────────
+
+const cardsAtivos: CardAtivo[] = [
+  {
+    tipo: 'ativo',
+    titulo: 'Usuários e permissões',
+    descricao: 'Convide a equipe interna, defina papéis (direção, coordenação, secretaria, financeiro) e controle o acesso por unidade.',
+    href: '/admin/usuarios',
+    icon: Users,
+    cor: '#3b82f6',
+  },
+  {
+    tipo: 'ativo',
+    titulo: 'Aparência e identidade',
+    descricao: 'Logo, cor primária, tema visual e ativação dos add-ons como Branding nos portais dos responsáveis e alunos.',
+    href: '/admin/personalizacao',
+    icon: Palette,
+    cor: '#7c3aed',
+  },
 ]
+
+const cardsDesenvolvimento: CardDesenvolvimento[] = [
+  {
+    tipo: 'dev',
+    titulo: 'Notificações',
+    descricao: 'Régua de cobrança, lembretes automáticos, e-mail e WhatsApp para responsáveis. Primeira versão com e-mail já em desenho.',
+    icon: Bell,
+    cor: '#d97706',
+  },
+  {
+    tipo: 'dev',
+    titulo: 'Segurança e LGPD',
+    descricao: 'Termos de consentimento, política de retenção, portal de portabilidade e exclusão de dados do titular.',
+    icon: Shield,
+    cor: '#dc2626',
+  },
+  {
+    tipo: 'dev',
+    titulo: 'Domínio e integrações',
+    descricao: 'Domínio próprio por escola (ex: suaescola.com.br), API pública e webhooks para ERPs acadêmicos e LMS.',
+    icon: Globe,
+    cor: '#0e7490',
+  },
+]
+
+const cardsEspera: CardEspera[] = [
+  {
+    tipo: 'espera',
+    titulo: 'Financeiro e pagamentos',
+    descricao: 'PIX, boleto, cartão e split automático direto no sistema. O checkout dos alunos e a loja virtual passam a gerar cobrança real.',
+    motivo: 'Aguardando aprovação da conta no Pagar.me',
+    icon: CreditCard,
+    cor: '#065f46',
+  },
+]
+
+// ── HELPERS DE MÁSCARA ──────────────────────────────────────────────
 
 function formatarCNPJ(v: string): string {
   const n = v.replace(/\D/g, '').slice(0, 14)
@@ -33,8 +115,12 @@ function formatarTelefone(v: string): string {
   return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
 }
 
+// ── COMPONENTE PRINCIPAL ────────────────────────────────────────────
+
 export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null }) {
   const router = useRouter()
+
+  // Form "Dados da escola"
   const [nome, setNome] = useState(escola?.nome || '')
   const [cnpj, setCnpj] = useState(escola?.cnpj || '')
   const [endereco, setEndereco] = useState(escola?.endereco || '')
@@ -46,6 +132,10 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
   const [salvando, setSalvando] = useState(false)
   const [salvou, setSalvou] = useState(false)
   const [erro, setErro] = useState('')
+
+  // Estado dos "avisar quando pronto"
+  const [avisados, setAvisados] = useState<Set<string>>(new Set())
+  const [processandoAviso, setProcessandoAviso] = useState<string | null>(null)
 
   async function handleSalvar() {
     if (!nome.trim()) {
@@ -79,6 +169,17 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
     setTimeout(() => setSalvou(false), 2500)
   }
 
+  async function handleAvisar(titulo: string) {
+    setProcessandoAviso(titulo)
+    const r = await solicitarRecursoFuturo(titulo)
+    setProcessandoAviso(null)
+    if (!r.success) {
+      alert(r.error || 'Erro ao registrar interesse.')
+      return
+    }
+    setAvisados((prev) => new Set(prev).add(titulo))
+  }
+
   if (!escola) {
     return (
       <AdminShell mode="school" active="Configurações">
@@ -98,13 +199,18 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
         <SectionHeading
           eyebrow="Administração"
           title="Configurações"
-          description="Gerencie os dados e a identidade da sua escola."
+          description="Gerencie os dados, a identidade e os recursos da sua escola em um só lugar."
         />
+
+        {/* ── BLOCO 1: DADOS DA ESCOLA ────────────────────────────── */}
 
         <Panel className="mt-8">
           <div className="flex items-center justify-between border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, transparent)', color: 'var(--cor-primaria, #0d9488)' }}
+              >
                 <School className="size-4" />
               </div>
               <div>
@@ -121,7 +227,8 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
               <button
                 onClick={handleSalvar}
                 disabled={salvando}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 {salvando ? 'Salvando...' : 'Salvar alterações'}
@@ -221,7 +328,9 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
 
             <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#82939a]">Endereço público da escola</p>
-              <p className="mt-1 font-mono text-sm text-[#0d9488]">edu.arxum.com.br/{escola.slug}</p>
+              <p className="mt-1 font-mono text-sm" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
+                edu.arxum.com.br/{escola.slug}
+              </p>
             </div>
 
             {erro && (
@@ -232,29 +341,142 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
           </div>
         </Panel>
 
-        <div className="mt-6">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#6b7d86]">Em breve</h3>
-          <Panel>
-            <div className="divide-y divide-[#f0f4f5]">
-              {secoesExtras.map((s) => (
-                <div
-                  key={s.titulo}
-                  className="flex w-full items-center gap-4 px-5 py-4 text-left opacity-60"
+        {/* ── BLOCO 2: RECURSOS ATIVOS ────────────────────────────── */}
+
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="size-4" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#6b7d86]">
+              Recursos ativos da sua escola
+            </h3>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {cardsAtivos.map((c) => {
+              const Icon = c.icon
+              return (
+                <Link
+                  key={c.titulo}
+                  href={c.href}
+                  className="group flex items-start gap-4 rounded-xl border border-[#dce5e8] bg-white p-5 transition hover:shadow-md"
+                  style={{ borderColor: '#dce5e8' }}
                 >
-                  <div className="grid size-10 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${s.cor}15`, color: s.cor }}>
-                    <s.icon className="size-5" />
+                  <div
+                    className="grid size-11 shrink-0 place-items-center rounded-lg"
+                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                  >
+                    <Icon className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-[#243942]">{s.titulo}</h3>
-                    <p className="mt-0.5 text-xs text-[#82939a]">{s.descricao}</p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-[#12232b]">{c.titulo}</h4>
+                      <span className="rounded-full bg-[#d1fae5] px-2 py-0.5 text-[10px] font-bold text-[#065f46]">
+                        Ativo
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs leading-5 text-[#82939a]">{c.descricao}</p>
                   </div>
-                  <span className="rounded-full bg-[#f0f4f5] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Em breve</span>
-                  <ChevronRight className="size-5 shrink-0 text-[#a0afb4]" />
+                  <ArrowRight
+                    className="mt-1 size-4 shrink-0 text-[#a0afb4] transition group-hover:translate-x-0.5"
+                    style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                  />
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── BLOCO 3: EM DESENVOLVIMENTO ─────────────────────────── */}
+
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Wrench className="size-4 text-[#6b7d86]" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#6b7d86]">
+              Em desenvolvimento
+            </h3>
+            <span className="ml-1 rounded-full bg-[#f0f4f5] px-2 py-0.5 text-[10px] font-bold text-[#82939a]">
+              Roadmap ARXUM
+            </span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {cardsDesenvolvimento.map((c) => {
+              const Icon = c.icon
+              const jaAvisado = avisados.has(c.titulo)
+              const processando = processandoAviso === c.titulo
+              return (
+                <Panel key={c.titulo} className="flex flex-col p-5">
+                  <div
+                    className="grid size-11 place-items-center rounded-lg"
+                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                  >
+                    <Icon className="size-5" />
+                  </div>
+                  <h4 className="mt-4 text-sm font-bold text-[#12232b]">{c.titulo}</h4>
+                  <p className="mt-1.5 flex-1 text-xs leading-5 text-[#82939a]">{c.descricao}</p>
+                  <button
+                    onClick={() => handleAvisar(c.titulo)}
+                    disabled={jaAvisado || processando}
+                    className={`mt-4 inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-70 ${
+                      jaAvisado
+                        ? 'border-[#d1fae5] bg-[#d1fae5]/40 text-[#065f46]'
+                        : 'border-[#b8c9ce] bg-white text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]'
+                    }`}
+                  >
+                    {processando ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : jaAvisado ? (
+                      <Check className="size-3.5" />
+                    ) : (
+                      <Bell className="size-3.5" />
+                    )}
+                    {processando
+                      ? 'Registrando...'
+                      : jaAvisado
+                        ? 'Avisaremos você'
+                        : 'Avisar quando estiver pronto'}
+                  </button>
+                </Panel>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── BLOCO 4: AGUARDANDO APROVAÇÃO EXTERNA ───────────────── */}
+
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Lock className="size-4 text-[#6b7d86]" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#6b7d86]">
+              Aguardando liberação externa
+            </h3>
+          </div>
+          {cardsEspera.map((c) => {
+            const Icon = c.icon
+            return (
+              <Panel key={c.titulo} className="overflow-hidden">
+                <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center">
+                  <div
+                    className="grid size-12 shrink-0 place-items-center rounded-lg"
+                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                  >
+                    <Icon className="size-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-[#12232b]">{c.titulo}</h4>
+                    <p className="mt-1.5 text-xs leading-5 text-[#82939a]">{c.descricao}</p>
+                  </div>
+                  <div className="shrink-0 rounded-lg border border-[#fef3c7] bg-[#fef3c7]/40 px-4 py-2.5 lg:max-w-[220px]">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#92400e]">
+                      Status
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-[#92400e]">
+                      {c.motivo}
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
+              </Panel>
+            )
+          })}
+        </section>
       </main>
     </AdminShell>
   )
