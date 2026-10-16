@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { notificarComunicado } from '@/lib/emails/notificacoes'
 import { revalidatePath } from 'next/cache'
 
 export type Comunicado = {
@@ -99,6 +100,34 @@ export async function criarComunicado(data: NovoComunicado) {
     })
 
     if (error) return { success: false, error: error.message }
+
+    // Envia e-mail para todos os responsáveis com aluno ativo na escola
+    try {
+      const { data: alunos } = await admin
+        .from('alunos')
+        .select('responsavel_email')
+        .eq('escola_id', escola.id)
+        .eq('status', 'ativo')
+
+      const emailsUnicos = Array.from(new Set((alunos || []).map((a) => a.responsavel_email).filter(Boolean)))
+
+      // Dispara em paralelo, sem bloquear a resposta (fire and forget)
+      Promise.all(
+        emailsUnicos.map((email) =>
+          notificarComunicado({
+            para: email,
+            escolaNome: escola.nome,
+            escolaSlug: escola.slug,
+            titulo: data.titulo,
+            mensagem: data.mensagem,
+            setor: data.setor,
+            autor,
+          }).catch((e) => console.error('[email comunicado]', email, e))
+        )
+      ).catch(() => {})
+    } catch (e) {
+      console.error('Erro ao disparar e-mails de comunicado:', e)
+    }
 
     revalidatePath('/admin/comunicacao')
     revalidatePath('/responsavel')

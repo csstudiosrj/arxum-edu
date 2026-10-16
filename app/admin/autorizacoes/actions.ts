@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { notificarAutorizacaoPendente } from '@/lib/emails/notificacoes'
 import { revalidatePath } from 'next/cache'
 
 export type Autorizacao = {
@@ -25,6 +26,16 @@ export type NovaAutorizacao = {
   data_evento: string
   prazo_resposta: string
   publico: string
+}
+
+function formatarDataBR(iso: string | null): string | null {
+  if (!iso) return null
+  try {
+    const d = new Date(iso + 'T12:00:00')
+    return d.toLocaleDateString('pt-BR')
+  } catch {
+    return iso
+  }
 }
 
 export async function getAutorizacoes(): Promise<Autorizacao[]> {
@@ -95,6 +106,32 @@ export async function criarAutorizacao(data: NovaAutorizacao) {
 
     if (error) return { success: false, error: error.message }
 
+    // Notifica responsáveis com alunos ativos
+    try {
+      const { data: alunos } = await admin
+        .from('alunos')
+        .select('responsavel_email')
+        .eq('escola_id', escola.id)
+        .eq('status', 'ativo')
+
+      const emailsUnicos = Array.from(new Set((alunos || []).map((a) => a.responsavel_email).filter(Boolean)))
+
+      Promise.all(
+        emailsUnicos.map((email) =>
+          notificarAutorizacaoPendente({
+            para: email,
+            escolaNome: escola.nome,
+            escolaSlug: escola.slug,
+            titulo: data.titulo,
+            descricao: data.descricao || null,
+            prazo: formatarDataBR(data.prazo_resposta),
+          }).catch((e) => console.error('[email autorização]', email, e))
+        )
+      ).catch(() => {})
+    } catch (e) {
+      console.error('Erro ao disparar e-mails de autorização:', e)
+    }
+
     revalidatePath('/admin/autorizacoes')
     revalidatePath('/responsavel')
     return { success: true }
@@ -135,7 +172,6 @@ export async function getRespostas(autorizacaoId: string): Promise<RespostaDetal
 
     const admin = createAdminClient()
 
-    // Confirma que a autorização pertence à escola logada
     const { data: aut } = await admin
       .from('autorizacoes')
       .select('id')

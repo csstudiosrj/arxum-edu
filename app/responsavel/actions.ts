@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notificarRespostaAutorizacao } from '@/lib/emails/notificacoes'
 import { revalidatePath } from 'next/cache'
 
 export type DocumentosMatricula = {
@@ -327,9 +328,12 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
   try {
     const email = await getEmailUsuario()
     if (!email) return { success: false, error: 'Não autenticado.' }
+
     const nomeAluno = await getNomePrimeiroAluno(email)
     if (!nomeAluno) return { success: false, error: 'Nenhum aluno vinculado a este e-mail.' }
+
     const admin = createAdminClient()
+
     const { data: existente } = await admin
       .from('autorizacoes_respostas')
       .select('id')
@@ -337,6 +341,7 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
       .eq('responsavel_email', email)
       .eq('aluno_nome', nomeAluno)
       .maybeSingle()
+
     if (existente) {
       const { error } = await admin.from('autorizacoes_respostas')
         .update({ resposta, observacao: observacao || null, respondido_em: new Date().toISOString() })
@@ -344,15 +349,51 @@ export async function responderAutorizacao(autorizacaoId: string, resposta: 'aut
       if (error) return { success: false, error: error.message }
     } else {
       const { error } = await admin.from('autorizacoes_respostas').insert({
-        autorizacao_id: autorizacaoId, responsavel_email: email, aluno_nome: nomeAluno,
-        resposta, observacao: observacao || null,
+        autorizacao_id: autorizacaoId,
+        responsavel_email: email,
+        aluno_nome: nomeAluno,
+        resposta,
+        observacao: observacao || null,
       })
       if (error) return { success: false, error: error.message }
     }
+
+    // Notifica a escola por e-mail
+    try {
+      const { data: aut } = await admin
+        .from('autorizacoes')
+        .select('titulo, escola_id')
+        .eq('id', autorizacaoId)
+        .maybeSingle()
+
+      if (aut?.escola_id) {
+        const { data: escola } = await admin
+          .from('escolas')
+          .select('nome, email_contato')
+          .eq('id', aut.escola_id)
+          .maybeSingle()
+
+        if (escola?.email_contato) {
+          notificarRespostaAutorizacao({
+            para: escola.email_contato,
+            escolaNome: escola.nome,
+            alunoNome: nomeAluno,
+            titulo: aut.titulo,
+            resposta,
+            observacao: observacao || null,
+          }).catch((e) => console.error('[email resposta autorização]', e))
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao notificar escola sobre resposta:', e)
+    }
+
     revalidatePath('/responsavel')
     revalidatePath('/admin/autorizacoes')
     return { success: true }
-  } catch (e) { return { success: false, error: 'Erro ao responder.' } }
+  } catch (e) {
+    return { success: false, error: 'Erro ao responder.' }
+  }
 }
 
 export async function marcarComoLido(comunicadoId: string) {
@@ -361,7 +402,8 @@ export async function marcarComoLido(comunicadoId: string) {
     if (!email) return { success: false }
     const admin = createAdminClient()
     const { error } = await admin.from('comunicados_leituras').insert({
-      comunicado_id: comunicadoId, responsavel_email: email,
+      comunicado_id: comunicadoId,
+      responsavel_email: email,
     })
     if (error && error.code !== '23505') return { success: false }
     return { success: true }
