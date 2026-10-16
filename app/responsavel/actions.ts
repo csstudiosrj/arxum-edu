@@ -117,9 +117,6 @@ async function getEmailUsuario(): Promise<string | null> {
   return user?.email || null
 }
 
-// Descobre a escola do responsável a partir dos alunos vinculados a ele.
-// Se ele tiver múltiplos filhos, usa a escola do primeiro aluno encontrado
-// (todos os filhos de um responsável ficam na mesma escola no modelo atual).
 async function getEscolaDoResponsavel(email: string): Promise<{
   escolaId: string
   escolaNome: string
@@ -408,7 +405,6 @@ export async function responderAutorizacao(
 
     const admin = createAdminClient()
 
-    // Confirma que o aluno pertence a este responsável
     const { data: aluno } = await admin
       .from('alunos')
       .select('id, nome')
@@ -444,7 +440,6 @@ export async function responderAutorizacao(
       if (error) return { success: false, error: error.message }
     }
 
-    // Notifica a escola por e-mail — respeitando a config da escola.
     try {
       const { data: aut } = await admin
         .from('autorizacoes')
@@ -499,4 +494,110 @@ export async function marcarComoLido(comunicadoId: string) {
     if (error && error.code !== '23505') return { success: false }
     return { success: true }
   } catch (e) { return { success: false } }
+}
+
+// ── LGPD: EXPORTAÇÃO DE DADOS ───────────────────────────────────────
+
+export async function exportarMeusDados() {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return { success: false, error: 'Não autenticado.' }
+
+    const admin = createAdminClient()
+
+    const [
+      alunos,
+      inscricoes,
+      comunicados,
+      faturas,
+      ocorrencias,
+      autorizacoes,
+      notas,
+      consentimentos,
+    ] = await Promise.all([
+      admin.from('alunos').select('*').eq('responsavel_email', email),
+      admin.from('inscricoes').select('*').eq('responsavel_email', email),
+      admin.from('comunicados').select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em').eq('ativo', true),
+      admin.from('faturas').select('*').eq('responsavel_email', email),
+      admin.from('ocorrencias').select('*').eq('responsavel_email', email),
+      admin.from('autorizacoes_respostas').select('*').eq('responsavel_email', email),
+      admin.from('notas').select('*').eq('responsavel_email', email),
+      admin.from('consentimentos').select('tipo, versao, aluno_nome, criado_em').eq('responsavel_email', email),
+    ])
+
+    const pacote = {
+      _meta: {
+        gerado_em: new Date().toISOString(),
+        gerado_para: email,
+        tipo_documento: 'Portabilidade de dados — LGPD Art. 18, V',
+        versao: 'v1-2026-10',
+        descricao: 'Este arquivo contém todos os dados pessoais tratados pelo ARXUM Edu vinculados a este e-mail de responsável, conforme a Lei 13.709/2018 (LGPD).',
+      },
+      dados_cadastrais_responsavel: {
+        email,
+      },
+      alunos_vinculados: alunos.data || [],
+      inscricoes: inscricoes.data || [],
+      comunicados_recebidos: comunicados.data || [],
+      faturas: faturas.data || [],
+      ocorrencias: ocorrencias.data || [],
+      autorizacoes_respondidas: autorizacoes.data || [],
+      notas_boletim: notas.data || [],
+      consentimentos_registrados: consentimentos.data || [],
+    }
+
+    return { success: true, dados: pacote }
+  } catch (e) {
+    console.error('[LGPD exportar]', e)
+    return { success: false, error: 'Erro ao gerar arquivo de dados.' }
+  }
+}
+
+// ── LGPD: SOLICITAÇÃO DE EXCLUSÃO ───────────────────────────────────
+
+export async function solicitarExclusaoDados(motivo: string) {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return { success: false, error: 'Não autenticado.' }
+
+    const admin = createAdminClient()
+
+    const contexto = await getEscolaDoResponsavel(email)
+    if (!contexto) {
+      return { success: false, error: 'Nenhum aluno vinculado a este e-mail. Não há dados para excluir.' }
+    }
+
+    // Verifica se já existe solicitação aberta recente
+    const { data: existente } = await admin
+      .from('tickets_suporte')
+      .select('id')
+      .eq('escola_id', contexto.escolaId)
+      .eq('categoria', 'outro')
+      .like('assunto', 'LGPD%')
+      .in('status', ['aberto', 'em_andamento'])
+      .maybeSingle()
+
+    if (existente) {
+      return { success: true, jaExistia: true }
+    }
+
+    const { error } = await admin.from('tickets_suporte').insert({
+      escola_id: contexto.escolaId,
+      escola_nome: contexto.escolaNome,
+      assunto: 'LGPD: Solicitação de exclusão de dados',
+      descricao: `O responsável (${email}) solicitou a exclusão dos seus dados pessoais.\n\nMotivo declarado: ${motivo || 'não informado'}\n\n⚠️ Ação requer análise manual. Verificar obrigações de retenção legal (registros acadêmicos, fiscais) antes de executar.`,
+      prioridade: 'alta',
+      categoria: 'outro',
+      status: 'aberto',
+      aberto_por: email,
+    })
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    console.error('[LGPD exclusão]', e)
+    return { success: false, error: 'Erro ao registrar solicitação.' }
+  }
 }

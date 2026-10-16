@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Eye, Clock, User, MapPin, Heart, X as XIcon, Inbox, FileText, Download, ExternalLink } from 'lucide-react'
+import { Search, Eye, Clock, User, MapPin, Heart, X as XIcon, Inbox, FileText, Download, ExternalLink, ImageIcon, ImageOff } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarStatusInscricao, type Inscricao, type DocumentosMatricula } from './actions'
 
@@ -85,6 +85,21 @@ const acoesPorStatus: Record<string, { label: string; novoStatus: string; varian
   cancelado: [
     { label: 'Reabrir análise', novoStatus: 'em_analise', variant: 'secondary' },
   ],
+}
+
+function BadgeImagem({ autorizou }: { autorizou: boolean | null }) {
+  if (autorizou === true) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[10px] font-bold text-[#065f46]">
+        <ImageIcon className="size-2.5" /> Autorizada
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#e5ecee] px-2 py-0.5 text-[10px] font-bold text-[#5e7a94]">
+      <ImageOff className="size-2.5" /> Não autorizada
+    </span>
+  )
 }
 
 export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
@@ -201,6 +216,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Série</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Responsável</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Status</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Imagem</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Data</th>
                     <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ações</th>
                   </tr>
@@ -208,7 +224,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                 <tbody>
                   {filtradas.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center text-sm text-[#82939a]">
+                      <td colSpan={8} className="px-5 py-12 text-center text-sm text-[#82939a]">
                         Nenhuma inscrição encontrada com esses filtros.
                       </td>
                     </tr>
@@ -228,6 +244,9 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}>
                               {st.label}
                             </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <BadgeImagem autorizou={m.autorizou_imagem} />
                           </td>
                           <td className="px-5 py-3.5 text-sm text-[#82939a]">{formatDate(m.criado_em)}</td>
                           <td className="px-5 py-3.5">
@@ -274,10 +293,11 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="mb-6">
+              <div className="mb-6 flex items-center gap-2">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusMap[selecionada.status]?.style}`}>
                   {statusMap[selecionada.status]?.label}
                 </span>
+                <BadgeImagem autorizou={selecionada.autorizou_imagem} />
               </div>
 
               <section className="space-y-3">

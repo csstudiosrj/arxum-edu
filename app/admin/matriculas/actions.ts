@@ -44,6 +44,7 @@ export type Inscricao = {
   documentos: DocumentosMatricula | null
   status: string
   criado_em: string
+  autorizou_imagem: boolean | null
 }
 
 export async function getInscricoes(): Promise<Inscricao[]> {
@@ -62,7 +63,33 @@ export async function getInscricoes(): Promise<Inscricao[]> {
       console.error('Erro ao buscar inscrições:', error)
       return []
     }
-    return (data || []) as Inscricao[]
+
+    if (!data || data.length === 0) return []
+
+    // Busca os consentimentos de uso de imagem para cruzar com as inscrições
+    const { data: consentimentos } = await supabase
+      .from('consentimentos')
+      .select('responsavel_email, aluno_nome')
+      .eq('escola_id', escola.id)
+      .eq('tipo', 'uso_imagem')
+
+    const autorizouSet = new Set(
+      (consentimentos || []).map(
+        (c) => `${(c.responsavel_email || '').toLowerCase()}::${(c.aluno_nome || '').toLowerCase()}`
+      )
+    )
+
+    return (data as Omit<Inscricao, 'autorizou_imagem'>[]).map((i) => {
+      const chave = `${i.responsavel_email.toLowerCase()}::${i.aluno_nome.toLowerCase()}`
+      // null = inscrição antiga sem consentimento registrado.
+      // true  = consentimento encontrado.
+      // false = ainda não foi registrado (tratamos como não autorizado por padrão).
+      const teveAlgumConsentimento = autorizouSet.has(chave)
+      return {
+        ...i,
+        autorizou_imagem: teveAlgumConsentimento ? true : false,
+      }
+    }) as Inscricao[]
   } catch (e) {
     console.error('Erro inesperado:', e)
     return []

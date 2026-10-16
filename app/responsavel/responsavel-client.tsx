@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
-import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida } from './actions'
+import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
 
 type MenuItem = readonly [LucideIcon, string]
@@ -174,6 +174,13 @@ export function ResponsavelClient({
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
 
+  // LGPD
+  const [baixandoDados, setBaixandoDados] = useState(false)
+  const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false)
+  const [motivoExclusao, setMotivoExclusao] = useState('')
+  const [enviandoExclusao, setEnviandoExclusao] = useState(false)
+  const [mensagemLgpd, setMensagemLgpd] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+
   useEffect(() => {
     if (!filhos.length) return
     const salvo = typeof window !== 'undefined' ? localStorage.getItem('arxum_filho_ativo') : null
@@ -237,6 +244,54 @@ export function ResponsavelClient({
     if (result.success) {
       setAutorizacaoAberta(null); setObservacao(''); router.refresh()
     } else { alert(result.error || 'Erro ao responder.') }
+  }
+
+  async function handleBaixarDados() {
+    setBaixandoDados(true)
+    setMensagemLgpd(null)
+    const r = await exportarMeusDados()
+    setBaixandoDados(false)
+
+    if (!r.success || !r.dados) {
+      setMensagemLgpd({ tipo: 'erro', texto: r.error || 'Erro ao gerar arquivo.' })
+      return
+    }
+
+    try {
+      const blob = new Blob([JSON.stringify(r.dados, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `arxum-meus-dados-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setMensagemLgpd({ tipo: 'ok', texto: 'Arquivo gerado. O download começou automaticamente.' })
+    } catch (e) {
+      setMensagemLgpd({ tipo: 'erro', texto: 'Erro ao iniciar download.' })
+    }
+  }
+
+  async function handleSolicitarExclusao() {
+    setEnviandoExclusao(true)
+    setMensagemLgpd(null)
+    const r = await solicitarExclusaoDados(motivoExclusao)
+    setEnviandoExclusao(false)
+
+    if (!r.success) {
+      setMensagemLgpd({ tipo: 'erro', texto: r.error || 'Erro ao registrar solicitação.' })
+      return
+    }
+
+    setModalExclusaoAberto(false)
+    setMotivoExclusao('')
+    setMensagemLgpd({
+      tipo: 'ok',
+      texto: r.jaExistia
+        ? 'Você já tem uma solicitação em análise. Nossa equipe entrará em contato.'
+        : 'Solicitação registrada. Nossa equipe entrará em contato em até 15 dias, conforme a LGPD.',
+    })
   }
 
   const naoLidos = comunicados.filter((c) => !c.lido).length
@@ -588,6 +643,54 @@ export function ResponsavelClient({
               ))}
             </div>
           </section>
+
+          <section className="mt-10">
+            <h3 className="mb-4 font-syne text-lg font-bold">Privacidade e meus dados</h3>
+            <div className="rounded-xl border border-[#dbe5e8] bg-white p-6">
+              <div className="flex items-start gap-3">
+                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#e6faf3] text-[#087f5b]">
+                  <ShieldCheck className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-bold text-[#243942]">Seus direitos conforme a LGPD</h4>
+                  <p className="mt-1 text-xs leading-5 text-[#82939a]">
+                    Você pode baixar uma cópia de todos os dados que o ARXUM Edu trata sobre você e
+                    seus filhos, ou solicitar a exclusão dos seus dados pessoais. A exclusão está
+                    sujeita a obrigações legais de retenção (registros acadêmicos e fiscais).
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={handleBaixarDados}
+                  disabled={baixandoDados}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#0d9488] bg-white px-4 py-3 text-sm font-semibold text-[#0d9488] transition hover:bg-[#f0fbf8] disabled:opacity-50"
+                >
+                  {baixandoDados ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />}
+                  {baixandoDados ? 'Gerando arquivo...' : 'Baixar meus dados'}
+                </button>
+
+                <button
+                  onClick={() => { setModalExclusaoAberto(true); setMensagemLgpd(null) }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-3 text-sm font-semibold text-[#dc2626] transition hover:bg-[#fee2e2]"
+                >
+                  <Trash2 className="size-4" />
+                  Solicitar exclusão de dados
+                </button>
+              </div>
+
+              {mensagemLgpd && (
+                <p className={`mt-4 rounded-lg border px-3 py-2 text-xs ${
+                  mensagemLgpd.tipo === 'ok'
+                    ? 'border-[#d1fae5] bg-[#d1fae5]/40 text-[#065f46]'
+                    : 'border-[#fee2e2] bg-[#fee2e2]/40 text-[#991b1b]'
+                }`}>
+                  {mensagemLgpd.texto}
+                </p>
+              )}
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -795,6 +898,52 @@ export function ResponsavelClient({
             <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar</button>
             <button onClick={() => handleResponder('autorizado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar</button>
           </footer>
+        </div>
+      </div>
+    )}
+
+    {modalExclusaoAberto && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => !enviandoExclusao && setModalExclusaoAberto(false)} />
+        <div className="relative z-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+          <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
+            <Trash2 className="size-5" />
+          </div>
+          <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Solicitar exclusão dos seus dados</h3>
+          <p className="mt-2 text-center text-xs leading-6 text-[#82939a]">
+            Nossa equipe vai analisar sua solicitação. Alguns dados podem ser mantidos por obrigação
+            legal (registros acadêmicos e fiscais), conforme a LGPD.
+          </p>
+
+          <div className="mt-5">
+            <label className="mb-1.5 block text-xs font-semibold text-[#536871]">
+              Motivo (opcional)
+            </label>
+            <textarea
+              value={motivoExclusao}
+              onChange={(e) => setMotivoExclusao(e.target.value)}
+              rows={3}
+              placeholder="Se quiser, conte pra gente o motivo desta solicitação."
+              className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+            />
+          </div>
+
+          <div className="mt-6 flex gap-2">
+            <button
+              onClick={() => setModalExclusaoAberto(false)}
+              disabled={enviandoExclusao}
+              className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSolicitarExclusao}
+              disabled={enviandoExclusao}
+              className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50"
+            >
+              {enviandoExclusao ? 'Enviando...' : 'Confirmar solicitação'}
+            </button>
+          </div>
         </div>
       </div>
     )}
