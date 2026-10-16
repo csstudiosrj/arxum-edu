@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, Image as ImageIcon, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Globe, Headphones, Image as ImageIcon, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,7 @@ type AdminMode = 'school' | 'super'
 const schoolItems = [
   ['Visão geral', '/dashboard', LayoutDashboard],
   ['Relatórios', '/admin/relatorios', BarChart3],
+  ['Site', '/admin/site', Globe],
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
@@ -172,7 +173,7 @@ export function SearchBox() {
 
 export function TrendChart() {
   return (
-    <svg viewBox="0 0 280 90" className="mt-3 h-20 w-full" role="img" aria-label="Tendência do tempo médio de resposta">
+    <svg viewBox="0 0 280 90" className="mt-3 h-20 w-full" role="img" aria-label="Tendência">
       <path d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15" fill="none" stroke="#0d9488" strokeWidth="3" strokeLinecap="round"/>
       <path d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15 V90 H2Z" fill="#0d9488" opacity=".08" />
     </svg>
