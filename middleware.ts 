@@ -2,21 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 const SLUGS_RESERVADOS = new Set([
-  'arxum',
-  'login',
-  'cadastro',
-  'matricula',
-  'eduflix',
-  'sala-virtual',
-  'loja',
-  'responsavel',
-  'dashboard',
-  'admin',
-  'super-admin',
-  'escola',
-  'aluno',
-  'primeiro-acesso',
-  'noticias',
+  'arxum', 'login', 'cadastro', 'matricula', 'eduflix', 'sala-virtual', 'loja',
+  'responsavel', 'dashboard', 'admin', 'super-admin', 'escola', 'aluno',
+  'professor', 'primeiro-acesso', 'noticias',
 ])
 
 export async function middleware(request: NextRequest) {

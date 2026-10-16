@@ -28,7 +28,6 @@ export default function LoginPage() {
       return
     }
 
-    // Detecta o perfil do usuário para redirecionar corretamente
     const { data: perfil } = await supabase
       .from('perfis')
       .select('papel')
@@ -41,8 +40,9 @@ export default function LoginPage() {
       router.push('/aluno')
     } else if (perfil?.papel === 'responsavel') {
       router.push('/responsavel')
+    } else if (perfil?.papel === 'professor') {
+      router.push('/professor')
     } else {
-      // admin_escola, direcao, coordenacao, secretaria, financeiro, professor
       router.push('/dashboard')
     }
 
@@ -56,18 +56,12 @@ export default function LoginPage() {
           <ArxumBrand />
         </div>
 
-        <h1 className="text-center text-2xl font-bold text-white">
-          Acesse sua conta
-        </h1>
-        <p className="mt-2 text-center text-sm text-[#8aa0ad]">
-          Entre com suas credenciais para continuar
-        </p>
+        <h1 className="text-center text-2xl font-bold text-white">Acesse sua conta</h1>
+        <p className="mt-2 text-center text-sm text-[#8aa0ad]">Entre com suas credenciais para continuar</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">
-              E-mail
-            </label>
+            <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">E-mail</label>
             <input
               type="email"
               value={email}
@@ -79,9 +73,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">
-              Senha
-            </label>
+            <label className="mb-1.5 block text-xs font-semibold text-[#c7d5db]">Senha</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -102,15 +94,11 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {error}
-            </p>
+            <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</p>
           )}
 
           <div className="flex justify-end">
-            <Link href="#" className="text-xs text-[#0d9488] hover:text-[#14b8a6]">
-              Esqueci minha senha
-            </Link>
+            <Link href="#" className="text-xs text-[#0d9488] hover:text-[#14b8a6]">Esqueci minha senha</Link>
           </div>
 
           <button
@@ -124,9 +112,7 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-xs text-[#5e7a94]">
           Não tem conta?{' '}
-          <Link href="/cadastro" className="text-[#0d9488] hover:text-[#14b8a6]">
-            Criar escola
-          </Link>
+          <Link href="/cadastro" className="text-[#0d9488] hover:text-[#14b8a6]">Criar escola</Link>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Globe, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,7 @@ const schoolItems = [
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
+  ['Professores', '/admin/professores', GraduationCap],
   ['Notas', '/admin/notas', TrendingUp],
   ['Ocorrências', '/admin/ocorrencias', AlertCircle],
   ['Financeiro', '/admin/financeiro', WalletCards],
@@ -49,17 +50,10 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   const items = mode === 'super' ? superItems : schoolItems
 
   useEffect(() => {
-    if (mode === 'super') {
-      setNomeEscola('Painel ARXUM')
-      return
-    }
+    if (mode === 'super') { setNomeEscola('Painel ARXUM'); return }
     let ativo = true
-    getNomeEscolaAtual().then((nome) => {
-      if (ativo) setNomeEscola(nome)
-    })
-    return () => {
-      ativo = false
-    }
+    getNomeEscolaAtual().then((nome) => { if (ativo) setNomeEscola(nome) })
+    return () => { ativo = false }
   }, [mode])
 
   async function handleLogout() {
