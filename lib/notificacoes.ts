@@ -258,8 +258,8 @@ export async function getNotificacoesResponsavel(): Promise<ResultadoNotificacoe
 export async function getNotificacoesAluno(): Promise<ResultadoNotificacoes> {
   const vazio: ResultadoNotificacoes = { total: 0, itens: [] }
   try {
-    const { email } = await getEmailUsuario()
-    if (!email) return vazio
+    const { email, userId } = await getEmailUsuario()
+    if (!email || !userId) return vazio
 
     const admin = createAdminClient()
 
@@ -267,7 +267,7 @@ export async function getNotificacoesAluno(): Promise<ResultadoNotificacoes> {
     const { data: aluno } = await admin
       .from('alunos')
       .select('id, escola_id, nome')
-      .eq('usuario_id', (await getEmailUsuario()).userId || '')
+      .eq('usuario_id', userId)
       .maybeSingle()
 
     if (!aluno) return vazio

@@ -80,3 +80,31 @@ export async function getNomeEscolaAtual(): Promise<string> {
   const escola = await getEscolaDoUsuario()
   return escola?.nome || 'Minha escola'
 }
+
+// ── MARCA ATUAL (nome + cor primária + logo) ────────────────────────
+
+export type MarcaAtual = {
+  nome: string
+  corPrimaria: string
+  logoUrl: string | null
+}
+
+const COR_FALLBACK = '#0d9488'
+
+function corValida(cor: string | null | undefined): string {
+  if (!cor) return COR_FALLBACK
+  if (!/^#[0-9a-fA-F]{6}$/.test(cor)) return COR_FALLBACK
+  return cor
+}
+
+export async function getMarcaEscolaAtual(): Promise<MarcaAtual> {
+  const escola = await getEscolaDoUsuario()
+  if (!escola) {
+    return { nome: 'Minha escola', corPrimaria: COR_FALLBACK, logoUrl: null }
+  }
+  return {
+    nome: escola.nome,
+    corPrimaria: corValida(escola.cor_primaria),
+    logoUrl: escola.logo_url,
+  }
+}
