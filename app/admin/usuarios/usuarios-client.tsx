@@ -7,20 +7,11 @@ import {
   ShieldCheck, Crown, Edit, Send, CheckCircle2, Lock, Building2, GraduationCap,
 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { PAPEIS_INTERNOS, papelCor, papelLabel } from './papeis'
 import {
   convidarUsuario, atualizarUsuario, excluirUsuario, reenviarConviteUsuario,
-  PAPEIS_INTERNOS,
   type UsuarioInterno,
 } from './actions'
-
-const papelCores: Record<string, string> = {
-  admin_escola: '#dc2626',
-  direcao: '#7c3aed',
-  coordenacao: '#3b82f6',
-  secretaria: '#0d9488',
-  financeiro: '#d97706',
-  professor: '#0891b2',
-}
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(' ')
@@ -30,14 +21,6 @@ function iniciais(nome: string): string {
 
 function formatarData(iso: string): string {
   try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return '—' }
-}
-
-function papelLabel(key: string): string {
-  return PAPEIS_INTERNOS.find((p) => p.key === key)?.label || key
-}
-
-function papelCor(key: string): string {
-  return papelCores[key] || '#6b7d86'
 }
 
 export function UsuariosClient({
@@ -56,14 +39,12 @@ export function UsuariosClient({
   const [processando, setProcessando] = useState(false)
   const [erro, setErro] = useState('')
 
-  // Form novo
   const [novoNome, setNovoNome] = useState('')
   const [novoEmail, setNovoEmail] = useState('')
   const [novoPapel, setNovoPapel] = useState('secretaria')
   const [novoTelefone, setNovoTelefone] = useState('')
   const [novaUnidade, setNovaUnidade] = useState('')
 
-  // Form edição
   const [editNome, setEditNome] = useState('')
   const [editPapel, setEditPapel] = useState('')
   const [editTelefone, setEditTelefone] = useState('')
@@ -335,7 +316,6 @@ export function UsuariosClient({
           )}
         </Panel>
 
-        {/* Info papéis */}
         <Panel className="mt-6">
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-center gap-3">
@@ -362,7 +342,6 @@ export function UsuariosClient({
         </Panel>
       </main>
 
-      {/* Novo usuário */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setNovoAberto(false)} />
@@ -435,7 +414,6 @@ export function UsuariosClient({
         </div>
       )}
 
-      {/* Editar usuário */}
       {editando && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setEditando(null)} />

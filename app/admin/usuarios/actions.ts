@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { createClient } from '@/lib/supabase/server'
 import { enviarConviteEquipe } from '@/lib/emails/convite-equipe'
+import { PAPEIS_INTERNOS } from './papeis'
 import { revalidatePath } from 'next/cache'
 
 export type UsuarioInterno = {
@@ -19,15 +20,6 @@ export type UsuarioInterno = {
   criado_em: string
   e_admin: boolean
 }
-
-export const PAPEIS_INTERNOS = [
-  { key: 'admin_escola', label: 'Administrador', descricao: 'Acesso total ao sistema' },
-  { key: 'direcao', label: 'Direção', descricao: 'Acesso geral menos configurações técnicas' },
-  { key: 'coordenacao', label: 'Coordenação', descricao: 'Pedagógico, alunos, professores e comunicados' },
-  { key: 'secretaria', label: 'Secretaria', descricao: 'Matrículas, documentos e alunos' },
-  { key: 'financeiro', label: 'Financeiro', descricao: 'Faturas, pagamentos e relatórios financeiros' },
-  { key: 'professor', label: 'Professor', descricao: 'Notas, ocorrências e portal do professor' },
-] as const
 
 export type NovoUsuario = {
   nome: string
@@ -54,7 +46,7 @@ export async function getUsuariosInternos(): Promise<UsuarioInterno[]> {
     if (error || !perfis) return []
 
     const unidadesIds = Array.from(new Set(perfis.map((p) => p.unidade_id).filter(Boolean))) as string[]
-    let nomesPorUnidade: Record<string, string> = {}
+    const nomesPorUnidade: Record<string, string> = {}
     if (unidadesIds.length > 0) {
       const { data: unidades } = await admin
         .from('unidades')
@@ -63,7 +55,6 @@ export async function getUsuariosInternos(): Promise<UsuarioInterno[]> {
       ;(unidades || []).forEach((u) => { nomesPorUnidade[u.id] = u.nome })
     }
 
-    // Admin principal = primeiro admin_escola mais antigo
     const primeiroAdmin = perfis.find((p) => p.papel === 'admin_escola')
 
     return perfis.map((p) => ({
@@ -100,7 +91,6 @@ export async function convidarUsuario(data: NovoUsuario) {
 
     const admin = createAdminClient()
 
-    // Descobre quem está convidando
     const supabaseAuth = await createClient()
     const { data: { user: userAtual } } = await supabaseAuth.auth.getUser()
     let convidadoPor = 'A equipe da escola'
@@ -113,7 +103,6 @@ export async function convidarUsuario(data: NovoUsuario) {
       convidadoPor = perfilAtual?.nome || 'A direção'
     }
 
-    // Verifica se já existe usuário com esse e-mail
     const { data: usuarios } = await admin.auth.admin.listUsers()
     let usuario = (usuarios?.users || []).find((u) => u.email === data.email)
 
@@ -130,7 +119,6 @@ export async function convidarUsuario(data: NovoUsuario) {
       usuario = novo.user
     }
 
-    // Verifica se já é da escola
     const { data: perfilExistente } = await admin
       .from('perfis')
       .select('escola_id, papel')
@@ -141,7 +129,6 @@ export async function convidarUsuario(data: NovoUsuario) {
       return { success: false, error: 'Este e-mail já está vinculado a outra escola.' }
     }
 
-    // Atualiza/cria o perfil
     const { error: erroPerfil } = await admin
       .from('perfis')
       .update({
@@ -156,7 +143,6 @@ export async function convidarUsuario(data: NovoUsuario) {
 
     if (erroPerfil) return { success: false, error: erroPerfil.message }
 
-    // Link mágico
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: data.email,
@@ -202,7 +188,6 @@ export async function atualizarUsuario(id: string, data: {
 
     const admin = createAdminClient()
 
-    // Bloqueia mudar papel do admin principal
     if (data.papel !== undefined) {
       const { data: perfis } = await admin
         .from('perfis')
@@ -311,7 +296,6 @@ export async function excluirUsuario(id: string) {
 
     const admin = createAdminClient()
 
-    // Bloqueia excluir admin principal
     const { data: perfis } = await admin
       .from('perfis')
       .select('id, papel, criado_em')
@@ -324,7 +308,6 @@ export async function excluirUsuario(id: string) {
       return { success: false, error: 'Não é possível excluir o administrador principal.' }
     }
 
-    // Confirma que o perfil é da escola
     const { data: perfil } = await admin
       .from('perfis')
       .select('id')
