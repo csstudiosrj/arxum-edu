@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowRight, BookOpen, FlaskConical, HeartHandshake, Landmark, Lightbulb, Medal, Sparkles } from 'lucide-react'
 import { PublicFooter, PublicHeader } from '@/components/arxum-brand'
+import { getFontePar } from '@/lib/fonts'
 
 const segments = [
   ['Educação Infantil', 'Descobertas que constroem os primeiros passos.', Sparkles],
@@ -23,11 +24,28 @@ const news = [
   ['15 SET 2026', 'Famílias participam da Semana da Comunidade'],
 ] as const
 
-export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: string }) {
+export function EscolaClient({
+  escolaNome,
+  slug,
+  fontePar,
+}: {
+  escolaNome: string
+  slug: string
+  fontePar: string | null
+}) {
   const base = `/edu/${slug}`
+  const par = getFontePar(fontePar)
+
+  const estiloFontes = {
+    '--font-heading-active': `var(${par.headingVar})`,
+    '--font-body-active': `var(${par.bodyVar})`,
+  } as React.CSSProperties
 
   return (
-    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+    <div
+      className="min-h-screen bg-[#070b0f] text-[#e7f1f5]"
+      style={estiloFontes}
+    >
       <PublicHeader slug={slug} />
 
       <main>
@@ -37,7 +55,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
               <span className="size-1.5 rounded-full bg-[#0d9488]" />
               {escolaNome}
             </p>
-            <h1 className="max-w-2xl font-syne text-5xl font-bold leading-[1.02] tracking-[-.06em] text-white sm:text-6xl">
+            <h1 className="max-w-2xl font-heading text-5xl font-bold leading-[1.02] tracking-[-.06em] text-white sm:text-6xl">
               Educação que prepara <span className="text-[#0d9488]">para o futuro.</span>
             </h1>
             <p className="mt-7 max-w-lg text-lg leading-8 text-[#8aa0ad]">
@@ -68,7 +86,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
                 </span>
               </div>
               <div>
-                <p className="font-syne text-4xl font-bold tracking-tight text-white">
+                <p className="font-heading text-4xl font-bold tracking-tight text-white">
                   O futuro começa<br /><span className="text-[#0d9488]">aqui.</span>
                 </p>
                 <div className="mt-8 flex gap-2">
@@ -85,7 +103,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">Uma jornada completa</p>
-              <h2 className="mt-3 font-syne text-3xl font-bold tracking-[-.04em] text-white">Nossos segmentos</h2>
+              <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-.04em] text-white">Nossos segmentos</h2>
             </div>
             <p className="hidden max-w-sm text-sm leading-6 text-[#8aa0ad] md:block">
               Cada etapa tem seu ritmo, suas descobertas e um jeito único de florescer.
@@ -97,7 +115,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
                 <div className="mb-12 grid size-10 place-items-center rounded-lg bg-[#0d9488]/10 text-[#0d9488]">
                   <Icon className="size-5" />
                 </div>
-                <h3 className="font-syne text-lg font-bold text-white">{title}</h3>
+                <h3 className="font-heading text-lg font-bold text-white">{title}</h3>
                 <p className="mt-2 text-sm leading-6 text-[#8196a2]">{text}</p>
               </article>
             ))}
@@ -107,7 +125,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
         <section id="a-escola" className="border-y border-white/[.07] bg-[#0b1115] px-6 py-20 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">Nossa diferença</p>
-            <h2 className="mt-3 max-w-xl font-syne text-3xl font-bold tracking-[-.04em] text-white">
+            <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold tracking-[-.04em] text-white">
               Por que escolher a {escolaNome}
             </h2>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -117,7 +135,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
                     <Icon className="size-5" />
                   </div>
                   <div>
-                    <h3 className="font-syne font-bold text-white">{title}</h3>
+                    <h3 className="font-heading font-bold text-white">{title}</h3>
                     <p className="mt-2 text-sm leading-6 text-[#8196a2]">{text}</p>
                   </div>
                 </div>
@@ -130,7 +148,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
           <div className="flex items-end justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">Fique por dentro</p>
-              <h2 className="mt-3 font-syne text-3xl font-bold tracking-[-.04em] text-white">Últimas notícias</h2>
+              <h2 className="mt-3 font-heading text-3xl font-bold tracking-[-.04em] text-white">Últimas notícias</h2>
             </div>
             <a href="#noticias" className="hidden text-sm text-[#0d9488] sm:block">
               Ver todas <ArrowRight className="ml-1 inline size-4" />
@@ -142,7 +160,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
                 <div className={`h-36 ${index === 0 ? 'bg-gradient-to-br from-[#154b45] to-[#132733]' : index === 1 ? 'bg-gradient-to-br from-[#26334c] to-[#141d2b]' : 'bg-gradient-to-br from-[#403b28] to-[#20291f]'}`} />
                 <div className="p-5">
                   <p className="text-[10px] font-semibold tracking-widest text-[#0d9488]">{date}</p>
-                  <h3 className="mt-3 font-syne text-lg font-bold leading-6 text-white">{title}</h3>
+                  <h3 className="mt-3 font-heading text-lg font-bold leading-6 text-white">{title}</h3>
                   <a href="#noticias" className="mt-5 inline-block text-sm font-medium text-[#0d9488]">
                     Ler mais <ArrowRight className="ml-1 inline size-3.5" />
                   </a>
@@ -154,7 +172,7 @@ export function EscolaClient({ escolaNome, slug }: { escolaNome: string; slug: s
 
         <section id="contato" className="mx-6 mb-20 rounded-2xl border border-[#0d9488]/20 bg-[#0d2727] px-6 py-16 text-center lg:mx-auto lg:max-w-7xl">
           <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#14b8a6]">O próximo capítulo começa agora</p>
-          <h2 className="mx-auto mt-4 max-w-xl font-syne text-3xl font-bold tracking-[-.04em] text-white sm:text-4xl">
+          <h2 className="mx-auto mt-4 max-w-xl font-heading text-3xl font-bold tracking-[-.04em] text-white sm:text-4xl">
             Pronto para matricular seu filho?
           </h2>
           <Link

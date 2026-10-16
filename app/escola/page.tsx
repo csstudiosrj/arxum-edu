@@ -8,5 +8,11 @@ export default async function EscolaPage() {
   const escola = await getEscolaDaRequisicao()
   if (!escola) notFound()
 
-  return <EscolaClient escolaNome={escola.nome} slug={escola.slug} />
+  return (
+    <EscolaClient
+      escolaNome={escola.nome}
+      slug={escola.slug}
+      fontePar={escola.fonte_par}
+    />
+  )
 }

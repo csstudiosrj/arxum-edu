@@ -18,6 +18,8 @@ export type EscolaCompleta = {
   site: string | null
   logo_url: string | null
   cor_primaria: string | null
+  fonte_par: string | null
+  tema: string | null
   criado_em: string
 }
 
@@ -62,11 +64,6 @@ export async function getEscolaPorSlug(slug: string): Promise<EscolaCompleta | n
   }
 }
 
-/**
- * Retorna a escola da requisição com base no header `x-escola-slug`
- * injetado pelo middleware. Se não houver slug, retorna null.
- * Sem escola = sem página. Não existe fallback.
- */
 export async function getEscolaDaRequisicao(): Promise<EscolaCompleta | null> {
   try {
     const headersList = await headers()
