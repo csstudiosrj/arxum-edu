@@ -20,25 +20,32 @@ export default function LoginPage() {
     setError('')
 
     const supabase = createClient()
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: auth, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
+    if (authError || !auth.user) {
       setError('E-mail ou senha incorretos.')
       setLoading(false)
       return
     }
 
-    // Redirecionamento baseado no perfil (role)
-    const role = data.user?.user_metadata?.role
+    // Detecta o perfil do usuário para redirecionar corretamente
+    const { data: perfil } = await supabase
+      .from('perfis')
+      .select('papel')
+      .eq('id', auth.user.id)
+      .maybeSingle()
 
-    if (role === 'super_admin') {
+    if (perfil?.papel === 'super_admin') {
       router.push('/super-admin')
-    } else if (role === 'admin') {
-      router.push('/dashboard')
-    } else {
+    } else if (perfil?.papel === 'aluno') {
+      router.push('/aluno')
+    } else if (perfil?.papel === 'responsavel') {
       router.push('/responsavel')
+    } else {
+      // admin_escola, direcao, coordenacao, secretaria, financeiro, professor
+      router.push('/dashboard')
     }
-    
+
     router.refresh()
   }
 
@@ -101,10 +108,7 @@ export default function LoginPage() {
           )}
 
           <div className="flex justify-end">
-            <Link
-              href="#"
-              className="text-xs text-[#0d9488] hover:text-[#14b8a6]"
-            >
+            <Link href="#" className="text-xs text-[#0d9488] hover:text-[#14b8a6]">
               Esqueci minha senha
             </Link>
           </div>
@@ -120,8 +124,8 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-xs text-[#5e7a94]">
           Não tem conta?{' '}
-          <Link href="#" className="text-[#0d9488] hover:text-[#14b8a6]">
-            Fale com a escola
+          <Link href="/cadastro" className="text-[#0d9488] hover:text-[#14b8a6]">
+            Criar escola
           </Link>
         </div>
       </div>

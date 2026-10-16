@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Mail, Phone, Users, Inbox, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, Mail, Phone, Users, Inbox, Eye, UserPlus, CheckCircle2, X, Loader2 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import type { Aluno } from './actions'
+import { convidarAlunoParaPortal, type Aluno } from './actions'
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(' ')
@@ -20,7 +21,13 @@ function formatarData(iso: string): string {
 }
 
 export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
+  const router = useRouter()
   const [busca, setBusca] = useState('')
+  const [convidando, setConvidando] = useState<Aluno | null>(null)
+  const [emailConvite, setEmailConvite] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [sucesso, setSucesso] = useState(false)
 
   const filtrados = alunos.filter((a) => {
     const termo = busca.toLowerCase()
@@ -33,6 +40,39 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
   })
 
   const ativos = alunos.filter((a) => a.status === 'ativo').length
+  const comPortal = alunos.filter((a) => a.usuario_id).length
+
+  function abrirConvite(aluno: Aluno) {
+    setConvidando(aluno)
+    setEmailConvite(aluno.email_aluno || '')
+    setErro('')
+    setSucesso(false)
+  }
+
+  async function handleConvidar() {
+    if (!convidando) return
+    if (!emailConvite.trim()) {
+      setErro('Informe o e-mail do aluno.')
+      return
+    }
+
+    setEnviando(true)
+    setErro('')
+    const result = await convidarAlunoParaPortal(convidando.id, emailConvite.trim())
+    setEnviando(false)
+
+    if (!result.success) {
+      setErro(result.error || 'Erro ao convidar.')
+      return
+    }
+
+    setSucesso(true)
+    router.refresh()
+    setTimeout(() => {
+      setConvidando(null)
+      setSucesso(false)
+    }, 1800)
+  }
 
   return (
     <AdminShell mode="school" active="Alunos">
@@ -63,12 +103,12 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
             </div>
           </Panel>
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]">
-              <Users className="size-5" />
+            <div className="grid size-10 place-items-center rounded-lg bg-[#ede9fe] text-[#5b21b6]">
+              <UserPlus className="size-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Turmas</p>
-              <p className="text-2xl font-bold tracking-[-.03em] text-[#12232b]">{new Set(alunos.map((a) => a.serie)).size}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Com acesso ao portal</p>
+              <p className="text-2xl font-bold tracking-[-.03em] text-[#5b21b6]">{comPortal}</p>
             </div>
           </Panel>
         </div>
@@ -109,15 +149,14 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Série / Turma</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Turno</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Responsável</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Status</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Matriculado em</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Portal</th>
                     <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtrados.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center text-sm text-[#82939a]">
+                      <td colSpan={6} className="px-5 py-12 text-center text-sm text-[#82939a]">
                         Nenhum aluno encontrado com esses filtros.
                       </td>
                     </tr>
@@ -131,7 +170,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                             </div>
                             <div>
                               <div className="text-sm font-semibold text-[#243942]">{a.nome}</div>
-                              <div className="text-xs text-[#82939a]">{a.responsavel_email}</div>
+                              <div className="text-xs text-[#82939a]">{a.email_aluno || a.responsavel_email}</div>
                             </div>
                           </div>
                         </td>
@@ -142,26 +181,31 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                           <div className="text-xs text-[#82939a]">{a.responsavel_telefone || '—'}</div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                            a.status === 'ativo' ? 'bg-[#d1fae5] text-[#065f46]' : 'bg-[#e5ecee] text-[#5e7a94]'
-                          }`}>
-                            {a.status === 'ativo' ? 'Ativo' : a.status}
-                          </span>
+                          {a.usuario_id ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2.5 py-1 text-[11px] font-semibold text-[#065f46]">
+                              <CheckCircle2 className="size-3" /> Ativo
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-[#e5ecee] px-2.5 py-1 text-[11px] font-semibold text-[#5e7a94]">
+                              Sem acesso
+                            </span>
+                          )}
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-[#82939a]">{formatarData(a.criado_em)}</td>
                         <td className="px-5 py-3.5">
                           <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => abrirConvite(a)}
+                              className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                              title="Convidar para o portal"
+                            >
+                              <UserPlus className="size-4" />
+                            </button>
                             <button className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ver detalhes">
                               <Eye className="size-4" />
                             </button>
-                            <a href={`mailto:${a.responsavel_email}`} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Enviar e-mail">
+                            <a href={`mailto:${a.responsavel_email}`} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Enviar e-mail ao responsável">
                               <Mail className="size-4" />
                             </a>
-                            {a.responsavel_telefone && (
-                              <a href={`tel:${a.responsavel_telefone}`} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ligar">
-                                <Phone className="size-4" />
-                              </a>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -173,6 +217,73 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
           )}
         </Panel>
       </main>
+
+      {convidando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && setConvidando(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-[#12232b]">Portal do aluno</h3>
+                <p className="mt-1 text-sm text-[#82939a]">
+                  Dê acesso ao portal para <strong className="text-[#243942]">{convidando.nome}</strong>.
+                </p>
+              </div>
+              <button
+                onClick={() => setConvidando(null)}
+                disabled={enviando}
+                className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail do aluno</label>
+              <input
+                type="email"
+                value={emailConvite}
+                onChange={(e) => setEmailConvite(e.target.value)}
+                placeholder="aluno@email.com"
+                className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+              />
+              <p className="mt-2 text-xs leading-5 text-[#82939a]">
+                O aluno fará login usando este e-mail. Se já existir conta, apenas vinculamos. Se não existir, criamos agora.
+              </p>
+            </div>
+
+            {erro && (
+              <p className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">
+                {erro}
+              </p>
+            )}
+
+            {sucesso && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#0d9488]/30 bg-[#ccfbf1] px-3 py-2 text-xs text-[#0f766e]">
+                <CheckCircle2 className="size-4" /> Aluno vinculado ao portal.
+              </div>
+            )}
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setConvidando(null)}
+                disabled={enviando}
+                className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={handleConvidar}
+                disabled={enviando || sucesso}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+              >
+                {enviando ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                {enviando ? 'Vinculando...' : 'Convidar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminShell>
   )
 }
