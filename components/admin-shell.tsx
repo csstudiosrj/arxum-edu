@@ -46,7 +46,8 @@ const superItems = [
   ['Add-ons', '/super-admin/addons', Palette],
   ['Faturamento', '/super-admin/faturamento', CircleDollarSign],
   ['Suporte', '/super-admin/suporte', Headphones],
-  // TODO: 'Métricas' e 'Configurações' voltam quando as páginas forem implementadas.
+  ['Métricas', '/super-admin/metricas', BarChart3],
+  // TODO: 'Configurações' volta quando a página for implementada.
 ] as const
 
 function iniciaisDe(nome: string): string {
