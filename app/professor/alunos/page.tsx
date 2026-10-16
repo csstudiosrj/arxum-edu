@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getProfessorDoUsuario } from '@/lib/auth/professor-atual'
+import { getEscolaPorId } from '@/lib/auth/escola-atual'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import { getAlunosDoProfessor } from '../actions'
 import { ProfessorShell } from '../professor-shell'
 
@@ -9,7 +11,12 @@ export default async function AlunosProfessorPage() {
   const prof = await getProfessorDoUsuario()
   if (!prof) redirect('/login')
 
-  const alunos = await getAlunosDoProfessor()
+  const [alunos, escola] = await Promise.all([
+    getAlunosDoProfessor(),
+    getEscolaPorId(prof.escola_id),
+  ])
+
+  const marca = escola ? marcaDaEscola(escola) : null
 
   return (
     <ProfessorShell
@@ -17,6 +24,7 @@ export default async function AlunosProfessorPage() {
       professorDisciplinas={prof.disciplinas || []}
       escolaNome={prof.escola_nome}
       escolaSlug={prof.escola_slug}
+      marca={marca}
     >
       <main className="px-5 py-8 lg:px-8">
         <div className="mb-8">

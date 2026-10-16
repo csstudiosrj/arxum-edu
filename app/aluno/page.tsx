@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAlunoDoUsuario } from '@/lib/auth/aluno-atual'
+import { getEscolaPorId } from '@/lib/auth/escola-atual'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import {
   getMinhasNotas,
   getMeusEventosAluno,
@@ -15,12 +17,15 @@ export default async function AlunoPage() {
   const aluno = await getAlunoDoUsuario()
   if (!aluno) redirect('/login')
 
-  const [notas, eventos, comunicados, aulas] = await Promise.all([
+  const [notas, eventos, comunicados, aulas, escola] = await Promise.all([
     getMinhasNotas(),
     getMeusEventosAluno(),
     getMeusComunicadosAluno(),
     getMinhasAulas(),
+    getEscolaPorId(aluno.escola_id),
   ])
+
+  const marca = escola ? marcaDaEscola(escola) : null
 
   return (
     <AlunoShell
@@ -28,6 +33,7 @@ export default async function AlunoPage() {
       alunoSerie={aluno.serie || 'Sem série'}
       escolaNome={aluno.escola_nome}
       escolaSlug={aluno.escola_slug}
+      marca={marca}
     >
       <AlunoDashboard
         alunoNome={aluno.nome}

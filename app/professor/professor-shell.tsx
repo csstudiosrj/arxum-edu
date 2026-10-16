@@ -6,8 +6,9 @@ import {
   AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
-import { ArxumBrand } from '@/components/arxum-brand'
+import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
+import type { MarcaEscola } from '@/lib/auth/marca'
 
 type MenuItem = readonly [string, string, LucideIcon]
 
@@ -24,12 +25,14 @@ export function ProfessorShell({
   professorDisciplinas,
   escolaNome,
   escolaSlug,
+  marca,
 }: {
   children: React.ReactNode
   professorNome: string
   professorDisciplinas: string[]
   escolaNome: string
   escolaSlug: string
+  marca: MarcaEscola | null
 }) {
   const [open, setOpen] = useState(false)
   const [saindo, setSaindo] = useState(false)
@@ -50,12 +53,17 @@ export function ProfessorShell({
   }
 
   const iniciais = professorNome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+  const temBranding = marca?.usaBranding && marca.logoUrl
 
   return (
     <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]">
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white px-4 py-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-2">
-          <ArxumBrand light={true} />
+          {temBranding ? (
+            <img src={marca!.logoUrl!} alt={marca!.nome} className="h-9 w-auto max-w-[180px] object-contain" />
+          ) : (
+            <ArxumBrand light={true} />
+          )}
           <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
         </div>
 
@@ -98,6 +106,9 @@ export function ProfessorShell({
             <LogOut className="size-[18px]" />
             {saindo ? 'Saindo...' : 'Sair'}
           </button>
+          <div className="mt-3 flex justify-center">
+            <ByArxum light />
+          </div>
         </div>
       </aside>
 

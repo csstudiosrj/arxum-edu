@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
-import { ArxumBrand } from '@/components/arxum-brand'
+import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel } from './actions'
 import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida } from './actions'
+import type { MarcaEscola } from '@/lib/auth/marca'
 
 type MenuItem = readonly [LucideIcon, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -88,9 +89,20 @@ const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> 
   { key: 'historico_escolar', label: 'Histórico escolar' },
 ]
 
-function Sidebar({ onLogout, saindo }: { onLogout: () => void; saindo: boolean }) {
+function Sidebar({ onLogout, saindo, marca }: { onLogout: () => void; saindo: boolean; marca: MarcaEscola | null }) {
+  const temBranding = marca?.usaBranding && marca.logoUrl
+
   return <aside className="hidden w-64 shrink-0 border-r border-[#dbe5e8] bg-white lg:flex lg:flex-col">
-    <div className="p-6"><ArxumBrand light /></div>
+    <div className="p-6">
+      {temBranding ? (
+        <div className="flex flex-col items-start gap-2">
+          <img src={marca!.logoUrl!} alt={marca!.nome} className="h-10 w-auto max-w-[180px] object-contain" />
+          <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#82939a]">{marca!.nome}</p>
+        </div>
+      ) : (
+        <ArxumBrand light />
+      )}
+    </div>
     <div className="px-3">
       <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[.16em] text-[#8aa0ad]">Área do responsável</p>
       {menu.map(([Icon,label],i) => <Link key={label} href="#" className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0?'bg-[#e6faf3] text-[#087f5b]':'text-[#617783] hover:bg-[#f4f7f8]'}`}><Icon size={18}/>{label}</Link>)}
@@ -99,6 +111,9 @@ function Sidebar({ onLogout, saindo }: { onLogout: () => void; saindo: boolean }
       <button onClick={onLogout} disabled={saindo} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-[#617783] disabled:opacity-50">
         <LogOut size={17}/>{saindo ? 'Saindo...' : 'Sair'}
       </button>
+      <div className="mt-3 flex justify-center">
+        <ByArxum light />
+      </div>
     </div>
   </aside>
 }
@@ -124,7 +139,7 @@ function corNota(nota: number | null): string {
 }
 
 export function ResponsavelClient({
-  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias,
+  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias, marca,
 }: {
   inscricoes: InscricaoResponsavel[]
   comunicados: ComunicadoResponsavel[]
@@ -134,6 +149,7 @@ export function ResponsavelClient({
   boletins: BoletimAluno[]
   albuns: AlbumResponsavel[]
   ocorrencias: OcorrenciaResponsavel[]
+  marca: MarcaEscola | null
 }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
@@ -186,10 +202,15 @@ export function ResponsavelClient({
   const faturasEmAberto = faturas.filter((f) => f.status === 'em_aberto' || f.status === 'vencido')
   const autorizacoesPendentes = autorizacoes.filter((a) => !a.resposta)
   const ocorrenciasNaoLidas = ocorrencias.filter((o) => !o.lida)
+  const temBranding = marca?.usaBranding && marca.logoUrl
 
-  return <div className="min-h-screen bg-[#f7fafb] text-[#18313c]">
+  const estiloMarca = marca?.usaBranding
+    ? ({ '--cor-primaria': marca.corPrimaria } as React.CSSProperties)
+    : undefined
+
+  return <div className="min-h-screen bg-[#f7fafb] text-[#18313c]" style={estiloMarca}>
     <div className="flex min-h-screen">
-      <Sidebar onLogout={handleLogout} saindo={saindo} />
+      <Sidebar onLogout={handleLogout} saindo={saindo} marca={marca} />
       <main className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-[#dbe5e8] bg-white px-5 py-4 md:px-8">
           <div>
@@ -261,9 +282,7 @@ export function ResponsavelClient({
                           <h4 className="mt-1 font-syne text-lg font-bold">{i.aluno_nome}</h4>
                           <p className="mt-0.5 text-sm text-[#8aa0ad]">{i.aluno_serie || 'Série não definida'}{i.aluno_turno ? ` · ${i.aluno_turno}` : ''}</p>
                         </div>
-                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}>
-                          <Icone size={12} />{st.label}
-                        </span>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}><Icone size={12} />{st.label}</span>
                       </div>
                       <div className="mt-5 grid grid-cols-2 gap-3 border-t border-[#edf1f2] pt-4 text-xs">
                         <div><p className="text-[#8aa0ad]">Enviada em</p><p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.criado_em)}</p></div>
@@ -321,14 +340,8 @@ export function ResponsavelClient({
                   const info = tipoOcorrencia[o.tipo] || tipoOcorrencia.outro
                   const Icone = info.icone
                   return (
-                    <button
-                      key={o.id}
-                      onClick={() => abrirOcorrencia(o)}
-                      className={`flex items-start gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-[#0d9488] ${!o.lida ? 'border-[#dc2626]/30' : 'border-[#dbe5e8]'}`}
-                    >
-                      <div className="grid size-10 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>
-                        <Icone className="size-5" />
-                      </div>
+                    <button key={o.id} onClick={() => abrirOcorrencia(o)} className={`flex items-start gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-[#0d9488] ${!o.lida ? 'border-[#dc2626]/30' : 'border-[#dbe5e8]'}`}>
+                      <div className="grid size-10 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}><Icone className="size-5" /></div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
@@ -349,10 +362,7 @@ export function ResponsavelClient({
             <section>
               <h3 className="mb-4 font-syne text-lg font-bold">Próximos eventos</h3>
               {eventos.length === 0 ? (
-                <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center">
-                  <Calendar className="mx-auto text-[#a0afb4]" size={28}/>
-                  <p className="mt-3 text-sm text-[#8aa0ad]">Nenhum evento agendado pela escola.</p>
-                </div>
+                <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center"><Calendar className="mx-auto text-[#a0afb4]" size={28}/><p className="mt-3 text-sm text-[#8aa0ad]">Nenhum evento agendado pela escola.</p></div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {eventos.map((e) => {
@@ -381,10 +391,7 @@ export function ResponsavelClient({
                 {naoLidos > 0 && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">{naoLidos} novos</span>}
               </div>
               {comunicados.length === 0 ? (
-                <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center">
-                  <MessageSquare className="mx-auto text-[#a0afb4]" size={28}/>
-                  <p className="mt-3 text-sm text-[#8aa0ad]">Nenhum comunicado recebido ainda.</p>
-                </div>
+                <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center"><MessageSquare className="mx-auto text-[#a0afb4]" size={28}/><p className="mt-3 text-sm text-[#8aa0ad]">Nenhum comunicado recebido ainda.</p></div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {comunicados.slice(0, 5).map((c) => (
@@ -393,10 +400,7 @@ export function ResponsavelClient({
                         <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{c.setor}</span>
                         <span className="text-xs text-[#8aa0ad]">{formatarData(c.criado_em)}</span>
                       </div>
-                      <h4 className="mt-3 text-sm font-semibold">
-                        {!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]"/>}
-                        {c.titulo}
-                      </h4>
+                      <h4 className="mt-3 text-sm font-semibold">{!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]"/>}{c.titulo}</h4>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{c.mensagem}</p>
                     </button>
                   ))}
@@ -413,10 +417,7 @@ export function ResponsavelClient({
             <div className="rounded-xl border border-[#dbe5e8] bg-white">
               <div className="flex items-center gap-3 border-b border-[#edf1f2] p-5">
                 <CircleDollarSign className="text-[#0d9488]"/>
-                <div>
-                  <h4 className="font-semibold">Minhas faturas</h4>
-                  <p className="text-xs text-[#8aa0ad]">Acompanhe os pagamentos da sua família</p>
-                </div>
+                <div><h4 className="font-semibold">Minhas faturas</h4><p className="text-xs text-[#8aa0ad]">Acompanhe os pagamentos da sua família</p></div>
               </div>
               {faturas.length === 0 ? (
                 <div className="p-8 text-center"><p className="text-sm text-[#8aa0ad]">Nenhuma fatura emitida até o momento.</p></div>
@@ -426,10 +427,7 @@ export function ResponsavelClient({
                   const statusLabel = f.status === 'pago' ? 'Pago' : f.status === 'vencido' ? 'Vencido' : f.status === 'cancelado' ? 'Cancelado' : 'Em aberto'
                   return (
                     <div key={f.id} className="flex flex-wrap items-center gap-4 border-b border-[#edf1f2] p-5 last:border-0">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p>
-                        <p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p>
-                      </div>
+                      <div className="flex-1"><p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p><p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p></div>
                       <strong className="font-syne text-base">{formatarMoeda(f.valor_centavos)}</strong>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
                     </div>
@@ -446,11 +444,7 @@ export function ResponsavelClient({
                 {albuns.map((a) => (
                   <button key={a.id} onClick={() => setAlbumAberto(a)} className="group overflow-hidden rounded-xl border border-[#dbe5e8] bg-white text-left transition hover:border-[#0d9488]">
                     <div className="relative aspect-video bg-[#f0f4f5]">
-                      {a.capa_url ? (
-                        <img src={a.capa_url} alt={a.titulo} className="h-full w-full object-cover transition group-hover:scale-105" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center"><ImageIcon className="size-10 text-[#a0afb4]" /></div>
-                      )}
+                      {a.capa_url ? (<img src={a.capa_url} alt={a.titulo} className="h-full w-full object-cover transition group-hover:scale-105" />) : (<div className="flex h-full items-center justify-center"><ImageIcon className="size-10 text-[#a0afb4]" /></div>)}
                       <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">{a.fotos.length} {a.fotos.length === 1 ? 'foto' : 'fotos'}</span>
                     </div>
                     <div className="p-4">
@@ -490,9 +484,7 @@ export function ResponsavelClient({
                 const Icone = info.icone
                 return (
                   <div className="flex items-center gap-2">
-                    <div className="grid size-8 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>
-                      <Icone className="size-4" />
-                    </div>
+                    <div className="grid size-8 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}><Icone className="size-4" /></div>
                     <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${gravidadeStyles[ocorrenciaAberta.gravidade]}`}>{gravidadeLabel[ocorrenciaAberta.gravidade]}</span>
                   </div>
@@ -504,16 +496,8 @@ export function ResponsavelClient({
             <button onClick={() => setOcorrenciaAberta(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Descrição</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.descricao}</p>
-            </div>
-            {ocorrenciaAberta.providencias && (
-              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Providências</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.providencias}</p>
-              </div>
-            )}
+            <div><p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Descrição</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.descricao}</p></div>
+            {ocorrenciaAberta.providencias && (<div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4"><p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Providências</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.providencias}</p></div>)}
             <p className="mt-4 text-xs text-[#a0afb4]">Registrado por {ocorrenciaAberta.autor_nome}</p>
           </div>
         </div>
@@ -525,19 +509,13 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setAlbumAberto(null)} />
         <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div>
-              <h2 className="font-syne text-xl font-bold text-[#12232b]">{albumAberto.titulo}</h2>
-              {albumAberto.descricao && <p className="mt-1 text-sm text-[#82939a]">{albumAberto.descricao}</p>}
-              <p className="mt-1 text-xs text-[#82939a]">{albumAberto.fotos.length} fotos · {formatarData(albumAberto.criado_em)}</p>
-            </div>
+            <div><h2 className="font-syne text-xl font-bold text-[#12232b]">{albumAberto.titulo}</h2>{albumAberto.descricao && <p className="mt-1 text-sm text-[#82939a]">{albumAberto.descricao}</p>}<p className="mt-1 text-xs text-[#82939a]">{albumAberto.fotos.length} fotos · {formatarData(albumAberto.criado_em)}</p></div>
             <button onClick={() => setAlbumAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {albumAberto.fotos.map((f) => (
-                <button key={f.id} onClick={() => setFotoAberta(f.url)} className="group aspect-square overflow-hidden rounded-lg border border-[#e5ecee]">
-                  <img src={f.url} alt={f.legenda || ''} className="h-full w-full object-cover transition group-hover:scale-105" />
-                </button>
+                <button key={f.id} onClick={() => setFotoAberta(f.url)} className="group aspect-square overflow-hidden rounded-lg border border-[#e5ecee]"><img src={f.url} alt={f.legenda || ''} className="h-full w-full object-cover transition group-hover:scale-105" /></button>
               ))}
             </div>
           </div>
@@ -557,10 +535,7 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setBoletimAberto(null)} />
         <div className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Boletim escolar</p>
-              <h2 className="mt-1 font-syne text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2>
-            </div>
+            <div><p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Boletim escolar</p><h2 className="mt-1 font-syne text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2></div>
             <button onClick={() => setBoletimAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -571,24 +546,8 @@ export function ResponsavelClient({
             </div>
             <div className="overflow-hidden rounded-lg border border-[#e5ecee]">
               <table className="w-full">
-                <thead className="bg-[#fafcfc]">
-                  <tr className="border-b border-[#e5ecee]">
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Disciplina</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Período</th>
-                    <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Nota</th>
-                    <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Faltas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {boletimAberto.notas.map((n, i) => (
-                    <tr key={i} className="border-b border-[#f0f4f5] last:border-0">
-                      <td className="px-4 py-2.5 text-sm text-[#243942]">{n.disciplina}</td>
-                      <td className="px-4 py-2.5 text-xs text-[#82939a]">{periodosLabel[n.periodo] || n.periodo}</td>
-                      <td className={`px-4 py-2.5 text-center font-syne text-base font-bold ${corNota(n.nota)}`}>{n.nota !== null ? n.nota.toFixed(1) : '—'}</td>
-                      <td className="px-4 py-2.5 text-center text-sm text-[#243942]">{n.faltas}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                <thead className="bg-[#fafcfc]"><tr className="border-b border-[#e5ecee]"><th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Disciplina</th><th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Período</th><th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Nota</th><th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Faltas</th></tr></thead>
+                <tbody>{boletimAberto.notas.map((n, i) => (<tr key={i} className="border-b border-[#f0f4f5] last:border-0"><td className="px-4 py-2.5 text-sm text-[#243942]">{n.disciplina}</td><td className="px-4 py-2.5 text-xs text-[#82939a]">{periodosLabel[n.periodo] || n.periodo}</td><td className={`px-4 py-2.5 text-center font-syne text-base font-bold ${corNota(n.nota)}`}>{n.nota !== null ? n.nota.toFixed(1) : '—'}</td><td className="px-4 py-2.5 text-center text-sm text-[#243942]">{n.faltas}</td></tr>))}</tbody>
               </table>
             </div>
           </div>
@@ -601,18 +560,11 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setDetalhes(null)} />
         <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
           <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div>
-              <p className="font-mono text-xs text-[#82939a]">{detalhes.protocolo}</p>
-              <h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalhes.aluno_nome}</h2>
-            </div>
+            <div><p className="font-mono text-xs text-[#82939a]">{detalhes.protocolo}</p><h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalhes.aluno_nome}</h2></div>
             <button onClick={() => setDetalhes(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="mb-6">
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${(statusMap[detalhes.status] || statusMap.inscrito).style}`}>
-                {(statusMap[detalhes.status] || statusMap.inscrito).label}
-              </span>
-            </div>
+            <div className="mb-6"><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${(statusMap[detalhes.status] || statusMap.inscrito).style}`}>{(statusMap[detalhes.status] || statusMap.inscrito).label}</span></div>
             <section className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Dados da inscrição</h3>
               <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -632,10 +584,7 @@ export function ResponsavelClient({
                     <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'}`}>
                       <div className="flex min-w-0 items-center gap-3">
                         <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}><FileText className="size-4" /></div>
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
-                          <p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p>
-                        </div>
+                        <div className="min-w-0"><p className="truncate text-xs font-semibold text-[#243942]">{label}</p><p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p></div>
                       </div>
                       {temArquivo && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"><ExternalLink className="mr-1 inline size-3" />Abrir</a>}
                     </div>
@@ -663,9 +612,7 @@ export function ResponsavelClient({
             </div>
             <button onClick={() => setComunicadoAberto(null)} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
-            <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{comunicadoAberto.mensagem}</p>
-          </div>
+          <div className="max-h-[70vh] overflow-y-auto px-6 py-5"><p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{comunicadoAberto.mensagem}</p></div>
         </div>
       </div>
     )}
@@ -676,10 +623,7 @@ export function ResponsavelClient({
         <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
             <div className="flex-1">
-              {(() => {
-                const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro
-                return <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
-              })()}
+              {(() => { const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro; return <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span> })()}
               <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{autorizacaoAberta.titulo}</h2>
               {autorizacaoAberta.prazo_resposta && <p className="mt-1 text-xs text-[#dc2626]">Responder até {formatarData(autorizacaoAberta.prazo_resposta)}</p>}
             </div>
@@ -687,18 +631,11 @@ export function ResponsavelClient({
           </header>
           <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
             <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{autorizacaoAberta.descricao}</p>
-            <div className="mt-5">
-              <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label>
-              <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: Meu filho não poderá participar..." rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
-            </div>
+            <div className="mt-5"><label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label><textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: Meu filho não poderá participar..." rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" /></div>
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-            <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">
-              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar
-            </button>
-            <button onClick={() => handleResponder('autorizado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar
-            </button>
+            <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar</button>
+            <button onClick={() => handleResponder('autorizado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar</button>
           </footer>
         </div>
       </div>
