@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/lib/supabase/proxy'
 
 const SLUGS_RESERVADOS = new Set([
   'arxum', 'login', 'cadastro', 'matricula', 'eduflix', 'sala-virtual', 'loja',
@@ -7,7 +7,7 @@ const SLUGS_RESERVADOS = new Set([
   'professor', 'primeiro-acesso', 'noticias', 'formulario',
 ])
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (
