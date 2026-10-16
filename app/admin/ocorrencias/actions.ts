@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Ocorrencia = {
@@ -31,22 +32,16 @@ export type NovaOcorrencia = {
   providencias: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getOcorrencias(): Promise<Ocorrencia[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('ocorrencias')
       .select('id, aluno_id, aluno_nome, responsavel_email, tipo, gravidade, titulo, descricao, providencias, autor_nome, lida, lida_em, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error) return []
@@ -58,14 +53,14 @@ export async function getOcorrencias(): Promise<Ocorrencia[]> {
 
 export async function getAlunosParaOcorrencia(): Promise<Array<{ id: string; nome: string; responsavel_email: string }>> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data } = await admin
       .from('alunos')
       .select('id, nome, responsavel_email')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .eq('status', 'ativo')
       .order('nome', { ascending: true })
 
@@ -77,10 +72,10 @@ export async function getAlunosParaOcorrencia(): Promise<Array<{ id: string; nom
 
 export async function criarOcorrencia(data: NovaOcorrencia) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const supabaseAuth = await createClient()
     const { data: { user } } = await supabaseAuth.auth.getUser()
 
@@ -95,7 +90,7 @@ export async function criarOcorrencia(data: NovaOcorrencia) {
     }
 
     const { error } = await admin.from('ocorrencias').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       aluno_id: data.aluno_id,
       aluno_nome: data.aluno_nome,
       responsavel_email: data.responsavel_email,
@@ -119,8 +114,11 @@ export async function criarOcorrencia(data: NovaOcorrencia) {
 
 export async function excluirOcorrencia(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('ocorrencias').delete().eq('id', id)
+    const { error } = await admin.from('ocorrencias').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/ocorrencias')

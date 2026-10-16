@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 
 export type Aluno = {
   id: string
@@ -16,10 +17,14 @@ export type Aluno = {
 
 export async function getAlunos(): Promise<Aluno[]> {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('alunos')
       .select('id, nome, serie, turno, responsavel_nome, responsavel_email, responsavel_telefone, status, criado_em')
+      .eq('escola_id', escola.id)
       .order('nome', { ascending: true })
 
     if (error) {

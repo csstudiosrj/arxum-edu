@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 import { enviarEmailStatusMatricula } from '@/lib/emails/status-matricula'
 
@@ -46,10 +47,14 @@ export type Inscricao = {
 
 export async function getInscricoes(): Promise<Inscricao[]> {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('inscricoes')
       .select('*')
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error) {
@@ -65,13 +70,16 @@ export async function getInscricoes(): Promise<Inscricao[]> {
 
 export async function atualizarStatusInscricao(id: string, novoStatus: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const supabase = createAdminClient()
 
-    // 1. Atualiza status da inscrição
     const { data: inscricao, error } = await supabase
       .from('inscricoes')
       .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
       .eq('id', id)
+      .eq('escola_id', escola.id)
       .select('*')
       .single()
 
@@ -79,7 +87,6 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
       return { success: false, error: error?.message || 'Inscrição não encontrada.' }
     }
 
-    // 2. Se virou "matriculado", cria o aluno (se ainda não existir)
     if (novoStatus === 'matriculado') {
       const { data: existente } = await supabase
         .from('alunos')
@@ -89,7 +96,7 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
 
       if (!existente) {
         const { error: erroAluno } = await supabase.from('alunos').insert({
-          escola_id: inscricao.escola_id,
+          escola_id: escola.id,
           inscricao_id: inscricao.id,
           nome: inscricao.aluno_nome,
           data_nascimento: inscricao.aluno_data_nascimento,
@@ -125,13 +132,13 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
       }
     }
 
-    // 3. Envia e-mail para o responsável (não bloqueia se falhar)
     try {
       await enviarEmailStatusMatricula({
         para: inscricao.responsavel_email,
         alunoNome: inscricao.aluno_nome,
         protocolo: inscricao.protocolo,
         novoStatus,
+        escolaNome: escola.nome,
       })
     } catch (e) {
       console.error('[email] Falha ao enviar, mas status foi atualizado:', e)
@@ -140,6 +147,7 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
     revalidatePath('/admin/matriculas')
     revalidatePath('/admin/alunos')
     revalidatePath('/responsavel')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao atualizar status.' }

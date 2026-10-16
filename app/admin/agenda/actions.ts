@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Evento = {
@@ -25,22 +26,16 @@ export type NovoEvento = {
   serie: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getEventos(): Promise<Evento[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('eventos')
       .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie, ativo')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('data_evento', { ascending: true })
 
     if (error) return []
@@ -52,12 +47,12 @@ export async function getEventos(): Promise<Evento[]> {
 
 export async function criarEvento(data: NovoEvento) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { error } = await admin.from('eventos').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       titulo: data.titulo,
       descricao: data.descricao || null,
       tipo: data.tipo,
@@ -79,8 +74,11 @@ export async function criarEvento(data: NovoEvento) {
 
 export async function excluirEvento(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('eventos').delete().eq('id', id)
+    const { error } = await admin.from('eventos').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/agenda')

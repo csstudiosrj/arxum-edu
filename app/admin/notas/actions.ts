@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Nota = {
@@ -27,22 +28,16 @@ export type NovaNota = {
   observacao: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getNotas(): Promise<Nota[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('notas')
       .select('id, aluno_id, aluno_nome, responsavel_email, disciplina, periodo, nota, faltas, observacao, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('aluno_nome', { ascending: true })
       .order('disciplina', { ascending: true })
 
@@ -55,14 +50,14 @@ export async function getNotas(): Promise<Nota[]> {
 
 export async function getAlunosAtivos(): Promise<Array<{ id: string; nome: string; responsavel_email: string }>> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data } = await admin
       .from('alunos')
       .select('id, nome, responsavel_email')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .eq('status', 'ativo')
       .order('nome', { ascending: true })
 
@@ -74,15 +69,15 @@ export async function getAlunosAtivos(): Promise<Array<{ id: string; nome: strin
 
 export async function lancarNota(data: NovaNota) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { error } = await admin
       .from('notas')
       .upsert(
         {
-          escola_id: escolaId,
+          escola_id: escola.id,
           aluno_id: data.aluno_id,
           aluno_nome: data.aluno_nome,
           responsavel_email: data.responsavel_email,
@@ -100,6 +95,7 @@ export async function lancarNota(data: NovaNota) {
 
     revalidatePath('/admin/notas')
     revalidatePath('/responsavel')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao lançar nota.' }
@@ -108,8 +104,11 @@ export async function lancarNota(data: NovaNota) {
 
 export async function excluirNota(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('notas').delete().eq('id', id)
+    const { error } = await admin.from('notas').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/notas')

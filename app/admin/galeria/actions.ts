@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Album = {
@@ -20,31 +21,31 @@ export type NovoAlbum = {
   publico: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getAlbuns(): Promise<Album[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data: albuns, error } = await admin
       .from('albuns')
       .select('id, titulo, descricao, publico, capa_url, ativo, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error || !albuns) return []
 
-    const { data: fotos } = await admin
-      .from('fotos')
-      .select('id, album_id, url, legenda')
-      .in('album_id', albuns.map((a) => a.id))
-      .order('ordem', { ascending: true })
+    const idsAlbuns = albuns.map((a) => a.id)
+
+    let fotos: Array<{ id: string; album_id: string; url: string; legenda: string | null }> = []
+    if (idsAlbuns.length > 0) {
+      const { data } = await admin
+        .from('fotos')
+        .select('id, album_id, url, legenda')
+        .in('album_id', idsAlbuns)
+        .order('ordem', { ascending: true })
+      fotos = (data || []) as Array<{ id: string; album_id: string; url: string; legenda: string | null }>
+    }
 
     return albuns.map((a) => ({
       id: a.id,
@@ -54,7 +55,7 @@ export async function getAlbuns(): Promise<Album[]> {
       capa_url: a.capa_url,
       ativo: a.ativo,
       criado_em: a.criado_em,
-      fotos: (fotos || [])
+      fotos: fotos
         .filter((f) => f.album_id === a.id)
         .map((f) => ({ id: f.id, url: f.url, legenda: f.legenda })),
     })) as Album[]
@@ -65,12 +66,12 @@ export async function getAlbuns(): Promise<Album[]> {
 
 export async function criarAlbum(data: NovoAlbum) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { error } = await admin.from('albuns').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       titulo: data.titulo,
       descricao: data.descricao || null,
       publico: data.publico,
@@ -88,7 +89,20 @@ export async function criarAlbum(data: NovoAlbum) {
 
 export async function adicionarFotos(albumId: string, urls: string[]) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
+
+    // Confirma que o álbum pertence à escola
+    const { data: album } = await admin
+      .from('albuns')
+      .select('id, capa_url')
+      .eq('id', albumId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!album) return { success: false, error: 'Álbum não encontrado.' }
 
     const { data: ultima } = await admin
       .from('fotos')
@@ -110,9 +124,7 @@ export async function adicionarFotos(albumId: string, urls: string[]) {
 
     if (error) return { success: false, error: error.message }
 
-    // Se o álbum não tem capa, define a primeira foto
-    const { data: album } = await admin.from('albuns').select('capa_url').eq('id', albumId).single()
-    if (album && !album.capa_url && urls[0]) {
+    if (!album.capa_url && urls[0]) {
       await admin.from('albuns').update({ capa_url: urls[0] }).eq('id', albumId)
     }
 
@@ -126,7 +138,29 @@ export async function adicionarFotos(albumId: string, urls: string[]) {
 
 export async function excluirFoto(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
+
+    // Confirma que a foto pertence a um álbum da escola
+    const { data: foto } = await admin
+      .from('fotos')
+      .select('id, album_id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!foto) return { success: false, error: 'Foto não encontrada.' }
+
+    const { data: album } = await admin
+      .from('albuns')
+      .select('id')
+      .eq('id', foto.album_id)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!album) return { success: false, error: 'Acesso negado.' }
+
     const { error } = await admin.from('fotos').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
 
@@ -140,8 +174,11 @@ export async function excluirFoto(id: string) {
 
 export async function excluirAlbum(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('albuns').delete().eq('id', id)
+    const { error } = await admin.from('albuns').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/galeria')

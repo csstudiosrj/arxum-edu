@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type AulaAdmin = {
@@ -40,31 +41,42 @@ export type NovaAula = {
   duracao_minutos: number | null
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getModulos(): Promise<ModuloAdmin[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data: mods, error } = await admin
       .from('modulos')
       .select('id, titulo, descricao, disciplina, serie, ordem, publicado')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('ordem', { ascending: true })
 
     if (error || !mods) return []
 
-    const { data: aulas } = await admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos, ordem, publicado')
-      .in('modulo_id', mods.map((m) => m.id))
-      .order('ordem', { ascending: true })
+    const idsMods = mods.map((m) => m.id)
+
+    let aulas: Array<{
+      id: string
+      modulo_id: string
+      titulo: string
+      descricao: string | null
+      tipo: string
+      conteudo_url: string | null
+      duracao_minutos: number | null
+      ordem: number
+      publicado: boolean
+    }> = []
+
+    if (idsMods.length > 0) {
+      const { data } = await admin
+        .from('aulas')
+        .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos, ordem, publicado')
+        .in('modulo_id', idsMods)
+        .order('ordem', { ascending: true })
+      aulas = (data || []) as typeof aulas
+    }
 
     return mods.map((m) => ({
       id: m.id,
@@ -74,7 +86,7 @@ export async function getModulos(): Promise<ModuloAdmin[]> {
       serie: m.serie,
       ordem: m.ordem,
       publicado: m.publicado,
-      aulas: (aulas || [])
+      aulas: aulas
         .filter((a) => a.modulo_id === m.id)
         .map((a) => ({
           id: a.id,
@@ -88,21 +100,20 @@ export async function getModulos(): Promise<ModuloAdmin[]> {
         })),
     })) as ModuloAdmin[]
   } catch (e) {
-    console.error('Erro:', e)
     return []
   }
 }
 
 export async function criarModulo(data: NovoModulo) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { data: ultimo } = await admin
       .from('modulos')
       .select('ordem')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('ordem', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -110,7 +121,7 @@ export async function criarModulo(data: NovoModulo) {
     const proximaOrdem = (ultimo?.ordem || 0) + 1
 
     const { error } = await admin.from('modulos').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       titulo: data.titulo,
       descricao: data.descricao || null,
       disciplina: data.disciplina,
@@ -130,8 +141,11 @@ export async function criarModulo(data: NovoModulo) {
 
 export async function excluirModulo(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('modulos').delete().eq('id', id)
+    const { error } = await admin.from('modulos').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/sala-virtual')
@@ -144,7 +158,20 @@ export async function excluirModulo(id: string) {
 
 export async function criarAula(moduloId: string, data: NovaAula) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
+
+    // Confirma que o módulo pertence à escola
+    const { data: mod } = await admin
+      .from('modulos')
+      .select('id')
+      .eq('id', moduloId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!mod) return { success: false, error: 'Módulo não encontrado.' }
 
     const { data: ultima } = await admin
       .from('aulas')
@@ -178,7 +205,29 @@ export async function criarAula(moduloId: string, data: NovaAula) {
 
 export async function excluirAula(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
+
+    // Confirma que a aula pertence a um módulo da escola
+    const { data: aula } = await admin
+      .from('aulas')
+      .select('id, modulo_id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!aula) return { success: false, error: 'Aula não encontrada.' }
+
+    const { data: mod } = await admin
+      .from('modulos')
+      .select('id')
+      .eq('id', aula.modulo_id)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!mod) return { success: false, error: 'Acesso negado.' }
+
     const { error } = await admin.from('aulas').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
 

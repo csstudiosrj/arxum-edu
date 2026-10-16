@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Comunicado = {
@@ -23,32 +24,33 @@ export type NovoComunicado = {
   prioridade: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getComunicados(): Promise<Comunicado[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data: coms, error } = await admin
       .from('comunicados')
       .select('*')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error || !coms) return []
 
-    const { data: leituras } = await admin
-      .from('comunicados_leituras')
-      .select('comunicado_id')
+    const idsComs = coms.map((c) => c.id)
+
+    let leituras: Array<{ comunicado_id: string }> = []
+    if (idsComs.length > 0) {
+      const { data } = await admin
+        .from('comunicados_leituras')
+        .select('comunicado_id')
+        .in('comunicado_id', idsComs)
+      leituras = (data || []) as Array<{ comunicado_id: string }>
+    }
 
     const contagemPorCom: Record<string, number> = {}
-    ;(leituras || []).forEach((l) => {
+    leituras.forEach((l) => {
       contagemPorCom[l.comunicado_id] = (contagemPorCom[l.comunicado_id] || 0) + 1
     })
 
@@ -64,17 +66,16 @@ export async function getComunicados(): Promise<Comunicado[]> {
       total_leituras: contagemPorCom[c.id] || 0,
     })) as Comunicado[]
   } catch (e) {
-    console.error('Erro:', e)
     return []
   }
 }
 
 export async function criarComunicado(data: NovoComunicado) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const supabaseAuth = await createClient()
     const { data: { user } } = await supabaseAuth.auth.getUser()
 
@@ -89,7 +90,7 @@ export async function criarComunicado(data: NovoComunicado) {
     }
 
     const { error } = await admin.from('comunicados').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       titulo: data.titulo,
       mensagem: data.mensagem,
       setor: data.setor,
@@ -109,8 +110,11 @@ export async function criarComunicado(data: NovoComunicado) {
 
 export async function excluirComunicado(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('comunicados').delete().eq('id', id)
+    const { error } = await admin.from('comunicados').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/comunicacao')

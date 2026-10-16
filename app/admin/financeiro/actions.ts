@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Fatura = {
@@ -22,22 +23,16 @@ export type NovaFatura = {
   vencimento: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getFaturas(): Promise<Fatura[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('faturas')
       .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('vencimento', { ascending: false })
 
     if (error) return []
@@ -49,19 +44,20 @@ export async function getFaturas(): Promise<Fatura[]> {
 
 export async function criarFatura(data: NovaFatura) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { data: aluno } = await admin
       .from('alunos')
       .select('id')
       .eq('nome', data.aluno_nome)
       .eq('responsavel_email', data.responsavel_email)
+      .eq('escola_id', escola.id)
       .maybeSingle()
 
     const { error } = await admin.from('faturas').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       aluno_id: aluno?.id || null,
       aluno_nome: data.aluno_nome,
       responsavel_email: data.responsavel_email,
@@ -74,6 +70,7 @@ export async function criarFatura(data: NovaFatura) {
 
     revalidatePath('/admin/financeiro')
     revalidatePath('/responsavel')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao criar fatura.' }
@@ -82,16 +79,21 @@ export async function criarFatura(data: NovaFatura) {
 
 export async function atualizarStatusFatura(id: string, novoStatus: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
     const { error } = await admin
       .from('faturas')
       .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
       .eq('id', id)
+      .eq('escola_id', escola.id)
 
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/financeiro')
     revalidatePath('/responsavel')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao atualizar.' }
@@ -100,12 +102,16 @@ export async function atualizarStatusFatura(id: string, novoStatus: string) {
 
 export async function excluirFatura(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('faturas').delete().eq('id', id)
+    const { error } = await admin.from('faturas').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/financeiro')
     revalidatePath('/responsavel')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao excluir.' }
@@ -114,14 +120,14 @@ export async function excluirFatura(id: string) {
 
 export async function getAlunosParaFatura(): Promise<Array<{ nome: string; responsavel_email: string }>> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data } = await admin
       .from('alunos')
       .select('nome, responsavel_email')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .eq('status', 'ativo')
       .order('nome', { ascending: true })
 

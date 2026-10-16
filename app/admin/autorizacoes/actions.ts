@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Autorizacao = {
@@ -26,32 +27,33 @@ export type NovaAutorizacao = {
   publico: string
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getAutorizacoes(): Promise<Autorizacao[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data: auts, error } = await admin
       .from('autorizacoes')
       .select('id, titulo, descricao, tipo, data_evento, prazo_resposta, publico, ativo, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error || !auts) return []
 
-    const { data: respostas } = await admin
-      .from('autorizacoes_respostas')
-      .select('autorizacao_id, resposta')
+    const idsAuts = auts.map((a) => a.id)
+
+    let respostas: Array<{ autorizacao_id: string; resposta: string }> = []
+    if (idsAuts.length > 0) {
+      const { data } = await admin
+        .from('autorizacoes_respostas')
+        .select('autorizacao_id, resposta')
+        .in('autorizacao_id', idsAuts)
+      respostas = (data || []) as Array<{ autorizacao_id: string; resposta: string }>
+    }
 
     const totalPorAut: Record<string, { total: number; autorizados: number }> = {}
-    ;(respostas || []).forEach((r) => {
+    respostas.forEach((r) => {
       if (!totalPorAut[r.autorizacao_id]) totalPorAut[r.autorizacao_id] = { total: 0, autorizados: 0 }
       totalPorAut[r.autorizacao_id].total += 1
       if (r.resposta === 'autorizado') totalPorAut[r.autorizacao_id].autorizados += 1
@@ -77,12 +79,12 @@ export async function getAutorizacoes(): Promise<Autorizacao[]> {
 
 export async function criarAutorizacao(data: NovaAutorizacao) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { error } = await admin.from('autorizacoes').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       titulo: data.titulo,
       descricao: data.descricao || null,
       tipo: data.tipo,
@@ -103,8 +105,11 @@ export async function criarAutorizacao(data: NovaAutorizacao) {
 
 export async function excluirAutorizacao(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('autorizacoes').delete().eq('id', id)
+    const { error } = await admin.from('autorizacoes').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/autorizacoes')
@@ -125,7 +130,21 @@ export type RespostaDetalhe = {
 
 export async function getRespostas(autorizacaoId: string): Promise<RespostaDetalhe[]> {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
     const admin = createAdminClient()
+
+    // Confirma que a autorização pertence à escola logada
+    const { data: aut } = await admin
+      .from('autorizacoes')
+      .select('id')
+      .eq('id', autorizacaoId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!aut) return []
+
     const { data, error } = await admin
       .from('autorizacoes_respostas')
       .select('aluno_nome, responsavel_email, resposta, observacao, respondido_em')

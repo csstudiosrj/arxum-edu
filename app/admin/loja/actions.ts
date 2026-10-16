@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
 export type Produto = {
@@ -33,22 +34,16 @@ export type Pedido = {
   itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number }>
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getProdutos(): Promise<Produto[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data, error } = await admin
       .from('produtos')
       .select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error) return []
@@ -60,22 +55,28 @@ export async function getProdutos(): Promise<Produto[]> {
 
 export async function getPedidos(): Promise<Pedido[]> {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
+    const admin = createAdminClient()
     const { data: pedidos, error } = await admin
       .from('pedidos')
       .select('id, responsavel_email, responsavel_nome, total_centavos, status, observacao, criado_em')
-      .eq('escola_id', escolaId)
+      .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
     if (error || !pedidos) return []
 
-    const { data: itens } = await admin
-      .from('pedido_itens')
-      .select('pedido_id, produto_nome, quantidade, preco_unitario_centavos')
-      .in('pedido_id', pedidos.map((p) => p.id))
+    const idsPedidos = pedidos.map((p) => p.id)
+
+    let itens: Array<{ pedido_id: string; produto_nome: string; quantidade: number; preco_unitario_centavos: number }> = []
+    if (idsPedidos.length > 0) {
+      const { data } = await admin
+        .from('pedido_itens')
+        .select('pedido_id, produto_nome, quantidade, preco_unitario_centavos')
+        .in('pedido_id', idsPedidos)
+      itens = (data || []) as typeof itens
+    }
 
     return pedidos.map((p) => ({
       id: p.id,
@@ -85,7 +86,7 @@ export async function getPedidos(): Promise<Pedido[]> {
       status: p.status,
       observacao: p.observacao,
       criado_em: p.criado_em,
-      itens: (itens || [])
+      itens: itens
         .filter((i) => i.pedido_id === p.id)
         .map((i) => ({
           produto_nome: i.produto_nome,
@@ -100,12 +101,12 @@ export async function getPedidos(): Promise<Pedido[]> {
 
 export async function criarProduto(data: NovoProduto) {
   try {
-    const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return { success: false, error: 'Escola não encontrada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    const admin = createAdminClient()
     const { error } = await admin.from('produtos').insert({
-      escola_id: escolaId,
+      escola_id: escola.id,
       nome: data.nome,
       descricao: data.descricao || null,
       categoria: data.categoria,
@@ -125,11 +126,15 @@ export async function criarProduto(data: NovoProduto) {
 
 export async function atualizarStatusPedido(id: string, novoStatus: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
     const { error } = await admin
       .from('pedidos')
       .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
       .eq('id', id)
+      .eq('escola_id', escola.id)
 
     if (error) return { success: false, error: error.message }
 
@@ -143,8 +148,11 @@ export async function atualizarStatusPedido(id: string, novoStatus: string) {
 
 export async function excluirProduto(id: string) {
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
     const admin = createAdminClient()
-    const { error } = await admin.from('produtos').delete().eq('id', id)
+    const { error } = await admin.from('produtos').delete().eq('id', id).eq('escola_id', escola.id)
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/loja')
