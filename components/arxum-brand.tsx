@@ -19,7 +19,35 @@ export function ArxumBrand({ light = false }: { light?: boolean }) {
   )
 }
 
-export function PublicHeader({ slug }: { slug?: string }) {
+export function ByArxum({ light = false }: { light?: boolean }) {
+  return (
+    <Link
+      href="/"
+      className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.18em] transition ${
+        light ? 'text-[#82939a] hover:text-[#0d9488]' : 'text-white/40 hover:text-[#0d9488]'
+      }`}
+      aria-label="Desenvolvido por ARXUM Edu"
+    >
+      <span>by</span>
+      <span className="font-syne text-xs font-black tracking-[-.03em] normal-case">
+        <span className="text-[#0d9488]">ARXUM</span>
+        <span className={light ? 'text-[#07090c]' : 'text-white'}> Edu</span>
+      </span>
+    </Link>
+  )
+}
+
+export function PublicHeader({
+  slug,
+  cor = '#0d9488',
+  logoUrl,
+  escolaNome,
+}: {
+  slug?: string
+  cor?: string
+  logoUrl?: string | null
+  escolaNome?: string
+}) {
   const base = slug ? `/edu/${slug}` : ''
 
   const links = slug
@@ -37,16 +65,30 @@ export function PublicHeader({ slug }: { slug?: string }) {
         { label: 'Contato', href: '#contato' },
       ]
 
+  const marca = slug ? (
+    <Link href={base} className="flex items-center gap-2.5">
+      {logoUrl ? (
+        <img src={logoUrl} alt={escolaNome || 'Logo da escola'} className="h-8 w-auto object-contain" />
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className="font-syne text-lg font-black tracking-[-.03em]" style={{ color: cor }}>
+            {escolaNome?.split(' ')[0] || 'ARXUM'}
+          </span>
+          {escolaNome && escolaNome.split(' ').length > 1 && (
+            <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
+              {escolaNome.split(' ').slice(1).join(' ')}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  ) : (
+    <ArxumBrand />
+  )
+
   return (
     <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-      <Link href={base || '/'} className="flex items-center gap-1.5" aria-label="Início">
-        <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
-          ARXUM
-        </span>
-        <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
-          Edu
-        </span>
-      </Link>
+      {marca}
       <nav className="hidden items-center gap-7 text-sm text-[#8aa0ad] lg:flex">
         {links.map((item) => (
           <Link key={item.label} href={item.href} className="transition hover:text-white">
@@ -63,7 +105,8 @@ export function PublicHeader({ slug }: { slug?: string }) {
         </Link>
         <Link
           href={`${base}/matricula`}
-          className="rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition"
+          style={{ backgroundColor: cor }}
         >
           Matrícula Online
         </Link>
@@ -72,7 +115,15 @@ export function PublicHeader({ slug }: { slug?: string }) {
   )
 }
 
-export function PublicFooter({ slug }: { slug?: string }) {
+export function PublicFooter({
+  slug,
+  cor = '#0d9488',
+  escolaNome,
+}: {
+  slug?: string
+  cor?: string
+  escolaNome?: string
+}) {
   const base = slug ? `/edu/${slug}` : ''
 
   const colunas = slug
@@ -115,10 +166,28 @@ export function PublicFooter({ slug }: { slug?: string }) {
     <footer className="border-t border-white/[.08] px-6 py-12 lg:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
         <div>
-          <ArxumBrand />
-          <p className="mt-4 max-w-xs text-sm leading-6 text-[#8aa0ad]">
+          <div className="mb-4">
+            {slug && escolaNome ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-syne text-lg font-black tracking-[-.03em]" style={{ color: cor }}>
+                  {escolaNome.split(' ')[0]}
+                </span>
+                {escolaNome.split(' ').length > 1 && (
+                  <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
+                    {escolaNome.split(' ').slice(1).join(' ')}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <ArxumBrand />
+            )}
+          </div>
+          <p className="max-w-xs text-sm leading-6 text-[#8aa0ad]">
             Educação que prepara para o futuro, com propósito, tecnologia e cuidado.
           </p>
+          <div className="mt-5">
+            <ByArxum />
+          </div>
         </div>
         {colunas.map((col) => (
           <div key={col.titulo}>
@@ -127,7 +196,7 @@ export function PublicFooter({ slug }: { slug?: string }) {
             </h3>
             <div className="flex flex-col gap-3 text-sm text-[#718895]">
               {col.links.map((link) => (
-                <Link key={link.label} href={link.href} className="hover:text-[#0d9488]">
+                <Link key={link.label} href={link.href} className="hover:opacity-80" style={{ color: 'inherit' }}>
                   {link.label}
                 </Link>
               ))}
@@ -135,8 +204,9 @@ export function PublicFooter({ slug }: { slug?: string }) {
           </div>
         ))}
       </div>
-      <div className="mx-auto mt-10 max-w-7xl border-t border-white/[.08] pt-6 text-xs text-[#617783]">
-        © 2026 ARXUM Edu. Todos os direitos reservados.
+      <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/[.08] pt-6 text-xs text-[#617783] sm:flex-row sm:items-center sm:justify-between">
+        <span>© 2026 {escolaNome || 'ARXUM Edu'}. Todos os direitos reservados.</span>
+        <ByArxum />
       </div>
     </footer>
   )
