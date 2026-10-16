@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, TrendingUp, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno } from './actions'
-import { marcarComoLido, responderAutorizacao } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel } from './actions'
+import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida } from './actions'
 
 type MenuItem = readonly [LucideIcon, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -49,13 +49,29 @@ const tipoAutorizacao: Record<string, { cor: string; label: string }> = {
   outro: { cor: '#6b7d86', label: 'Outro' },
 }
 
+const tipoOcorrencia: Record<string, { cor: string; label: string; icone: LucideIcon }> = {
+  pedagogica: { cor: '#3b82f6', label: 'Pedagógica', icone: BookOpen },
+  disciplinar: { cor: '#dc2626', label: 'Disciplinar', icone: ShieldAlert },
+  saude: { cor: '#d97706', label: 'Saúde', icone: Heart },
+  elogio: { cor: '#0d9488', label: 'Elogio', icone: Award },
+  outro: { cor: '#6b7d86', label: 'Outro', icone: FileQuestion },
+}
+
+const gravidadeStyles: Record<string, string> = {
+  baixa: 'bg-[#e5ecee] text-[#5e7a94]',
+  media: 'bg-[#fef3c7] text-[#92400e]',
+  alta: 'bg-[#fee2e2] text-[#991b1b]',
+}
+
+const gravidadeLabel: Record<string, string> = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+}
+
 const periodosLabel: Record<string, string> = {
-  '1_bimestre': '1º Bim',
-  '2_bimestre': '2º Bim',
-  '3_bimestre': '3º Bim',
-  '4_bimestre': '4º Bim',
-  '1_semestre': '1º Sem',
-  '2_semestre': '2º Sem',
+  '1_bimestre': '1º Bim', '2_bimestre': '2º Bim', '3_bimestre': '3º Bim', '4_bimestre': '4º Bim',
+  '1_semestre': '1º Sem', '2_semestre': '2º Sem',
 }
 
 const atalhos: Atalho[] = [
@@ -88,38 +104,18 @@ function Sidebar({ onLogout, saindo }: { onLogout: () => void; saindo: boolean }
 }
 
 function formatarData(iso: string): string {
-  try {
-    return new Date(iso + (iso.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR')
-  } catch {
-    return '—'
-  }
+  try { return new Date(iso + (iso.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') } catch { return '—' }
 }
-
 function formatarDataHora(iso: string): string {
-  try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return '—'
-  }
+  try { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } catch { return '—' }
 }
-
-function formatarMoeda(centavos: number): string {
-  return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
+function formatarMoeda(centavos: number): string { return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 function diaMes(iso: string): { dia: string; mes: string } {
   try {
     const d = new Date(iso + 'T12:00:00')
-    return {
-      dia: String(d.getDate()).padStart(2, '0'),
-      mes: d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', ''),
-    }
-  } catch {
-    return { dia: '--', mes: '---' }
-  }
+    return { dia: String(d.getDate()).padStart(2, '0'), mes: d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '') }
+  } catch { return { dia: '--', mes: '---' } }
 }
-
 function corNota(nota: number | null): string {
   if (nota === null) return 'text-[#82939a]'
   if (nota >= 7) return 'text-[#065f46]'
@@ -128,12 +124,7 @@ function corNota(nota: number | null): string {
 }
 
 export function ResponsavelClient({
-  inscricoes,
-  comunicados,
-  faturas,
-  eventos,
-  autorizacoes,
-  boletins,
+  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias,
 }: {
   inscricoes: InscricaoResponsavel[]
   comunicados: ComunicadoResponsavel[]
@@ -141,6 +132,8 @@ export function ResponsavelClient({
   eventos: EventoResponsavel[]
   autorizacoes: AutorizacaoResponsavel[]
   boletins: BoletimAluno[]
+  albuns: AlbumResponsavel[]
+  ocorrencias: OcorrenciaResponsavel[]
 }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
@@ -148,6 +141,9 @@ export function ResponsavelClient({
   const [comunicadoAberto, setComunicadoAberto] = useState<ComunicadoResponsavel | null>(null)
   const [autorizacaoAberta, setAutorizacaoAberta] = useState<AutorizacaoResponsavel | null>(null)
   const [boletimAberto, setBoletimAberto] = useState<BoletimAluno | null>(null)
+  const [albumAberto, setAlbumAberto] = useState<AlbumResponsavel | null>(null)
+  const [fotoAberta, setFotoAberta] = useState<string | null>(null)
+  const [ocorrenciaAberta, setOcorrenciaAberta] = useState<OcorrenciaResponsavel | null>(null)
   const [observacao, setObservacao] = useState('')
   const [enviandoResposta, setEnviandoResposta] = useState(false)
 
@@ -169,24 +165,27 @@ export function ResponsavelClient({
     setObservacao(a.observacao || '')
   }
 
+  async function abrirOcorrencia(o: OcorrenciaResponsavel) {
+    setOcorrenciaAberta(o)
+    if (!o.lida) {
+      await marcarOcorrenciaLida(o.id)
+    }
+  }
+
   async function handleResponder(resposta: 'autorizado' | 'recusado') {
     if (!autorizacaoAberta) return
     setEnviandoResposta(true)
     const result = await responderAutorizacao(autorizacaoAberta.id, resposta, observacao)
     setEnviandoResposta(false)
-
     if (result.success) {
-      setAutorizacaoAberta(null)
-      setObservacao('')
-      router.refresh()
-    } else {
-      alert(result.error || 'Erro ao responder.')
-    }
+      setAutorizacaoAberta(null); setObservacao(''); router.refresh()
+    } else { alert(result.error || 'Erro ao responder.') }
   }
 
   const naoLidos = comunicados.filter((c) => !c.lido).length
   const faturasEmAberto = faturas.filter((f) => f.status === 'em_aberto' || f.status === 'vencido')
   const autorizacoesPendentes = autorizacoes.filter((a) => !a.resposta)
+  const ocorrenciasNaoLidas = ocorrencias.filter((o) => !o.lida)
 
   return <div className="min-h-screen bg-[#f7fafb] text-[#18313c]">
     <div className="flex min-h-screen">
@@ -228,9 +227,7 @@ export function ResponsavelClient({
                       <h4 className="mt-2 font-syne text-base font-bold">{a.titulo}</h4>
                       {a.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{a.descricao}</p>}
                       {a.prazo_resposta && <p className="mt-2 text-xs font-semibold text-[#dc2626]">Responder até {formatarData(a.prazo_resposta)}</p>}
-                      <button onClick={() => abrirAutorizacao(a)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">
-                        Responder
-                      </button>
+                      <button onClick={() => abrirAutorizacao(a)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">Responder</button>
                     </article>
                   )
                 })}
@@ -243,12 +240,9 @@ export function ResponsavelClient({
               <h3 className="font-syne text-lg font-bold">Minhas matrículas</h3>
               <Link href="/matricula" className="text-sm font-medium text-[#087f5b]">Nova matrícula <ChevronRight className="inline" size={15}/></Link>
             </div>
-
             {inscricoes.length === 0 ? (
               <div className="rounded-xl border border-[#dbe5e8] bg-white p-10 text-center">
-                <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#e6faf3] text-[#0d9488]">
-                  <FileText size={24}/>
-                </div>
+                <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#e6faf3] text-[#0d9488]"><FileText size={24}/></div>
                 <h4 className="mt-4 font-syne text-lg font-bold">Nenhuma inscrição ainda</h4>
                 <p className="mt-1 text-sm text-[#8aa0ad]">Quando você enviar uma matrícula pelo site, ela aparecerá aqui para acompanhamento.</p>
                 <Link href="/matricula" className="mt-6 inline-block rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white">Iniciar matrícula</Link>
@@ -265,26 +259,16 @@ export function ResponsavelClient({
                         <div>
                           <p className="font-mono text-[11px] text-[#8aa0ad]">{i.protocolo}</p>
                           <h4 className="mt-1 font-syne text-lg font-bold">{i.aluno_nome}</h4>
-                          <p className="mt-0.5 text-sm text-[#8aa0ad]">
-                            {i.aluno_serie || 'Série não definida'}{i.aluno_turno ? ` · ${i.aluno_turno}` : ''}
-                          </p>
+                          <p className="mt-0.5 text-sm text-[#8aa0ad]">{i.aluno_serie || 'Série não definida'}{i.aluno_turno ? ` · ${i.aluno_turno}` : ''}</p>
                         </div>
                         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}>
                           <Icone size={12} />{st.label}
                         </span>
                       </div>
-
                       <div className="mt-5 grid grid-cols-2 gap-3 border-t border-[#edf1f2] pt-4 text-xs">
-                        <div>
-                          <p className="text-[#8aa0ad]">Enviada em</p>
-                          <p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.criado_em)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[#8aa0ad]">Documentos</p>
-                          <p className="mt-0.5 font-semibold text-[#243942]">{docsEnviados} de 4 enviados</p>
-                        </div>
+                        <div><p className="text-[#8aa0ad]">Enviada em</p><p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.criado_em)}</p></div>
+                        <div><p className="text-[#8aa0ad]">Documentos</p><p className="mt-0.5 font-semibold text-[#243942]">{docsEnviados} de 4 enviados</p></div>
                       </div>
-
                       <div className="mt-5 grid grid-cols-3 gap-2">
                         <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f1f8f6] px-2 py-2 text-center text-xs font-semibold text-[#087f5b] hover:bg-[#d9f2e7]">Ver detalhes</button>
                         <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Documentos</button>
@@ -316,20 +300,47 @@ export function ResponsavelClient({
                       )}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#edf1f2] pt-4 text-xs">
-                      <div>
-                        <p className="text-[#8aa0ad]">Disciplinas avaliadas</p>
-                        <p className="mt-0.5 font-semibold text-[#243942]">{new Set(b.notas.map((n) => n.disciplina)).size}</p>
-                      </div>
-                      <div>
-                        <p className="text-[#8aa0ad]">Total de faltas</p>
-                        <p className={`mt-0.5 font-semibold ${b.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{b.total_faltas}</p>
-                      </div>
+                      <div><p className="text-[#8aa0ad]">Disciplinas avaliadas</p><p className="mt-0.5 font-semibold text-[#243942]">{new Set(b.notas.map((n) => n.disciplina)).size}</p></div>
+                      <div><p className="text-[#8aa0ad]">Total de faltas</p><p className={`mt-0.5 font-semibold ${b.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{b.total_faltas}</p></div>
                     </div>
-                    <button onClick={() => setBoletimAberto(b)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">
-                      Ver boletim completo
-                    </button>
+                    <button onClick={() => setBoletimAberto(b)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">Ver boletim completo</button>
                   </article>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {ocorrencias.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-syne text-lg font-bold">Ocorrências</h3>
+                {ocorrenciasNaoLidas.length > 0 && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">{ocorrenciasNaoLidas.length} novas</span>}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {ocorrencias.slice(0, 6).map((o) => {
+                  const info = tipoOcorrencia[o.tipo] || tipoOcorrencia.outro
+                  const Icone = info.icone
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => abrirOcorrencia(o)}
+                      className={`flex items-start gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-[#0d9488] ${!o.lida ? 'border-[#dc2626]/30' : 'border-[#dbe5e8]'}`}
+                    >
+                      <div className="grid size-10 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>
+                        <Icone className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${gravidadeStyles[o.gravidade]}`}>{gravidadeLabel[o.gravidade]}</span>
+                          {!o.lida && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">Nova</span>}
+                        </div>
+                        <h4 className="mt-2 text-sm font-semibold text-[#243942]">{o.titulo}</h4>
+                        <p className="mt-0.5 truncate text-xs text-[#82939a]">{o.aluno_nome} · {formatarData(o.criado_em)}</p>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </section>
           )}
@@ -355,9 +366,7 @@ export function ResponsavelClient({
                         </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="text-sm font-semibold">{e.titulo}</h4>
-                          <p className="mt-1 truncate text-xs text-[#8aa0ad]">
-                            {e.hora_evento ? `${e.hora_evento} · ` : ''}{info.label}{e.descricao ? ` · ${e.descricao}` : ''}
-                          </p>
+                          <p className="mt-1 truncate text-xs text-[#8aa0ad]">{e.hora_evento ? `${e.hora_evento} · ` : ''}{info.label}{e.descricao ? ` · ${e.descricao}` : ''}</p>
                         </div>
                       </article>
                     )
@@ -419,9 +428,7 @@ export function ResponsavelClient({
                     <div key={f.id} className="flex flex-wrap items-center gap-4 border-b border-[#edf1f2] p-5 last:border-0">
                       <div className="flex-1">
                         <p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p>
-                        <p className="mt-1 text-xs text-[#8aa0ad]">
-                          {f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}
-                        </p>
+                        <p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p>
                       </div>
                       <strong className="font-syne text-base">{formatarMoeda(f.valor_centavos)}</strong>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
@@ -431,6 +438,31 @@ export function ResponsavelClient({
               )}
             </div>
           </section>
+
+          {albuns.length > 0 && (
+            <section className="mt-10">
+              <h3 className="mb-4 font-syne text-lg font-bold">Galeria de fotos</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {albuns.map((a) => (
+                  <button key={a.id} onClick={() => setAlbumAberto(a)} className="group overflow-hidden rounded-xl border border-[#dbe5e8] bg-white text-left transition hover:border-[#0d9488]">
+                    <div className="relative aspect-video bg-[#f0f4f5]">
+                      {a.capa_url ? (
+                        <img src={a.capa_url} alt={a.titulo} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center"><ImageIcon className="size-10 text-[#a0afb4]" /></div>
+                      )}
+                      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">{a.fotos.length} {a.fotos.length === 1 ? 'foto' : 'fotos'}</span>
+                    </div>
+                    <div className="p-4">
+                      <h4 className="text-sm font-semibold text-[#243942]">{a.titulo}</h4>
+                      {a.descricao && <p className="mt-1 line-clamp-2 text-xs text-[#82939a]">{a.descricao}</p>}
+                      <p className="mt-2 text-xs text-[#82939a]">{formatarData(a.criado_em)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="mt-10">
             <h3 className="mb-4 font-syne text-lg font-bold">Atalhos rápidos</h3>
@@ -447,6 +479,79 @@ export function ResponsavelClient({
       </main>
     </div>
 
+    {ocorrenciaAberta && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setOcorrenciaAberta(null)} />
+        <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-2xl">
+          <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div>
+              {(() => {
+                const info = tipoOcorrencia[ocorrenciaAberta.tipo] || tipoOcorrencia.outro
+                const Icone = info.icone
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="grid size-8 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>
+                      <Icone className="size-4" />
+                    </div>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${gravidadeStyles[ocorrenciaAberta.gravidade]}`}>{gravidadeLabel[ocorrenciaAberta.gravidade]}</span>
+                  </div>
+                )
+              })()}
+              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{ocorrenciaAberta.titulo}</h2>
+              <p className="mt-1 text-xs text-[#82939a]">{ocorrenciaAberta.aluno_nome} · {formatarDataHora(ocorrenciaAberta.criado_em)}</p>
+            </div>
+            <button onClick={() => setOcorrenciaAberta(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
+          </header>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Descrição</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.descricao}</p>
+            </div>
+            {ocorrenciaAberta.providencias && (
+              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#82939a]">Providências</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#243942]">{ocorrenciaAberta.providencias}</p>
+              </div>
+            )}
+            <p className="mt-4 text-xs text-[#a0afb4]">Registrado por {ocorrenciaAberta.autor_nome}</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {albumAberto && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setAlbumAberto(null)} />
+        <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-2xl">
+          <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div>
+              <h2 className="font-syne text-xl font-bold text-[#12232b]">{albumAberto.titulo}</h2>
+              {albumAberto.descricao && <p className="mt-1 text-sm text-[#82939a]">{albumAberto.descricao}</p>}
+              <p className="mt-1 text-xs text-[#82939a]">{albumAberto.fotos.length} fotos · {formatarData(albumAberto.criado_em)}</p>
+            </div>
+            <button onClick={() => setAlbumAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
+          </header>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {albumAberto.fotos.map((f) => (
+                <button key={f.id} onClick={() => setFotoAberta(f.url)} className="group aspect-square overflow-hidden rounded-lg border border-[#e5ecee]">
+                  <img src={f.url} alt={f.legenda || ''} className="h-full w-full object-cover transition group-hover:scale-105" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {fotoAberta && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4" onClick={() => setFotoAberta(null)}>
+        <button onClick={() => setFotoAberta(null)} className="absolute right-4 top-4 rounded-lg bg-white/10 p-2 text-white hover:bg-white/20"><X className="size-6" /></button>
+        <img src={fotoAberta} alt="" className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+      </div>
+    )}
+
     {boletimAberto && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/40" onClick={() => setBoletimAberto(null)} />
@@ -460,20 +565,10 @@ export function ResponsavelClient({
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="mb-5 grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Média geral</p>
-                <p className={`mt-1 font-syne text-2xl font-bold ${corNota(boletimAberto.media)}`}>{boletimAberto.media !== null ? boletimAberto.media.toFixed(1) : '—'}</p>
-              </div>
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Avaliações</p>
-                <p className="mt-1 font-syne text-2xl font-bold text-[#243942]">{boletimAberto.notas.length}</p>
-              </div>
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Total de faltas</p>
-                <p className={`mt-1 font-syne text-2xl font-bold ${boletimAberto.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{boletimAberto.total_faltas}</p>
-              </div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Média geral</p><p className={`mt-1 font-syne text-2xl font-bold ${corNota(boletimAberto.media)}`}>{boletimAberto.media !== null ? boletimAberto.media.toFixed(1) : '—'}</p></div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Avaliações</p><p className="mt-1 font-syne text-2xl font-bold text-[#243942]">{boletimAberto.notas.length}</p></div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Faltas</p><p className={`mt-1 font-syne text-2xl font-bold ${boletimAberto.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{boletimAberto.total_faltas}</p></div>
             </div>
-
             <div className="overflow-hidden rounded-lg border border-[#e5ecee]">
               <table className="w-full">
                 <thead className="bg-[#fafcfc]">
@@ -536,19 +631,13 @@ export function ResponsavelClient({
                   return (
                     <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'}`}>
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}>
-                          <FileText className="size-4" />
-                        </div>
+                        <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}><FileText className="size-4" /></div>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
                           <p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p>
                         </div>
                       </div>
-                      {temArquivo && (
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white">
-                          <ExternalLink className="mr-1 inline size-3" />Abrir
-                        </a>
-                      )}
+                      {temArquivo && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"><ExternalLink className="mr-1 inline size-3" />Abrir</a>}
                     </div>
                   )
                 })}

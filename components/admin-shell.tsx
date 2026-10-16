@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, FileText, Headphones, Image as ImageIcon, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { createClient } from '@/lib/supabase/client'
@@ -15,10 +15,12 @@ const schoolItems = [
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
   ['Notas', '/admin/notas', TrendingUp],
+  ['Ocorrências', '/admin/ocorrencias', AlertCircle],
   ['Financeiro', '/admin/financeiro', WalletCards],
   ['Comunicação', '/admin/comunicacao', Bell],
   ['Agenda', '/admin/agenda', Calendar],
   ['Autorizações', '/admin/autorizacoes', ShieldCheck],
+  ['Galeria', '/admin/galeria', ImageIcon],
   ['EduFlix', '/admin/eduflix', BookOpen],
   ['Sala virtual', '/admin/sala-virtual', BookOpen],
   ['Loja', '/admin/loja', CircleDollarSign],
