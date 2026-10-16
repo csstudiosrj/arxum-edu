@@ -49,7 +49,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     const admin = createAdminClient()
 
-    // Busca dados do aluno para personalizar o e-mail
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
@@ -59,7 +58,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
 
-    // Salva o e-mail no aluno
     const { error: erroUpdate } = await admin
       .from('alunos')
       .update({ email_aluno: emailAluno })
@@ -68,11 +66,9 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (erroUpdate) return { success: false, error: erroUpdate.message }
 
-    // Verifica se já existe usuário com esse e-mail
     const { data: usuarios } = await admin.auth.admin.listUsers()
     let usuarioExistente = (usuarios?.users || []).find((u) => u.email === emailAluno)
 
-    // Se não existe, cria
     if (!usuarioExistente) {
       const { data: novoUsuario, error: erroAuth } = await admin.auth.admin.createUser({
         email: emailAluno,
@@ -86,7 +82,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
       usuarioExistente = novoUsuario.user
 
-      // Vincula ao perfil como aluno
       await admin
         .from('perfis')
         .update({
@@ -98,26 +93,21 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
         .eq('id', usuarioExistente.id)
     }
 
-    // Vincula o usuário ao registro do aluno
     await admin
       .from('alunos')
       .update({ usuario_id: usuarioExistente.id })
       .eq('id', alunoId)
 
-    // Gera o link mágico
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: emailAluno,
-      options: {
-        redirectTo: 'https://arxum.com.br/primeiro-acesso',
-      },
+      options: { redirectTo: 'https://arxum.com.br/primeiro-acesso' },
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
-      return { success: false, error: erroLink?.message || 'Erro ao gerar link de acesso.' }
+      return { success: false, error: erroLink?.message || 'Erro ao gerar link.' }
     }
 
-    // Envia o e-mail
     const envio = await enviarConviteAluno({
       para: emailAluno,
       alunoNome: aluno.nome,
@@ -135,5 +125,59 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
   } catch (e) {
     console.error('Erro ao convidar aluno:', e)
     return { success: false, error: 'Erro ao convidar aluno.' }
+  }
+}
+
+export async function reenviarConviteAluno(alunoId: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('nome, email_aluno, usuario_id')
+      .eq('id', alunoId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
+    if (!aluno.email_aluno) return { success: false, error: 'Este aluno ainda não tem e-mail cadastrado.' }
+    if (!aluno.usuario_id) return { success: false, error: 'O aluno ainda não foi vinculado ao portal.' }
+
+    // Verifica se o usuário ainda existe no Auth
+    const { data: usuario } = await admin.auth.admin.getUserById(aluno.usuario_id)
+    if (!usuario?.user) {
+      return { success: false, error: 'Usuário não encontrado. Convide novamente.' }
+    }
+
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: aluno.email_aluno,
+      options: { redirectTo: 'https://arxum.com.br/primeiro-acesso' },
+    })
+
+    if (erroLink || !linkData?.properties?.action_link) {
+      return { success: false, error: erroLink?.message || 'Erro ao gerar link.' }
+    }
+
+    const envio = await enviarConviteAluno({
+      para: aluno.email_aluno,
+      alunoNome: aluno.nome,
+      escolaNome: escola.nome,
+      escolaSlug: escola.slug,
+      linkMagico: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return { success: false, error: envio.error || 'Erro ao enviar e-mail.' }
+    }
+
+    revalidatePath('/admin/alunos')
+    return { success: true, enviadoPara: aluno.email_aluno }
+  } catch (e) {
+    console.error('Erro ao reenviar convite:', e)
+    return { success: false, error: 'Erro ao reenviar convite.' }
   }
 }

@@ -53,7 +53,6 @@ export async function convidarProfessor(data: NovoProfessor) {
 
     const admin = createAdminClient()
 
-    // Verifica se já existe usuário com esse e-mail
     const { data: usuarios } = await admin.auth.admin.listUsers()
     let usuario = (usuarios?.users || []).find((u) => u.email === data.email)
 
@@ -70,7 +69,6 @@ export async function convidarProfessor(data: NovoProfessor) {
       usuario = novo.user
     }
 
-    // Atualiza o perfil
     const { error: erroPerfil } = await admin
       .from('perfis')
       .update({
@@ -87,7 +85,6 @@ export async function convidarProfessor(data: NovoProfessor) {
       return { success: false, error: erroPerfil.message }
     }
 
-    // Gera link mágico
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: data.email,
@@ -115,6 +112,59 @@ export async function convidarProfessor(data: NovoProfessor) {
   } catch (e) {
     console.error('Erro ao convidar professor:', e)
     return { success: false, error: 'Erro ao convidar professor.' }
+  }
+}
+
+export async function reenviarConviteProfessor(professorId: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+
+    const { data: perfil } = await admin
+      .from('perfis')
+      .select('nome, email')
+      .eq('id', professorId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!perfil) return { success: false, error: 'Professor não encontrado.' }
+    if (!perfil.email) return { success: false, error: 'Este professor não tem e-mail cadastrado.' }
+
+    // Verifica se o usuário ainda existe no Auth
+    const { data: usuario } = await admin.auth.admin.getUserById(professorId)
+    if (!usuario?.user) {
+      return { success: false, error: 'Usuário não encontrado. Convide novamente.' }
+    }
+
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: perfil.email,
+      options: { redirectTo: 'https://arxum.com.br/primeiro-acesso' },
+    })
+
+    if (erroLink || !linkData?.properties?.action_link) {
+      return { success: false, error: erroLink?.message || 'Erro ao gerar link.' }
+    }
+
+    const envio = await enviarConviteProfessor({
+      para: perfil.email,
+      professorNome: perfil.nome,
+      escolaNome: escola.nome,
+      escolaSlug: escola.slug,
+      linkMagico: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return { success: false, error: envio.error || 'Erro ao enviar e-mail.' }
+    }
+
+    revalidatePath('/admin/professores')
+    return { success: true, enviadoPara: perfil.email }
+  } catch (e) {
+    console.error('Erro ao reenviar convite:', e)
+    return { success: false, error: 'Erro ao reenviar convite.' }
   }
 }
 
@@ -146,7 +196,6 @@ export async function excluirProfessor(id: string) {
 
     const admin = createAdminClient()
 
-    // Confirma que o perfil pertence à escola
     const { data: perfil } = await admin
       .from('perfis')
       .select('id')

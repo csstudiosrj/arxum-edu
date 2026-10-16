@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Users, Mail, Phone, Trash2, X, Loader2, Check, Eye, EyeOff, BookOpen } from 'lucide-react'
+import { Plus, Search, Users, Mail, Phone, Trash2, X, Loader2, Check, Eye, EyeOff, BookOpen, Send, CheckCircle2 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { convidarProfessor, alternarAtivoProfessor, excluirProfessor, type Professor } from './actions'
+import { convidarProfessor, reenviarConviteProfessor, alternarAtivoProfessor, excluirProfessor, type Professor } from './actions'
 
 const DISCIPLINAS = [
   'Matemática', 'Português', 'Física', 'Química', 'Biologia', 'História',
@@ -35,6 +35,9 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
   const [processando, setProcessando] = useState<string | null>(null)
+
+  const [reenviando, setReenviando] = useState<string | null>(null)
+  const [sucessoReenvio, setSucessoReenvio] = useState<string | null>(null)
 
   const filtrados = professores.filter((p) => {
     const termo = busca.toLowerCase()
@@ -71,6 +74,22 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
       setNovoAberto(false)
       limpar()
     }, 2200)
+  }
+
+  async function handleReenviar(p: Professor) {
+    setReenviando(p.id)
+    setSucessoReenvio(null)
+
+    const r = await reenviarConviteProfessor(p.id)
+    setReenviando(null)
+
+    if (!r.success) {
+      alert(r.error || 'Erro ao reenviar.')
+      return
+    }
+
+    setSucessoReenvio(p.id)
+    setTimeout(() => setSucessoReenvio(null), 3000)
   }
 
   async function handleToggleAtivo(p: Professor) {
@@ -208,6 +227,24 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                         <td className="px-5 py-3.5 text-sm text-[#82939a]">{formatarData(p.criado_em)}</td>
                         <td className="px-5 py-3.5">
                           <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => handleReenviar(p)}
+                              disabled={reenviando === p.id || sucessoReenvio === p.id}
+                              className={`rounded-lg p-1.5 transition ${
+                                sucessoReenvio === p.id
+                                  ? 'bg-[#d1fae5] text-[#065f46]'
+                                  : 'text-[#0d9488] hover:bg-[#ccfbf1]'
+                              } disabled:opacity-60`}
+                              title={sucessoReenvio === p.id ? 'Convite reenviado' : 'Reenviar convite'}
+                            >
+                              {reenviando === p.id ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : sucessoReenvio === p.id ? (
+                                <CheckCircle2 className="size-4" />
+                              ) : (
+                                <Send className="size-4" />
+                              )}
+                            </button>
                             <button
                               onClick={() => handleToggleAtivo(p)}
                               disabled={processando === p.id}

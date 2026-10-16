@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Mail, Phone, Users, Inbox, Eye, UserPlus, CheckCircle2, X, Loader2 } from 'lucide-react'
+import { Search, Mail, Phone, Users, Inbox, Eye, UserPlus, CheckCircle2, X, Loader2, RefreshCw, Send } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { convidarAlunoParaPortal, type Aluno } from './actions'
+import { convidarAlunoParaPortal, reenviarConviteAluno, type Aluno } from './actions'
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(' ')
@@ -28,6 +28,9 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
+
+  const [reenviando, setReenviando] = useState<string | null>(null)
+  const [sucessoReenvio, setSucessoReenvio] = useState<string | null>(null)
 
   const filtrados = alunos.filter((a) => {
     const termo = busca.toLowerCase()
@@ -72,6 +75,22 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
       setConvidando(null)
       setSucesso(false)
     }, 1800)
+  }
+
+  async function handleReenviar(aluno: Aluno) {
+    setReenviando(aluno.id)
+    setSucessoReenvio(null)
+
+    const r = await reenviarConviteAluno(aluno.id)
+    setReenviando(null)
+
+    if (!r.success) {
+      alert(r.error || 'Erro ao reenviar.')
+      return
+    }
+
+    setSucessoReenvio(aluno.id)
+    setTimeout(() => setSucessoReenvio(null), 3000)
   }
 
   return (
@@ -193,13 +212,34 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex justify-end gap-1">
-                            <button
-                              onClick={() => abrirConvite(a)}
-                              className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
-                              title="Convidar para o portal"
-                            >
-                              <UserPlus className="size-4" />
-                            </button>
+                            {a.usuario_id ? (
+                              <button
+                                onClick={() => handleReenviar(a)}
+                                disabled={reenviando === a.id || sucessoReenvio === a.id}
+                                className={`rounded-lg p-1.5 transition ${
+                                  sucessoReenvio === a.id
+                                    ? 'bg-[#d1fae5] text-[#065f46]'
+                                    : 'text-[#0d9488] hover:bg-[#ccfbf1]'
+                                } disabled:opacity-60`}
+                                title={sucessoReenvio === a.id ? 'Convite reenviado' : 'Reenviar convite'}
+                              >
+                                {reenviando === a.id ? (
+                                  <Loader2 className="size-4 animate-spin" />
+                                ) : sucessoReenvio === a.id ? (
+                                  <CheckCircle2 className="size-4" />
+                                ) : (
+                                  <Send className="size-4" />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => abrirConvite(a)}
+                                className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                                title="Convidar para o portal"
+                              >
+                                <UserPlus className="size-4" />
+                              </button>
+                            )}
                             <button className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ver detalhes">
                               <Eye className="size-4" />
                             </button>
