@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -17,6 +17,7 @@ const schoolItems = [
   ['Site', '/admin/site', Globe],
   ['Personalização', '/admin/personalizacao', Palette],
   ['Unidades', '/admin/unidades', Network],
+  ['Usuários', '/admin/usuarios', UserCog],
   ['Matrículas', '/admin/matriculas', FileText],
   ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users],
