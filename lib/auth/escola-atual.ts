@@ -20,6 +20,7 @@ export type EscolaCompleta = {
   cor_primaria: string | null
   fonte_par: string | null
   tema: string | null
+  branding_portais: boolean
   criado_em: string
 }
 
