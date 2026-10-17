@@ -119,7 +119,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       type: 'signup',
       email: data.admin_email,
       password: data.admin_senha,
-      options: { redirectTo: 'https://arxum.com.br/dashboard' },
+      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' }, // CORRIGIDO AQUI
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
@@ -134,7 +134,6 @@ export async function cadastrarEscola(data: CadastroInput) {
     })
 
     if (!envio.success) {
-      // AQUI: retorna o erro real do Resend para a tela
       return { success: false, error: `Erro no envio do e-mail (Resend): ${envio.error}` }
     }
 
@@ -146,7 +145,6 @@ export async function cadastrarEscola(data: CadastroInput) {
 }
 
 export async function reenviarConfirmacao(email: string) {
-  // ... (manter a função reenviarConfirmacao igual)
   try {
     const admin = createAdminClient()
     const { data: usuarios } = await admin.auth.admin.listUsers()
@@ -161,11 +159,11 @@ export async function reenviarConfirmacao(email: string) {
       type: 'signup',
       email: user.email!,
       password: 'temp-' + Math.random().toString(36).slice(2),
-      options: { redirectTo: 'https://arxum.com.br/dashboard' },
+      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' }, // CORRIGIDO AQUI
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
-      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, { redirectTo: 'https://arxum.com.br/dashboard' })
+      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, { redirectTo: 'https://arxum.com.br/edu/dashboard' }) // CORRIGIDO AQUI
       if (erroInvite) return { success: false, error: 'Não foi possível reenviar agora.' }
       return { success: true }
     }
