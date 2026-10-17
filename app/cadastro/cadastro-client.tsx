@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Phone, FileText, Check, Loader2, CheckCircle2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Phone, FileText, Check, Loader2, CheckCircle2, RefreshCw, Eye, EyeOff, X } from 'lucide-react'
 import { cadastrarEscola, reenviarConfirmacao } from './actions'
 
 const planos = [
@@ -13,13 +13,7 @@ const planos = [
 ]
 
 function slugify(texto: string): string {
-  return texto
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 50)
+  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
 }
 
 function formatarCNPJ(v: string): string {
@@ -39,6 +33,12 @@ function formatarTelefone(v: string): string {
   return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
 }
 
+function formatarCEP(v: string): string {
+  const n = v.replace(/\D/g, '').slice(0, 8)
+  if (n.length <= 5) return n
+  return `${n.slice(0, 5)}-${n.slice(5)}`
+}
+
 type Estado = 'formulario' | 'aguardando_email'
 
 export function CadastroClient() {
@@ -47,17 +47,34 @@ export function CadastroClient() {
   const [escolaNomeCadastrada, setEscolaNomeCadastrada] = useState('')
 
   const [plano, setPlano] = useState('raiz')
+  
+  // Escola
+  const [razaoSocial, setRazaoSocial] = useState('')
   const [escolaNome, setEscolaNome] = useState('')
   const [escolaCnpj, setEscolaCnpj] = useState('')
+  
+  // Endereço
+  const [cep, setCep] = useState('')
+  const [rua, setRua] = useState('')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estadoUf, setEstadoUf] = useState('')
+
+  // Admin
   const [adminNome, setAdminNome] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
-  const [adminSenha, setAdminSenha] = useState('')
   const [adminTelefone, setAdminTelefone] = useState('')
+  const [adminSenha, setAdminSenha] = useState('')
+  const [adminConfirmarSenha, setAdminConfirmarSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  
   const [aceitou, setAceitou] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [reenviando, setReenviando] = useState(false)
   const [reenviado, setReenviado] = useState(false)
+  const [modalLegal, setModalLegal] = useState<'termos' | 'privacidade' | null>(null)
 
   const slugSugerido = slugify(escolaNome)
 
@@ -65,17 +82,31 @@ export function CadastroClient() {
     e.preventDefault()
     setErro('')
 
-    if (!escolaNome.trim()) return setErro('Informe o nome da escola.')
+    if (!razaoSocial.trim()) return setErro('Informe a Razão Social.')
+    if (!escolaNome.trim()) return setErro('Informe o Nome Fantasia da escola.')
+    if (escolaCnpj.replace(/\D/g, '').length !== 14) return setErro('O CNPJ é obrigatório e deve ter 14 dígitos.')
+    
+    if (!cep || !rua || !numero || !bairro || !cidade || !estadoUf) return setErro('Preencha o endereço completo da escola.')
     if (!adminNome.trim()) return setErro('Informe seu nome.')
     if (!adminEmail.trim()) return setErro('Informe seu e-mail.')
+    
     if (adminSenha.length < 8) return setErro('A senha deve ter pelo menos 8 caracteres.')
+    if (adminSenha !== adminConfirmarSenha) return setErro('As senhas não coincidem.')
+    
     if (!aceitou) return setErro('Você precisa aceitar os termos e a política de privacidade.')
 
     setEnviando(true)
 
     const result = await cadastrarEscola({
       escola_nome: escolaNome,
+      escola_razao_social: razaoSocial,
       escola_cnpj: escolaCnpj,
+      escola_cep: cep,
+      escola_endereco: rua,
+      escola_numero: numero,
+      escola_bairro: bairro,
+      escola_cidade: cidade,
+      escola_estado: estadoUf,
       admin_nome: adminNome,
       admin_email: adminEmail,
       admin_senha: adminSenha,
@@ -121,7 +152,7 @@ export function CadastroClient() {
         <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
           <Mail className="size-8" />
         </div>
-        <h1 className="mt-6 text-center font-syne text-4xl font-bold tracking-[-.04em] text-white">
+        <h1 className="mt-6 text-center text-4xl font-bold tracking-[-.04em] text-white">
           Confirme seu e-mail
         </h1>
         <p className="mt-4 max-w-md text-center text-sm leading-6 text-[#8aa0ad]">
@@ -136,9 +167,6 @@ export function CadastroClient() {
             <li className="flex gap-3"><span className="text-[#0d9488]">2.</span> Clique em "Confirmar e-mail".</li>
             <li className="flex gap-3"><span className="text-[#0d9488]">3.</span> Você será redirecionado para o painel da escola.</li>
           </ol>
-          <p className="mt-4 text-xs leading-5 text-[#82939a]">
-            Não recebeu? Verifique a pasta de spam ou clique abaixo para reenviar.
-          </p>
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-3">
@@ -167,7 +195,7 @@ export function CadastroClient() {
 
       <div className="mt-8 mb-12">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Comece agora</p>
-        <h1 className="mt-3 font-syne text-4xl font-bold tracking-[-.04em] text-white md:text-5xl">
+        <h1 className="mt-3 text-4xl font-bold tracking-[-.04em] text-white md:text-5xl">
           Crie a conta da sua escola
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
@@ -177,121 +205,8 @@ export function CadastroClient() {
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
-          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
-                <Building2 className="size-4" />
-              </div>
-              <h2 className="text-base font-bold text-white">Dados da escola</h2>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
-                  Nome da escola <span className="text-[#dc2626]">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={escolaNome}
-                  onChange={(e) => setEscolaNome(e.target.value)}
-                  placeholder="Ex: Colégio Horizonte"
-                  className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                />
-                {escolaNome && (
-                  <p className="mt-1.5 text-xs text-[#5e7a94]">
-                    Endereço: <span className="font-mono text-[#0d9488]">edu.arxum.com.br/{slugSugerido}</span>
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">CNPJ (opcional)</label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
-                  <input
-                    type="text"
-                    value={escolaCnpj}
-                    onChange={(e) => setEscolaCnpj(formatarCNPJ(e.target.value))}
-                    placeholder="00.000.000/0000-00"
-                    className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
-                <User className="size-4" />
-              </div>
-              <h2 className="text-base font-bold text-white">Seus dados (administrador)</h2>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
-                  Nome completo <span className="text-[#dc2626]">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
-                  <input
-                    type="text"
-                    value={adminNome}
-                    onChange={(e) => setAdminNome(e.target.value)}
-                    placeholder="Como você quer ser chamado"
-                    className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
-                    E-mail <span className="text-[#dc2626]">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
-                    <input
-                      type="email"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                      className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Telefone</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
-                    <input
-                      type="text"
-                      value={adminTelefone}
-                      onChange={(e) => setAdminTelefone(formatarTelefone(e.target.value))}
-                      placeholder="(21) 90000-0000"
-                      className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
-                  Senha <span className="text-[#dc2626]">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
-                  <input
-                    type="password"
-                    value={adminSenha}
-                    onChange={(e) => setAdminSenha(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-[#5e7a94]">Use pelo menos 8 caracteres com letras e números.</p>
-              </div>
-            </div>
-          </section>
-
+          
+          {/* PLANO MOVIDO PARA O TOPO */}
           <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
             <div className="mb-5 flex items-center gap-3">
               <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
@@ -310,7 +225,7 @@ export function CadastroClient() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-syne text-base font-bold text-white">{p.label}</span>
+                    <span className="text-base font-bold text-white">{p.label}</span>
                     {plano === p.key && (
                       <div className="grid size-5 place-items-center rounded-full bg-[#0d9488] text-white">
                         <Check className="size-3" />
@@ -318,13 +233,165 @@ export function CadastroClient() {
                     )}
                   </div>
                   <p className="mt-1 text-xs text-[#82939a]">{p.desc}</p>
-                  <p className="mt-3 font-syne text-lg font-bold text-[#0d9488]">{p.preco}</p>
+                  <p className="mt-3 text-lg font-bold text-[#0d9488]">{p.preco}</p>
                 </button>
               ))}
             </div>
             <p className="mt-4 text-xs leading-5 text-[#5e7a94]">
               Você não será cobrado agora. A cobrança só começa depois do período de teste.
             </p>
+          </section>
+
+          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
+                <Building2 className="size-4" />
+              </div>
+              <h2 className="text-base font-bold text-white">Dados da escola</h2>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
+                  Razão Social <span className="text-[#dc2626]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={razaoSocial}
+                  onChange={(e) => setRazaoSocial(e.target.value)}
+                  placeholder="Ex: Colégio Horizonte Educação LTDA"
+                  className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
+                  Nome Fantasia <span className="text-[#dc2626]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={escolaNome}
+                  onChange={(e) => setEscolaNome(e.target.value)}
+                  placeholder="Ex: Colégio Horizonte"
+                  className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+                />
+                {escolaNome && (
+                  <p className="mt-1.5 text-xs text-[#5e7a94]">
+                    Endereço: <span className="font-mono text-[#0d9488]">edu.arxum.com.br/{slugSugerido}</span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">
+                  CNPJ <span className="text-[#dc2626]">*</span>
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                  <input
+                    type="text"
+                    value={escolaCnpj}
+                    onChange={(e) => setEscolaCnpj(formatarCNPJ(e.target.value))}
+                    placeholder="00.000.000/0000-00"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
+                <Building2 className="size-4" />
+              </div>
+              <h2 className="text-base font-bold text-white">Endereço da escola</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">CEP *</label>
+                  <input type="text" value={cep} onChange={(e) => setCep(formatarCEP(e.target.value))} placeholder="00000-000" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Rua / Logradouro *</label>
+                  <input type="text" value={rua} onChange={(e) => setRua(e.target.value)} placeholder="Av. Paulista" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Número *</label>
+                  <input type="text" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="123" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Bairro *</label>
+                  <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Centro" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Cidade *</label>
+                  <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="São Paulo" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Estado (UF) *</label>
+                  <input type="text" value={estadoUf} onChange={(e) => setEstadoUf(e.target.value.toUpperCase())} maxLength={2} placeholder="SP" className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
+                <User className="size-4" />
+              </div>
+              <h2 className="text-base font-bold text-white">Seus dados (administrador)</h2>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Nome completo *</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                  <input type="text" value={adminNome} onChange={(e) => setAdminNome(e.target.value)} placeholder="Como você quer ser chamado" className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">E-mail *</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                    <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-[#0d9488]" />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Telefone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                    <input type="text" value={adminTelefone} onChange={(e) => setAdminTelefone(formatarTelefone(e.target.value))} placeholder="(21) 90000-0000" className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-[#0d9488]" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Senha *</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                    <input type={mostrarSenha ? 'text' : 'password'} value={adminSenha} onChange={(e) => setAdminSenha(e.target.value)} placeholder="Mínimo 8 caracteres" className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-10 text-sm text-white outline-none focus:border-[#0d9488]" />
+                    <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5e7a94] hover:text-white">
+                      {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Confirmar Senha *</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#5e7a94]" />
+                    <input type={mostrarSenha ? 'text' : 'password'} value={adminConfirmarSenha} onChange={(e) => setAdminConfirmarSenha(e.target.value)} placeholder="Repita a senha" className="w-full rounded-lg border border-white/10 bg-[#0b1115] py-2.5 pl-10 pr-10 text-sm text-white outline-none focus:border-[#0d9488]" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-[#5e7a94]">Use pelo menos 8 caracteres com letras e números.</p>
+            </div>
           </section>
         </div>
 
@@ -335,6 +402,10 @@ export function CadastroClient() {
               <div className="flex justify-between">
                 <dt className="text-[#82939a]">Escola</dt>
                 <dd className="max-w-[160px] truncate text-right font-semibold text-white">{escolaNome || '—'}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[#82939a]">Razão Social</dt>
+                <dd className="max-w-[160px] truncate text-right text-xs text-white">{razaoSocial || '—'}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-[#82939a]">Endereço</dt>
@@ -354,7 +425,7 @@ export function CadastroClient() {
               </div>
               <div className="flex justify-between border-t border-white/[.08] pt-3">
                 <dt className="text-[#82939a]">Mensalidade</dt>
-                <dd className="text-right font-syne text-base font-bold text-white">
+                <dd className="text-right text-base font-bold text-white">
                   {planos.find((p) => p.key === plano)?.preco}
                 </dd>
               </div>
@@ -369,13 +440,13 @@ export function CadastroClient() {
               />
               <span>
                 Aceito os{' '}
-                <Link href="/termos-de-uso" target="_blank" className="text-[#0d9488] hover:underline">
+                <button type="button" onClick={() => setModalLegal('termos')} className="text-[#0d9488] hover:underline">
                   termos de uso
-                </Link>{' '}
+                </button>{' '}
                 e a{' '}
-                <Link href="/politica-privacidade" target="_blank" className="text-[#0d9488] hover:underline">
+                <button type="button" onClick={() => setModalLegal('privacidade')} className="text-[#0d9488] hover:underline">
                   política de privacidade
-                </Link>
+                </button>
                 .
               </span>
             </label>
@@ -392,15 +463,9 @@ export function CadastroClient() {
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#0d9488] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
             >
               {enviando ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Criando conta...
-                </>
+                <><Loader2 className="size-4 animate-spin" /> Criando conta...</>
               ) : (
-                <>
-                  Criar minha escola
-                  <ArrowRight className="size-4" />
-                </>
+                <>Criar minha escola <ArrowRight className="size-4" /></>
               )}
             </button>
 
@@ -413,6 +478,30 @@ export function CadastroClient() {
           </div>
         </aside>
       </form>
+
+      {/* MODAL DE TERMOS E PRIVACIDADE */}
+      {modalLegal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setModalLegal(null)} />
+          <div className="relative z-10 flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-2xl">
+            <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+              <h2 className="text-lg font-bold text-[#12232b]">
+                {modalLegal === 'termos' ? 'Termos de Uso' : 'Política de Privacidade'}
+              </h2>
+              <button onClick={() => setModalLegal(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]">
+                <X className="size-5" />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto px-6 py-5 text-sm leading-6 text-[#536871]">
+              <p className="mb-4 text-[#f59e0b]">
+                Documento em revisão jurídica. Versão final será publicada antes do início da operação comercial.
+              </p>
+              <p>O ARXUM Edu é uma plataforma SaaS de gestão escolar...</p>
+              <p className="mt-4">Para mais informações, entre em contato com contato@arxum.com.br.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

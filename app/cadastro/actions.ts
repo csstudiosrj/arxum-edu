@@ -1,14 +1,20 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 import { enviarConfirmacaoCadastro } from '@/lib/emails/cadastro'
 import { registrarConsentimento } from '@/lib/consentimentos-server'
 import { POLITICA_VERSAO, TERMOS_VERSAO } from '@/lib/consentimentos'
 
 export type CadastroInput = {
   escola_nome: string
+  escola_razao_social: string
   escola_cnpj: string
+  escola_cep: string
+  escola_endereco: string
+  escola_numero: string
+  escola_bairro: string
+  escola_cidade: string
+  escola_estado: string
   admin_nome: string
   admin_email: string
   admin_senha: string
@@ -43,7 +49,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       .maybeSingle()
 
     if (perfilExistente) {
-      return { success: false, error: 'Este e-mail já está cadastrado.' }
+      return { success: false, error: 'Este e-mail já está cadastrado no sistema. Tente fazer login ou use outro e-mail.' }
     }
 
     // 2. Gerar slug único
@@ -66,7 +72,17 @@ export async function cadastrarEscola(data: CadastroInput) {
       .from('escolas')
       .insert({
         nome: data.escola_nome,
+        razao_social: data.escola_razao_social,
         slug: slugFinal,
+        cnpj: data.escola_cnpj,
+        cep: data.escola_cep,
+        endereco: data.escola_endereco,
+        numero: data.escola_numero,
+        bairro: data.escola_bairro,
+        cidade: data.escola_cidade,
+        estado: data.escola_estado,
+        telefone: data.admin_telefone,
+        email_contato: data.admin_email,
         plano: data.plano,
         status_assinatura: 'trial',
       })
@@ -74,10 +90,11 @@ export async function cadastrarEscola(data: CadastroInput) {
       .single()
 
     if (erroEscola || !escola) {
-      return { success: false, error: erroEscola?.message || 'Erro ao criar escola.' }
+      console.error('Erro ao criar escola:', erroEscola)
+      return { success: false, error: erroEscola?.message || 'Erro ao criar escola no banco.' }
     }
 
-    // 4. Criar usuário no Auth — sem auto-confirmar
+    // 4. Criar usuário no Auth
     const { data: authUser, error: erroAuth } = await admin.auth.admin.createUser({
       email: data.admin_email,
       password: data.admin_senha,
@@ -87,7 +104,7 @@ export async function cadastrarEscola(data: CadastroInput) {
 
     if (erroAuth || !authUser.user) {
       await admin.from('escolas').delete().eq('id', escola.id)
-      return { success: false, error: erroAuth?.message || 'Erro ao criar usuário.' }
+      return { success: false, error: erroAuth?.message || 'Erro ao criar credenciais de acesso.' }
     }
 
     // 5. Vincular perfil à escola
@@ -104,27 +121,22 @@ export async function cadastrarEscola(data: CadastroInput) {
     if (erroPerfil) {
       await admin.auth.admin.deleteUser(authUser.user.id)
       await admin.from('escolas').delete().eq('id', escola.id)
-      return { success: false, error: 'Erro ao vincular perfil à escola.' }
+      return { success: false, error: 'Erro ao vincular perfil ao usuário.' }
     }
 
-    // 6. Registrar consentimentos (best-effort)
-    //    Política de privacidade + Termos de uso — os dois vêm do mesmo aceite.
-    const consentimentoBase = {
-      escolaId: escola.id,
-      usuarioId: authUser.user.id,
-      responsavelEmail: data.admin_email,
-      alunoNome: null,
+    // 6. Registrar consentimentos
+    try {
+      const consentimentoBase = {
+        escolaId: escola.id,
+        usuarioId: authUser.user.id,
+        responsavelEmail: data.admin_email,
+        alunoNome: null,
+      }
+      await registrarConsentimento({ ...consentimentoBase, tipo: 'politica_privacidade', versao: POLITICA_VERSAO })
+      await registrarConsentimento({ ...consentimentoBase, tipo: 'termos_uso', versao: TERMOS_VERSAO })
+    } catch (e) {
+      console.error('Erro ao registrar consentimentos (ignorado):', e)
     }
-    await registrarConsentimento({
-      ...consentimentoBase,
-      tipo: 'politica_privacidade',
-      versao: POLITICA_VERSAO,
-    })
-    await registrarConsentimento({
-      ...consentimentoBase,
-      tipo: 'termos_uso',
-      versao: TERMOS_VERSAO,
-    })
 
     // 7. Gerar link de confirmação
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
@@ -140,11 +152,11 @@ export async function cadastrarEscola(data: CadastroInput) {
         proximo_passo: 'confirmar_email',
         email: data.admin_email,
         slug: escola.slug,
-        aviso: 'Conta criada, mas houve falha ao gerar o link de confirmação. Contate o suporte.',
+        aviso: 'Conta criada, mas houve falha ao gerar o link de confirmação.',
       }
     }
 
-    // 8. Enviar e-mail de confirmação via Resend
+    // 8. Enviar e-mail
     const envio = await enviarConfirmacaoCadastro({
       para: data.admin_email,
       nome: data.admin_nome,
@@ -158,7 +170,7 @@ export async function cadastrarEscola(data: CadastroInput) {
         proximo_passo: 'confirmar_email',
         email: data.admin_email,
         slug: escola.slug,
-        aviso: 'Conta criada. Houve problema ao enviar o e-mail, mas você pode tentar reenviar na próxima tela.',
+        aviso: 'Conta criada. Houve problema ao enviar o e-mail de confirmação.',
       }
     }
 
@@ -168,33 +180,23 @@ export async function cadastrarEscola(data: CadastroInput) {
       email: data.admin_email,
       slug: escola.slug,
     }
-  } catch (e) {
-    console.error('Erro no cadastro:', e)
-    return { success: false, error: 'Erro inesperado. Tente novamente.' }
+  } catch (e: any) {
+    console.error('Erro fatal no cadastro:', e)
+    return { success: false, error: e.message || 'Erro inesperado ao criar a conta.' }
   }
 }
 
 export async function reenviarConfirmacao(email: string) {
   try {
     const admin = createAdminClient()
-
     const { data: usuarios } = await admin.auth.admin.listUsers()
     const user = (usuarios?.users || []).find((u) => u.email === email)
 
     if (!user) return { success: false, error: 'Conta não encontrada.' }
-    if (user.email_confirmed_at) {
-      return { success: false, error: 'Este e-mail já foi confirmado.' }
-    }
+    if (user.email_confirmed_at) return { success: false, error: 'Este e-mail já foi confirmado.' }
 
-    const { data: perfil } = await admin
-      .from('perfis')
-      .select('nome, escola_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const { data: escola } = perfil?.escola_id
-      ? await admin.from('escolas').select('nome').eq('id', perfil.escola_id).maybeSingle()
-      : { data: null }
+    const { data: perfil } = await admin.from('perfis').select('nome, escola_id').eq('id', user.id).maybeSingle()
+    const { data: escola } = perfil?.escola_id ? await admin.from('escolas').select('nome').eq('id', perfil.escola_id).maybeSingle() : { data: null }
 
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'signup',
@@ -204,12 +206,8 @@ export async function reenviarConfirmacao(email: string) {
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
-      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, {
-        redirectTo: 'https://arxum.com.br/dashboard',
-      })
-      if (erroInvite) {
-        return { success: false, error: 'Não foi possível reenviar agora. Tente novamente em alguns minutos.' }
-      }
+      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, { redirectTo: 'https://arxum.com.br/dashboard' })
+      if (erroInvite) return { success: false, error: 'Não foi possível reenviar agora.' }
       return { success: true }
     }
 
@@ -220,26 +218,9 @@ export async function reenviarConfirmacao(email: string) {
       linkConfirmacao: linkData.properties.action_link,
     })
 
-    if (!envio.success) {
-      return { success: false, error: 'Erro ao enviar e-mail.' }
-    }
-
+    if (!envio.success) return { success: false, error: 'Erro ao enviar e-mail.' }
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao reenviar.' }
-  }
-}
-
-export async function verificarSlug(slug: string): Promise<boolean> {
-  try {
-    const admin = createAdminClient()
-    const { data } = await admin
-      .from('escolas')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle()
-    return !data
-  } catch {
-    return false
   }
 }
