@@ -81,10 +81,6 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-
-  /* Fonte padrão (sobrescrita por escola) */
-  --font-heading-active: var(--font-syne);
-  --font-body-active: var(--font-dm-sans);
 }
 
 .dark {
@@ -165,16 +161,15 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-body-active), system-ui, sans-serif;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
   }
+  /* Títulos do sistema agora usam a fonte limpa (DM Sans) */
   h1, h2, h3 {
-    font-family: var(--font-heading-active), system-ui, sans-serif;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    letter-spacing: -0.03em;
   }
-  .font-syne,
-  .font-heading {
-    font-family: var(--font-heading-active), system-ui, sans-serif;
-  }
-  .font-body {
-    font-family: var(--font-body-active), system-ui, sans-serif;
+  /* A classe font-syne agora é exclusiva para a LOGO */
+  .font-syne {
+    font-family: var(--font-syne), system-ui, sans-serif !important;
   }
 }
