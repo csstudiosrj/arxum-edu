@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, QrCode, Copy, Check, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -173,6 +173,10 @@ export function ResponsavelClient({
   const [filhoAtivo, setFilhoAtivo] = useState<Filho | null>(filhos[0] || null)
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
+  
+  // Pagamento PIX
+  const [faturaParaPagar, setFaturaParaPagar] = useState<FaturaResponsavel | null>(null)
+  const [copiouPix, setCopiouPix] = useState(false)
 
   // LGPD
   const [baixandoDados, setBaixandoDados] = useState(false)
@@ -292,6 +296,13 @@ export function ResponsavelClient({
         ? 'Você já tem uma solicitação em análise. Nossa equipe entrará em contato.'
         : 'Solicitação registrada. Nossa equipe entrará em contato em até 15 dias, conforme a LGPD.',
     })
+  }
+
+  function copiarPix() {
+    if (!faturaParaPagar?.pagarme_qr_code) return
+    navigator.clipboard.writeText(faturaParaPagar.pagarme_qr_code)
+    setCopiouPix(true)
+    setTimeout(() => setCopiouPix(false), 2000)
   }
 
   const naoLidos = comunicados.filter((c) => !c.lido).length
@@ -601,9 +612,18 @@ export function ResponsavelClient({
                   const statusLabel = f.status === 'pago' ? 'Pago' : f.status === 'vencido' ? 'Vencido' : f.status === 'cancelado' ? 'Cancelado' : 'Em aberto'
                   return (
                     <div key={f.id} className="flex flex-wrap items-center gap-4 border-b border-[#edf1f2] p-5 last:border-0">
-                      <div className="flex-1"><p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p><p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p>
+                        <p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p>
+                      </div>
                       <strong className="font-syne text-base">{formatarMoeda(f.valor_centavos)}</strong>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
+                      
+                      {(f.status === 'em_aberto' || f.status === 'vencido') && f.pagarme_qr_code_url && (
+                        <button onClick={() => setFaturaParaPagar(f)} className="ml-2 rounded-lg bg-[#0d9488] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0f766e]">
+                          Pagar PIX
+                        </button>
+                      )}
                     </div>
                   )
                 })
@@ -655,8 +675,7 @@ export function ResponsavelClient({
                   <h4 className="text-sm font-bold text-[#243942]">Seus direitos conforme a LGPD</h4>
                   <p className="mt-1 text-xs leading-5 text-[#82939a]">
                     Você pode baixar uma cópia de todos os dados que o ARXUM Edu trata sobre você e
-                    seus filhos, ou solicitar a exclusão dos seus dados pessoais. A exclusão está
-                    sujeita a obrigações legais de retenção (registros acadêmicos e fiscais).
+                    seus filhos, ou solicitar a exclusão dos seus dados pessoais.
                   </p>
                 </div>
               </div>
@@ -943,6 +962,52 @@ export function ResponsavelClient({
             >
               {enviandoExclusao ? 'Enviando...' : 'Confirmar solicitação'}
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {faturaParaPagar && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setFaturaParaPagar(null)} />
+        <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl">
+          <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div>
+              <h2 className="text-lg font-bold text-[#12232b]">Pagamento via PIX</h2>
+              <p className="mt-0.5 text-xs text-[#82939a]">{faturaParaPagar.descricao}</p>
+            </div>
+            <button onClick={() => setFaturaParaPagar(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
+          </header>
+          
+          <div className="p-6 flex flex-col items-center">
+            <p className="text-sm text-[#536871] text-center mb-4">Abra o app do seu banco e escaneie o QR Code abaixo, ou use o código Copia e Cola.</p>
+            
+            <div className="bg-[#fafcfc] p-4 rounded-xl border border-[#e5ecee] mb-4">
+              {faturaParaPagar.pagarme_qr_code_url ? (
+                <img src={faturaParaPagar.pagarme_qr_code_url} alt="QR Code PIX" className="size-48 object-contain" />
+              ) : (
+                <div className="size-48 flex items-center justify-center bg-gray-100 rounded-lg">
+                  <QrCode className="size-12 text-[#a0afb4]" />
+                </div>
+              )}
+            </div>
+            
+            <div className="w-full">
+              <p className="text-xs font-semibold text-[#536871] mb-1.5 uppercase tracking-wider">Código PIX</p>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={faturaParaPagar.pagarme_qr_code || ''} 
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-[#fafcfc] px-3 py-2 text-xs font-mono text-[#243942] outline-none"
+                />
+                <button onClick={copiarPix} className="shrink-0 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] flex items-center gap-2">
+                  {copiouPix ? <Check size={16} /> : <Copy size={16} />} Copiar
+                </button>
+              </div>
+            </div>
+            
+            <p className="mt-4 text-xs text-[#82939a] text-center">O pagamento será identificado automaticamente em alguns segundos após a confirmação do banco.</p>
           </div>
         </div>
       </div>

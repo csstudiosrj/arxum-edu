@@ -44,6 +44,8 @@ export type FaturaResponsavel = {
   vencimento: string
   status: string
   pago_em: string | null
+  pagarme_qr_code_url: string | null
+  pagarme_qr_code: string | null
 }
 
 export type EventoResponsavel = {
@@ -218,7 +220,7 @@ export async function getMinhasFaturas(): Promise<FaturaResponsavel[]> {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('faturas')
-      .select('id, aluno_nome, descricao, valor_centavos, vencimento, status, pago_em')
+      .select('id, aluno_nome, descricao, valor_centavos, vencimento, status, pago_em, pagarme_qr_code_url, pagarme_qr_code')
       .eq('responsavel_email', email)
       .order('vencimento', { ascending: false })
     if (error) return []
@@ -496,8 +498,6 @@ export async function marcarComoLido(comunicadoId: string) {
   } catch (e) { return { success: false } }
 }
 
-// ── LGPD: EXPORTAÇÃO DE DADOS ───────────────────────────────────────
-
 export async function exportarMeusDados() {
   try {
     const email = await getEmailUsuario()
@@ -505,16 +505,7 @@ export async function exportarMeusDados() {
 
     const admin = createAdminClient()
 
-    const [
-      alunos,
-      inscricoes,
-      comunicados,
-      faturas,
-      ocorrencias,
-      autorizacoes,
-      notas,
-      consentimentos,
-    ] = await Promise.all([
+    const [alunos, inscricoes, comunicados, faturas, ocorrencias, autorizacoes, notas, consentimentos] = await Promise.all([
       admin.from('alunos').select('*').eq('responsavel_email', email),
       admin.from('inscricoes').select('*').eq('responsavel_email', email),
       admin.from('comunicados').select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em').eq('ativo', true),
@@ -533,9 +524,7 @@ export async function exportarMeusDados() {
         versao: 'v1-2026-10',
         descricao: 'Este arquivo contém todos os dados pessoais tratados pelo ARXUM Edu vinculados a este e-mail de responsável, conforme a Lei 13.709/2018 (LGPD).',
       },
-      dados_cadastrais_responsavel: {
-        email,
-      },
+      dados_cadastrais_responsavel: { email },
       alunos_vinculados: alunos.data || [],
       inscricoes: inscricoes.data || [],
       comunicados_recebidos: comunicados.data || [],
@@ -553,8 +542,6 @@ export async function exportarMeusDados() {
   }
 }
 
-// ── LGPD: SOLICITAÇÃO DE EXCLUSÃO ───────────────────────────────────
-
 export async function solicitarExclusaoDados(motivo: string) {
   try {
     const email = await getEmailUsuario()
@@ -567,7 +554,6 @@ export async function solicitarExclusaoDados(motivo: string) {
       return { success: false, error: 'Nenhum aluno vinculado a este e-mail. Não há dados para excluir.' }
     }
 
-    // Verifica se já existe solicitação aberta recente
     const { data: existente } = await admin
       .from('tickets_suporte')
       .select('id')
