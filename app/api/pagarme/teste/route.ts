@@ -66,6 +66,45 @@ export async function GET(request: NextRequest) {
       titular_documento: '11222333000181',
     },
     siteUrl: 'https://arxum.com.br',
+    registerInformation: {
+      type: 'corporation',
+      company_name: 'Escola de Teste ARXUM LTDA',
+      trading_name: 'Escola de Teste',
+      document_number: '11222333000181',
+      email: 'recebedor-teste@arxum.com.br',
+      phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
+      address: {
+        street: 'Rua de Teste',
+        complementary: 'Sala 1',
+        street_number: '100',
+        neighborhood: 'Centro',
+        city: 'Rio de Janeiro',
+        state: 'RJ',
+        zipcode: '20040020',
+      },
+      managing_partners: [
+        {
+          type: 'individual',
+          name: 'Sócio de Teste',
+          document_number: '11144477735',
+          birthdate: '1980-01-01',
+          email: 'socio@arxum.com.br',
+          monthly_income: '10000',
+          professional_occupation: 'Empresário',
+          self_declared_legal_representative: true,
+          address: {
+            street: 'Rua de Teste',
+            complementary: 'Sala 1',
+            street_number: '100',
+            neighborhood: 'Centro',
+            city: 'Rio de Janeiro',
+            state: 'RJ',
+            zipcode: '20040020',
+          },
+          phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
+        }
+      ],
+    },
   })
 
   resultados.etapa_1_recebedor = recebedor
