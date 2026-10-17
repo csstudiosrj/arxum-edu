@@ -10,7 +10,11 @@ export type EscolaCompleta = {
   slug: string
   plano: string
   cnpj: string | null
+  razao_social: string | null
+  cep: string | null
   endereco: string | null
+  numero: string | null
+  bairro: string | null
   cidade: string | null
   estado: string | null
   telefone: string | null
@@ -48,7 +52,11 @@ export async function getEscolaDoUsuario(): Promise<EscolaCompleta | null> {
 export async function getEscolaPorId(id: string): Promise<EscolaCompleta | null> {
   try {
     const admin = createAdminClient()
-    const { data } = await admin.from('escolas').select('*').eq('id', id).maybeSingle()
+    const { data } = await admin
+      .from('escolas')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
     return (data || null) as EscolaCompleta | null
   } catch (e) {
     return null

@@ -53,7 +53,7 @@ export function PagarmeClient({
   const [documento, setDocumento] = useState(escola.cnpj ? formatarCNPJ(escola.cnpj) : '')
   const [email, setEmail] = useState(escola.email_contato || '')
   
-  // Endereço da empresa
+  // Endereço da empresa (agora corretamente tipado)
   const [rua, setRua] = useState(escola.endereco || '')
   const [numero, setNumero] = useState(escola.numero || '')
   const [bairro, setBairro] = useState(escola.bairro || '')
