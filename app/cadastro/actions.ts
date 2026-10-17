@@ -41,6 +41,7 @@ export async function cadastrarEscola(data: CadastroInput) {
 
     const admin = createAdminClient()
 
+    // 1. Validar e-mail único
     const { data: perfilExistente } = await admin
       .from('perfis')
       .select('id')
@@ -51,6 +52,21 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Este e-mail já está cadastrado no sistema. Tente fazer login ou use outro e-mail.' }
     }
 
+    // 2. Validar CNPJ único (TRAVA DE SEGURANÇA ADICIONADA AQUI)
+    const cnpjLimpo = data.escola_cnpj.replace(/\D/g, '')
+    
+    // Busca tanto formatado quanto limpo para garantir compatibilidade com cadastros antigos
+    const { data: cnpjExistente } = await admin
+      .from('escolas')
+      .select('id')
+      .or(`cnpj.eq.${cnpjLimpo},cnpj.eq.${data.escola_cnpj}`)
+      .maybeSingle()
+
+    if (cnpjExistente) {
+      return { success: false, error: 'Este CNPJ já está cadastrado para outra escola. Cada escola deve ter um CNPJ exclusivo.' }
+    }
+
+    // 3. Gerar slug único
     let slug = gerarSlug(data.escola_nome)
     let contador = 0
     let slugFinal = slug
@@ -61,6 +77,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       slugFinal = `${slug}-${contador}`
     }
 
+    // 4. Criar escola
     const { data: escola, error: erroEscola } = await admin
       .from('escolas')
       .insert({
@@ -83,9 +100,14 @@ export async function cadastrarEscola(data: CadastroInput) {
       .single()
 
     if (erroEscola || !escola) {
+      // Fallback para caso o banco rejeite por duplicidade (erro 23505)
+      if (erroEscola?.code === '23505') {
+         return { success: false, error: 'Este CNPJ já está cadastrado no banco de dados.' }
+      }
       return { success: false, error: erroEscola?.message || 'Erro ao criar escola no banco.' }
     }
 
+    // 5. Criar usuário no Auth
     const { data: authUser, error: erroAuth } = await admin.auth.admin.createUser({
       email: data.admin_email,
       password: data.admin_senha,
@@ -98,6 +120,7 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: erroAuth?.message || 'Erro ao criar credenciais de acesso.' }
     }
 
+    // 6. Vincular perfil à escola
     const { error: erroPerfil } = await admin
       .from('perfis')
       .update({ escola_id: escola.id, nome: data.admin_nome, papel: 'admin_escola', ativo: true })
@@ -109,23 +132,26 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Erro ao vincular perfil ao usuário.' }
     }
 
+    // 7. Registrar consentimentos
     try {
       const consentimentoBase = { escolaId: escola.id, usuarioId: authUser.user.id, responsavelEmail: data.admin_email, alunoNome: null }
       await registrarConsentimento({ ...consentimentoBase, tipo: 'politica_privacidade', versao: POLITICA_VERSAO })
       await registrarConsentimento({ ...consentimentoBase, tipo: 'termos_uso', versao: TERMOS_VERSAO })
     } catch (e) {}
 
+    // 8. Gerar link de confirmação
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'signup',
       email: data.admin_email,
       password: data.admin_senha,
-      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' }, // CORRIGIDO AQUI
+      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' },
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
       return { success: true, proximo_passo: 'confirmar_email', email: data.admin_email, slug: escola.slug, aviso: 'Conta criada, mas falha ao gerar link.' }
     }
 
+    // 9. Enviar e-mail
     const envio = await enviarConfirmacaoCadastro({
       para: data.admin_email,
       nome: data.admin_nome,
@@ -159,11 +185,11 @@ export async function reenviarConfirmacao(email: string) {
       type: 'signup',
       email: user.email!,
       password: 'temp-' + Math.random().toString(36).slice(2),
-      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' }, // CORRIGIDO AQUI
+      options: { redirectTo: 'https://arxum.com.br/edu/dashboard' },
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
-      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, { redirectTo: 'https://arxum.com.br/edu/dashboard' }) // CORRIGIDO AQUI
+      const { error: erroInvite } = await admin.auth.admin.inviteUserByEmail(user.email!, { redirectTo: 'https://arxum.com.br/edu/dashboard' })
       if (erroInvite) return { success: false, error: 'Não foi possível reenviar agora.' }
       return { success: true }
     }
