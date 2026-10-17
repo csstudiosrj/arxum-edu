@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Mail, Phone, Users, Inbox, Eye, UserPlus, CheckCircle2, X, Loader2, RefreshCw, Send } from 'lucide-react'
+import { Search, Mail, Phone, Users, Inbox, Eye, UserPlus, CheckCircle2, X, Loader2, Send, Trash2, MapPin, Heart, FileText, ExternalLink } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { convidarAlunoParaPortal, reenviarConviteAluno, type Aluno } from './actions'
+import { convidarAlunoParaPortal, reenviarConviteAluno, getAlunoDetalhes, excluirAluno, type Aluno } from './actions'
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(' ')
@@ -12,13 +12,17 @@ function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
 }
 
-function formatarData(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('pt-BR')
-  } catch {
-    return '—'
-  }
+function formatarData(iso: string | null): string {
+  if (!iso) return '—'
+  try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return '—' }
 }
+
+const nomesDocumentos = [
+  { key: 'rg_aluno', label: 'RG ou Certidão de nascimento' },
+  { key: 'cpf_responsavel', label: 'CPF do responsável' },
+  { key: 'comprovante_residencia', label: 'Comprovante de residência' },
+  { key: 'historico_escolar', label: 'Histórico escolar' },
+]
 
 export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
   const router = useRouter()
@@ -31,6 +35,12 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
 
   const [reenviando, setReenviando] = useState<string | null>(null)
   const [sucessoReenvio, setSucessoReenvio] = useState<string | null>(null)
+
+  // Estados para Detalhes e Exclusão
+  const [detalheAluno, setDetalheAluno] = useState<any>(null)
+  const [carregandoDetalhes, setCarregandoDetalhes] = useState(false)
+  const [confirmarExclusao, setConfirmarExclusao] = useState<Aluno | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const filtrados = alunos.filter((a) => {
     const termo = busca.toLowerCase()
@@ -91,6 +101,26 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
 
     setSucessoReenvio(aluno.id)
     setTimeout(() => setSucessoReenvio(null), 3000)
+  }
+
+  async function abrirDetalhes(alunoId: string) {
+    setCarregandoDetalhes(true)
+    const detalhes = await getAlunoDetalhes(alunoId)
+    setCarregandoDetalhes(false)
+    if (detalhes) setDetalheAluno(detalhes)
+  }
+
+  async function handleExcluir() {
+    if (!confirmarExclusao) return
+    setExcluindo(true)
+    const r = await excluirAluno(confirmarExclusao.id)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
+    setConfirmarExclusao(null)
+    router.refresh()
   }
 
   return (
@@ -240,12 +270,14 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                                 <UserPlus className="size-4" />
                               </button>
                             )}
-                            <button className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ver detalhes">
-                              <Eye className="size-4" />
+                            
+                            <button onClick={() => abrirDetalhes(a.id)} disabled={carregandoDetalhes} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ver detalhes">
+                              {carregandoDetalhes ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
                             </button>
-                            <a href={`mailto:${a.responsavel_email}`} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Enviar e-mail ao responsável">
-                              <Mail className="size-4" />
-                            </a>
+
+                            <button onClick={() => setConfirmarExclusao(a)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir aluno">
+                              <Trash2 className="size-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -258,6 +290,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
         </Panel>
       </main>
 
+      {/* MODAL CONVIDAR */}
       {convidando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && setConvidando(null)} />
@@ -319,6 +352,115 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               >
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
                 {enviando ? 'Vinculando...' : 'Convidar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAWER DETALHES DO ALUNO */}
+      {detalheAluno && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDetalheAluno(null)} />
+          <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
+            <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Ficha do aluno</p>
+                <h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalheAluno.nome}</h2>
+              </div>
+              <button onClick={() => setDetalheAluno(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]">
+                <X className="size-5" />
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              
+              <section className="space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <Users className="size-3.5" /> Dados do aluno
+                </h3>
+                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
+                  <div><dt className="text-xs text-[#82939a]">Nome</dt><dd className="text-[#243942]">{detalheAluno.nome}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Data de nascimento</dt><dd className="text-[#243942]">{formatarData(detalheAluno.data_nascimento)}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Série / Turma</dt><dd className="text-[#243942]">{detalheAluno.serie || '—'}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Turno</dt><dd className="text-[#243942]">{detalheAluno.turno || '—'}</dd></div>
+                </dl>
+              </section>
+
+              <section className="mt-6 space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <UserPlus className="size-3.5" /> Responsável
+                </h3>
+                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
+                  <div><dt className="text-xs text-[#82939a]">Nome</dt><dd className="text-[#243942]">{detalheAluno.responsavel_nome}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">E-mail</dt><dd className="text-[#243942]">{detalheAluno.responsavel_email}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Telefone</dt><dd className="text-[#243942]">{detalheAluno.responsavel_telefone || '—'}</dd></div>
+                </dl>
+              </section>
+
+              <section className="mt-6 space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <MapPin className="size-3.5" /> Endereço
+                </h3>
+                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
+                  <div><dt className="text-xs text-[#82939a]">Endereço</dt><dd className="text-[#243942]">
+                    {[detalheAluno.endereco_rua, detalheAluno.endereco_numero, detalheAluno.endereco_complemento].filter(Boolean).join(', ') || '—'}
+                  </dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Bairro / Cidade</dt><dd className="text-[#243942]">
+                    {[detalheAluno.endereco_bairro, detalheAluno.endereco_cidade, detalheAluno.endereco_estado].filter(Boolean).join(' · ') || '—'}
+                  </dd></div>
+                </dl>
+              </section>
+
+              <section className="mt-6 space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <Heart className="size-3.5" /> Anamnese
+                </h3>
+                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
+                  <div><dt className="text-xs text-[#82939a]">Alergias</dt><dd className="text-[#243942]">{detalheAluno.anamnese_alergias || '—'}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Condições médicas</dt><dd className="text-[#243942]">{detalheAluno.anamnese_condicoes || '—'}</dd></div>
+                  <div><dt className="text-xs text-[#82939a]">Medicamentos</dt><dd className="text-[#243942]">{detalheAluno.anamnese_medicamentos || '—'}</dd></div>
+                </dl>
+              </section>
+
+              <section className="mt-6 space-y-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                  <FileText className="size-3.5" /> Documentos
+                </h3>
+                <div className="space-y-2">
+                  {nomesDocumentos.map(({ key, label }) => {
+                    const doc = detalheAluno.documentos?.[key]
+                    const temArquivo = doc && doc.url
+                    return (
+                      <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'}`}>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}><FileText className="size-4" /></div>
+                          <div className="min-w-0"><p className="truncate text-xs font-semibold text-[#243942]">{label}</p><p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p></div>
+                        </div>
+                        {temArquivo && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"><ExternalLink className="mr-1 inline size-3" />Abrir</a>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL EXCLUIR */}
+      {confirmarExclusao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
+            <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir aluno?</h3>
+            <p className="mt-2 text-center text-sm text-[#82939a]">
+              Tem certeza que deseja excluir <strong className="text-[#243942]">{confirmarExclusao.nome}</strong>? Todos os dados vinculados (notas, faturas, ocorrências) serão removidos permanentemente.
+            </p>
+            <div className="mt-6 flex gap-2">
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir aluno'}
               </button>
             </div>
           </div>

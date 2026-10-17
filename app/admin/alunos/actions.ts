@@ -38,6 +38,56 @@ export async function getAlunos(): Promise<Aluno[]> {
   }
 }
 
+export async function getAlunoDetalhes(id: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return null
+
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('alunos')
+      .select('*')
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    return data
+  } catch (e) {
+    return null
+  }
+}
+
+export async function excluirAluno(id: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('usuario_id')
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
+
+    // Se o aluno tiver um usuário de acesso, apaga do Auth também
+    if (aluno.usuario_id) {
+      await admin.auth.admin.deleteUser(aluno.usuario_id)
+    }
+
+    const { error } = await admin.from('alunos').delete().eq('id', id).eq('escola_id', escola.id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/alunos')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir aluno.' }
+  }
+}
+
 export async function convidarAlunoParaPortal(alunoId: string, emailAluno: string) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -146,7 +196,6 @@ export async function reenviarConviteAluno(alunoId: string) {
     if (!aluno.email_aluno) return { success: false, error: 'Este aluno ainda não tem e-mail cadastrado.' }
     if (!aluno.usuario_id) return { success: false, error: 'O aluno ainda não foi vinculado ao portal.' }
 
-    // Verifica se o usuário ainda existe no Auth
     const { data: usuario } = await admin.auth.admin.getUserById(aluno.usuario_id)
     if (!usuario?.user) {
       return { success: false, error: 'Usuário não encontrado. Convide novamente.' }

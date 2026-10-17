@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Users, FileText, WalletCards, Bell, ArrowRight, TrendingUp, Plus, Send, Receipt, Video, Inbox } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import type { DashboardData } from './actions'
 
 const statusStyles: Record<string, string> = {
@@ -97,9 +97,9 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               <h2 className="text-base font-bold text-[#12232b]">Matrículas recentes</h2>
               <p className="mt-0.5 text-xs text-[#82939a]">Últimas inscrições recebidas pela escola</p>
             </div>
-            <ActionButton variant="secondary">
-              <Link href="/admin/matriculas">Ver todas</Link>
-            </ActionButton>
+            <Link href="/admin/matriculas" className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]">
+              Ver todas
+            </Link>
           </div>
 
           {data.matriculasRecentes.length === 0 ? (
