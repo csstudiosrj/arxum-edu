@@ -5,13 +5,6 @@ import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Building2, User, Mail, Lock, Phone, FileText, Check, Loader2, CheckCircle2, RefreshCw, Eye, EyeOff, X } from 'lucide-react'
 import { cadastrarEscola, reenviarConfirmacao } from './actions'
 
-const planos = [
-  { key: 'semente', label: 'Semente', preco: 'R$ 199/mês', desc: 'Até 100 alunos' },
-  { key: 'raiz', label: 'Raiz', preco: 'R$ 399/mês', desc: 'Até 300 alunos' },
-  { key: 'copa', label: 'Copa', preco: 'R$ 699/mês', desc: 'Até 800 alunos' },
-  { key: 'rede', label: 'Rede', preco: 'Sob consulta', desc: 'Multiunidade' },
-]
-
 function slugify(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
 }
@@ -39,14 +32,21 @@ function formatarCEP(v: string): string {
   return `${n.slice(0, 5)}-${n.slice(5)}`
 }
 
+const planosLabels: Record<string, string> = {
+  semente: 'Semente (R$ 199/mês)',
+  raiz: 'Raiz (R$ 399/mês)',
+  copa: 'Copa (R$ 699/mês)',
+  rede: 'Rede (Sob consulta)'
+}
+
 type Estado = 'formulario' | 'aguardando_email'
 
-export function CadastroClient() {
+export function CadastroClient({ planoInicial }: { planoInicial: string }) {
   const [estado, setEstado] = useState<Estado>('formulario')
   const [emailCadastrado, setEmailCadastrado] = useState('')
   const [escolaNomeCadastrada, setEscolaNomeCadastrada] = useState('')
 
-  const [plano, setPlano] = useState('raiz')
+  const plano = planoInicial
   
   // Escola
   const [razaoSocial, setRazaoSocial] = useState('')
@@ -152,7 +152,7 @@ export function CadastroClient() {
         <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
           <Mail className="size-8" />
         </div>
-        <h1 className="mt-6 text-center text-4xl font-bold tracking-[-.04em] text-white">
+        <h1 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
           Confirme seu e-mail
         </h1>
         <p className="mt-4 max-w-md text-center text-sm leading-6 text-[#8aa0ad]">
@@ -189,13 +189,13 @@ export function CadastroClient() {
   // ── Formulário ─────────────────────────────────────────────────
   return (
     <main className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-20">
-      <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
-        <ArrowLeft className="size-4" /> Voltar
+      <Link href="/planos" className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
+        <ArrowLeft className="size-4" /> Voltar para planos
       </Link>
 
       <div className="mt-8 mb-12">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Comece agora</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-[-.04em] text-white md:text-5xl">
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
           Crie a conta da sua escola
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
@@ -206,42 +206,6 @@ export function CadastroClient() {
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           
-          {/* PLANO MOVIDO PARA O TOPO */}
-          <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
-                <Check className="size-4" />
-              </div>
-              <h2 className="text-base font-bold text-white">Escolha seu plano</h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {planos.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => setPlano(p.key)}
-                  className={`rounded-xl border-2 p-4 text-left transition ${
-                    plano === p.key ? 'border-[#0d9488] bg-[#0d9488]/10' : 'border-white/[.08] bg-[#0b1115] hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-bold text-white">{p.label}</span>
-                    {plano === p.key && (
-                      <div className="grid size-5 place-items-center rounded-full bg-[#0d9488] text-white">
-                        <Check className="size-3" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-[#82939a]">{p.desc}</p>
-                  <p className="mt-3 text-lg font-bold text-[#0d9488]">{p.preco}</p>
-                </button>
-              ))}
-            </div>
-            <p className="mt-4 text-xs leading-5 text-[#5e7a94]">
-              Você não será cobrado agora. A cobrança só começa depois do período de teste.
-            </p>
-          </section>
-
           <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
             <div className="mb-5 flex items-center gap-3">
               <div className="grid size-9 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
@@ -420,13 +384,7 @@ export function CadastroClient() {
               <div className="flex justify-between">
                 <dt className="text-[#82939a]">Plano</dt>
                 <dd className="text-right font-semibold text-[#0d9488]">
-                  {planos.find((p) => p.key === plano)?.label}
-                </dd>
-              </div>
-              <div className="flex justify-between border-t border-white/[.08] pt-3">
-                <dt className="text-[#82939a]">Mensalidade</dt>
-                <dd className="text-right text-base font-bold text-white">
-                  {planos.find((p) => p.key === plano)?.preco}
+                  {planosLabels[plano] || plano}
                 </dd>
               </div>
             </dl>
