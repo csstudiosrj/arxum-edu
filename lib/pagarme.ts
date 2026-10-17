@@ -62,7 +62,7 @@ export type DadosRecebedor = {
     birthdate?: string
     monthly_income?: string
     professional_occupation?: string
-    document_number: string
+    document: string // Corrigido de document_number para document
     email: string
     site_url?: string
     phone_numbers: Array<{ ddd: string; number: string; type: string }>
@@ -73,13 +73,13 @@ export type DadosRecebedor = {
       neighborhood: string
       city: string
       state: string
-      zipcode: string
-      reference_point?: string
+      zip_code: string // Corrigido de zipcode para zip_code
+      reference_point: string // Adicionado
     }
     managing_partners?: Array<{
       type: 'individual'
       name: string
-      document_number: string
+      document: string // Corrigido de document_number para document
       mother_name?: string
       birthdate: string
       email: string
@@ -93,8 +93,8 @@ export type DadosRecebedor = {
         neighborhood: string
         city: string
         state: string
-        zipcode: string
-        reference_point?: string
+        zip_code: string // Corrigido de zipcode para zip_code
+        reference_point: string // Adicionado
       }
       phone_numbers: Array<{ ddd: string; number: string; type: string }>
     }>
@@ -126,7 +126,7 @@ export async function criarRecebedor(dados: DadosRecebedor) {
           holder_name: dados.banco.titular_nome,
           holder_type: dados.banco.titular_tipo || dados.tipo,
           holder_document: dados.banco.titular_documento,
-          bank: dados.banco.codigo,
+          bank: dados.banco.codigo.slice(0, 3), // Garante que não passa de 3 dígitos
           branch_number: dados.banco.agencia,
           ...(dados.banco.agenciaDigito ? { branch_check_digit: dados.banco.agenciaDigito } : {}),
           account_number: dados.banco.conta,
@@ -370,8 +370,6 @@ export async function obterPedido(orderId: string) {
 }
 
 // ── Cálculo de split ──────────────────────────────────────────────
-// A conta principal (ARXUM) não precisa de ID de recebedor. 
-// Ela automaticamente absorve o valor restante (remainder).
 export function calcularSplitFatura(params: {
   taxaArxumBps: number
   recipientEscolaId: string
@@ -379,10 +377,10 @@ export function calcularSplitFatura(params: {
   return [
     {
       recipientId: params.recipientEscolaId,
-      percentage: 100 - (params.taxaArxumBps / 100), // Ex: 98% para a escola (2% para ARXUM)
+      percentage: 100 - (params.taxaArxumBps / 100),
       liable: true,
       chargeProcessingFee: true,
-      chargeRemainder: false, // O remainder (2%) fica com a conta principal (ARXUM)
+      chargeRemainder: false,
     },
   ]
 }
@@ -405,7 +403,7 @@ export function calcularSplitLoja(params: {
         amount: valorEscola,
         liable: true,
         chargeProcessingFee: true,
-        chargeRemainder: false, // O resto (valorArxum + taxa) fica com a conta principal (ARXUM)
+        chargeRemainder: false,
       },
     ],
   }

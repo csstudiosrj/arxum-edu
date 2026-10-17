@@ -53,13 +53,15 @@ export function PagarmeClient({
   const [documento, setDocumento] = useState(escola.cnpj ? formatarCNPJ(escola.cnpj) : '')
   const [email, setEmail] = useState(escola.email_contato || '')
   
-  // Endereço da empresa (agora corretamente tipado)
+  // Endereço da empresa
   const [rua, setRua] = useState(escola.endereco || '')
   const [numero, setNumero] = useState(escola.numero || '')
+  const [complemento, setComplemento] = useState('')
   const [bairro, setBairro] = useState(escola.bairro || '')
   const [cidade, setCidade] = useState(escola.cidade || '')
   const [estado, setEstado] = useState(escola.estado || '')
   const [cep, setCep] = useState(escola.cep ? formatarCEP(escola.cep) : '')
+  const [pontoReferencia, setPontoReferencia] = useState('')
 
   // Banco
   const [banco, setBanco] = useState('')
@@ -135,23 +137,24 @@ export function PagarmeClient({
         type: 'corporation' as const,
         company_name: nome,
         trading_name: nome,
-        document_number: documento.replace(/\D/g, ''),
+        document: documento.replace(/\D/g, ''), // Corrigido
         email: email,
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
         address: {
           street: rua,
-          complementary: 'Sala 1',
+          complementary: complemento || 'N/A',
           street_number: numero,
           neighborhood: bairro,
           city: cidade,
           state: estado,
-          zipcode: cep.replace(/\D/g, ''),
+          zip_code: cep.replace(/\D/g, ''), // Corrigido
+          reference_point: pontoReferencia || 'N/A', // Adicionado
         },
         managing_partners: [
           {
             type: 'individual' as const,
             name: socioNome,
-            document_number: socioCpf.replace(/\D/g, ''),
+            document: socioCpf.replace(/\D/g, ''), // Corrigido
             birthdate: socioNascimento,
             email: email,
             monthly_income: '10000',
@@ -159,12 +162,13 @@ export function PagarmeClient({
             self_declared_legal_representative: true,
             address: {
               street: rua,
-              complementary: 'Sala 1',
+              complementary: complemento || 'N/A',
               street_number: numero,
               neighborhood: bairro,
               city: cidade,
               state: estado,
-              zipcode: cep.replace(/\D/g, ''),
+              zip_code: cep.replace(/\D/g, ''), // Corrigido
+              reference_point: pontoReferencia || 'N/A', // Adicionado
             },
             phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
           }
@@ -296,6 +300,16 @@ export function PagarmeClient({
                   <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
               </div>
+              <div className="grid gap-5 md:grid-cols-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Complemento</label>
+                  <input type="text" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Sala, bloco (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Ponto de Referência</label>
+                  <input type="text" value={pontoReferencia} onChange={e => setPontoReferencia(e.target.value)} placeholder="Ex: Próximo ao metrô (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
               <div className="grid gap-5 md:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Cidade</label>
@@ -312,7 +326,7 @@ export function PagarmeClient({
                 <div className="grid gap-5 md:grid-cols-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Código do Banco</label>
-                    <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" maxLength={3} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Agência</label>
