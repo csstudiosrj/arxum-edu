@@ -52,9 +52,11 @@ export type DadosRecebedor = {
   siteUrl?: string
   registerInformation: {
     type: 'corporation' | 'individual'
+    name: string // Adicionado — agora vai dentro do register_information
     company_name?: string
     trading_name?: string
-    annual_revenue?: string
+    annual_revenue?: string // Alterado para string
+    site_url?: string
     corporation_type?: string
     founding_date?: string
     cnae?: string
@@ -64,7 +66,6 @@ export type DadosRecebedor = {
     professional_occupation?: string
     document: string
     email: string
-    site_url?: string
     phone_numbers: Array<{ ddd: string; number: string; type: string }>
     main_address: {
       street: string
@@ -107,42 +108,47 @@ export async function criarRecebedor(dados: DadosRecebedor) {
   if (!auth) return { success: false as const, error: 'PAGARME_SECRET_KEY não configurada.' }
 
   try {
+    // Monta o register_information com todos os dados
+    const registerInfo = {
+      ...dados.registerInformation,
+      name: dados.nome, // name vai aqui
+      email: dados.email, // email vai aqui
+      document: dados.documento, // document vai aqui
+      type: dados.tipo === 'company' ? 'corporation' : 'individual', // type vai aqui
+    }
+
+    // Monta o payload SEM name, email, document e type na raiz
+    const payload = {
+      // NÃO envie name, email, document, type na raiz
+      default_bank_account: {
+        holder_name: dados.banco.titular_nome,
+        holder_type: dados.banco.titular_tipo || dados.tipo,
+        holder_document: dados.banco.titular_documento,
+        bank: dados.banco.codigo.slice(0, 3),
+        branch_number: dados.banco.agencia,
+        ...(dados.banco.agenciaDigito ? { branch_check_digit: dados.banco.agenciaDigito } : {}),
+        account_number: dados.banco.conta,
+        account_check_digit: dados.banco.digito,
+        type: dados.banco.tipo,
+      },
+      transfer_settings: {
+        transfer_enabled: true,
+        transfer_interval: 'Daily',
+        transfer_day: 0,
+      },
+      automatic_anticipation_settings: {
+        enabled: false,
+      },
+      register_information: registerInfo,
+    }
+
     const res = await fetch(`${PAGARME_API}/recipients`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: auth,
       },
-      body: JSON.stringify({
-        name: dados.nome,
-        email: dados.email,
-        document: dados.documento,
-        type: dados.tipo,
-        ...(dados.tipo === 'company' ? { company_name: dados.nome } : {}),
-        ...(dados.siteUrl ? { site_url: dados.siteUrl } : {}),
-        phone: dados.telefone,
-        address: dados.endereco,
-        default_bank_account: {
-          holder_name: dados.banco.titular_nome,
-          holder_type: dados.banco.titular_tipo || dados.tipo,
-          holder_document: dados.banco.titular_documento,
-          bank: dados.banco.codigo.slice(0, 3),
-          branch_number: dados.banco.agencia,
-          ...(dados.banco.agenciaDigito ? { branch_check_digit: dados.banco.agenciaDigito } : {}),
-          account_number: dados.banco.conta,
-          account_check_digit: dados.banco.digito,
-          type: dados.banco.tipo,
-        },
-        transfer_settings: {
-          transfer_enabled: true,
-          transfer_interval: 'Daily',
-          transfer_day: 0,
-        },
-        automatic_anticipation_settings: {
-          enabled: false,
-        },
-        register_information: dados.registerInformation,
-      }),
+      body: JSON.stringify(payload),
     })
 
     const data = await res.json()

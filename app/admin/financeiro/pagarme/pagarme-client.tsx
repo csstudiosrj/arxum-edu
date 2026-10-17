@@ -31,6 +31,19 @@ function formatarCEP(v: string): string {
   return `${n.slice(0, 5)}-${n.slice(5)}`
 }
 
+// Nova máscara de moeda
+function formatarMoedaInput(valor: string): string {
+  const apenasNumeros = valor.replace(/\D/g, '')
+  if (!apenasNumeros) return ''
+  const numero = parseInt(apenasNumeros, 10) / 100
+  return numero.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 export function PagarmeClient({
   escola,
   dados,
@@ -115,7 +128,11 @@ export function PagarmeClient({
 
     setLoading(true)
 
+    // Extrai o valor numérico do faturamento (remove "R$", pontos e vírgulas)
+    const faturamentoLimpo = faturamentoAnual.replace(/\D/g, '')
+
     const payload = {
+      // Não envie name, email, document, type na raiz
       nome,
       email,
       documento: documento.replace(/\D/g, ''),
@@ -139,13 +156,15 @@ export function PagarmeClient({
       },
       registerInformation: {
         type: 'corporation' as const,
+        name: nome, // name dentro do register_information
         company_name: nome,
         trading_name: nome,
-        annual_revenue: faturamentoAnual, // Adicionado
+        annual_revenue: faturamentoLimpo, // string
+        site_url: 'https://arxum.com.br', // obrigatório para corporation
         document: documento.replace(/\D/g, ''),
         email: email,
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
-        main_address: { // Substitui 'address' por 'main_address'
+        main_address: {
           street: rua,
           complementary: complemento || 'N/A',
           street_number: numero,
@@ -205,7 +224,7 @@ export function PagarmeClient({
       <main className="px-5 py-8 lg:px-8">
         <SectionHeading
           eyebrow="Financeiro"
-          title="Conta de Recebimento (Pagar.me)"
+          title="Conta de Recebimento" // Título sem "Pagar.me"
           description="Configure os dados bancários para receber os repasses das mensalidades e vendas da loja."
         />
 
@@ -272,7 +291,14 @@ export function PagarmeClient({
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Faturamento Anual (R$)</label>
-                  <input type="text" value={faturamentoAnual} onChange={e => setFaturamentoAnual(e.target.value)} required placeholder="Ex: 500000" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input 
+                    type="text" 
+                    value={faturamentoAnual} 
+                    onChange={e => setFaturamentoAnual(formatarMoedaInput(e.target.value))} 
+                    required 
+                    placeholder="R$ 0,00" 
+                    className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" 
+                  />
                 </div>
               </div>
 

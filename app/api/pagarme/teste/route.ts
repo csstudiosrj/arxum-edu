@@ -50,9 +50,11 @@ export async function GET(request: NextRequest) {
     siteUrl: 'https://arxum.com.br',
     registerInformation: {
       type: 'corporation',
+      name: 'Escola de Teste ARXUM LTDA', // name dentro do register_information
       company_name: 'Escola de Teste ARXUM LTDA',
       trading_name: 'Escola de Teste',
-      annual_revenue: '500000',
+      annual_revenue: '500000', // string
+      site_url: 'https://arxum.com.br',
       document: '11222333000181',
       email: 'recebedor-teste@arxum.com.br',
       phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
