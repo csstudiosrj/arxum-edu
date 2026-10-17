@@ -52,18 +52,19 @@ export async function GET(request: NextRequest) {
       type: 'corporation',
       company_name: 'Escola de Teste ARXUM LTDA',
       trading_name: 'Escola de Teste',
+      annual_revenue: '500000',
       document: '11222333000181',
       email: 'recebedor-teste@arxum.com.br',
       phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
-      address: { 
-        street: 'Rua de Teste', 
-        complementary: 'Sala 1', 
-        street_number: '100', 
-        neighborhood: 'Centro', 
-        city: 'Rio de Janeiro', 
-        state: 'RJ', 
-        zip_code: '20040020', 
-        reference_point: 'Próximo ao metrô' 
+      main_address: {
+        street: 'Rua de Teste',
+        complementary: 'Sala 1',
+        street_number: '100',
+        neighborhood: 'Centro',
+        city: 'Rio de Janeiro',
+        state: 'RJ',
+        zip_code: '20040020',
+        reference_point: 'Próximo ao metrô',
       },
       managing_partners: [{
         type: 'individual', 

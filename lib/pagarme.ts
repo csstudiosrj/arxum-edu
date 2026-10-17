@@ -62,24 +62,24 @@ export type DadosRecebedor = {
     birthdate?: string
     monthly_income?: string
     professional_occupation?: string
-    document: string // Corrigido de document_number para document
+    document: string
     email: string
     site_url?: string
     phone_numbers: Array<{ ddd: string; number: string; type: string }>
-    address: {
+    main_address: {
       street: string
       complementary: string
       street_number: string
       neighborhood: string
       city: string
       state: string
-      zip_code: string // Corrigido de zipcode para zip_code
-      reference_point: string // Adicionado
+      zip_code: string
+      reference_point: string
     }
     managing_partners?: Array<{
       type: 'individual'
       name: string
-      document: string // Corrigido de document_number para document
+      document: string
       mother_name?: string
       birthdate: string
       email: string
@@ -93,8 +93,8 @@ export type DadosRecebedor = {
         neighborhood: string
         city: string
         state: string
-        zip_code: string // Corrigido de zipcode para zip_code
-        reference_point: string // Adicionado
+        zip_code: string
+        reference_point: string
       }
       phone_numbers: Array<{ ddd: string; number: string; type: string }>
     }>
@@ -126,7 +126,7 @@ export async function criarRecebedor(dados: DadosRecebedor) {
           holder_name: dados.banco.titular_nome,
           holder_type: dados.banco.titular_tipo || dados.tipo,
           holder_document: dados.banco.titular_documento,
-          bank: dados.banco.codigo.slice(0, 3), // Garante que não passa de 3 dígitos
+          bank: dados.banco.codigo.slice(0, 3),
           branch_number: dados.banco.agencia,
           ...(dados.banco.agenciaDigito ? { branch_check_digit: dados.banco.agenciaDigito } : {}),
           account_number: dados.banco.conta,

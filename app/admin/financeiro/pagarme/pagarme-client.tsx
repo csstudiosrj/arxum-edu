@@ -52,6 +52,7 @@ export function PagarmeClient({
   const [nome, setNome] = useState(escola.nome)
   const [documento, setDocumento] = useState(escola.cnpj ? formatarCNPJ(escola.cnpj) : '')
   const [email, setEmail] = useState(escola.email_contato || '')
+  const [faturamentoAnual, setFaturamentoAnual] = useState('')
   
   // Endereço da empresa
   const [rua, setRua] = useState(escola.endereco || '')
@@ -105,6 +106,9 @@ export function PagarmeClient({
     if (!rua || !numero || !bairro || !cidade || !estado || !cep) {
       return setErro('Preencha o endereço completo da empresa.')
     }
+    if (!faturamentoAnual) {
+      return setErro('Informe o faturamento anual estimado.')
+    }
     if (socioCpf.replace(/\D/g, '').length !== 11) {
       return setErro('O CPF do sócio deve ter 11 dígitos.')
     }
@@ -137,24 +141,25 @@ export function PagarmeClient({
         type: 'corporation' as const,
         company_name: nome,
         trading_name: nome,
-        document: documento.replace(/\D/g, ''), // Corrigido
+        annual_revenue: faturamentoAnual, // Adicionado
+        document: documento.replace(/\D/g, ''),
         email: email,
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
-        address: {
+        main_address: { // Substitui 'address' por 'main_address'
           street: rua,
           complementary: complemento || 'N/A',
           street_number: numero,
           neighborhood: bairro,
           city: cidade,
           state: estado,
-          zip_code: cep.replace(/\D/g, ''), // Corrigido
-          reference_point: pontoReferencia || 'N/A', // Adicionado
+          zip_code: cep.replace(/\D/g, ''),
+          reference_point: pontoReferencia || 'N/A',
         },
         managing_partners: [
           {
             type: 'individual' as const,
             name: socioNome,
-            document: socioCpf.replace(/\D/g, ''), // Corrigido
+            document: socioCpf.replace(/\D/g, ''),
             birthdate: socioNascimento,
             email: email,
             monthly_income: '10000',
@@ -167,8 +172,8 @@ export function PagarmeClient({
               neighborhood: bairro,
               city: cidade,
               state: estado,
-              zip_code: cep.replace(/\D/g, ''), // Corrigido
-              reference_point: pontoReferencia || 'N/A', // Adicionado
+              zip_code: cep.replace(/\D/g, ''),
+              reference_point: pontoReferencia || 'N/A',
             },
             phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
           }
@@ -265,6 +270,13 @@ export function PagarmeClient({
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail financeiro</label>
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Faturamento Anual (R$)</label>
+                  <input type="text" value={faturamentoAnual} onChange={e => setFaturamentoAnual(e.target.value)} required placeholder="Ex: 500000" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CEP da empresa</label>
                   <div className="relative">
