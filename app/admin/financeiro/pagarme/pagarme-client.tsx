@@ -7,6 +7,30 @@ import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { cadastrarRecebedor, sincronizarStatusRecebedor } from './actions'
 import type { EscolaCompleta } from '@/lib/auth/escola-atual'
 
+// ── MÁSCARAS ────────────────────────────────────────────────────────
+function formatarCNPJ(v: string): string {
+  const n = v.replace(/\D/g, '').slice(0, 14)
+  if (n.length <= 2) return n
+  if (n.length <= 5) return `${n.slice(0, 2)}.${n.slice(2)}`
+  if (n.length <= 8) return `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5)}`
+  if (n.length <= 12) return `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5, 8)}/${n.slice(8)}`
+  return `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5, 8)}/${n.slice(8, 12)}-${n.slice(12)}`
+}
+
+function formatarCPF(v: string): string {
+  const n = v.replace(/\D/g, '').slice(0, 11)
+  if (n.length <= 3) return n
+  if (n.length <= 6) return `${n.slice(0, 3)}.${n.slice(3)}`
+  if (n.length <= 9) return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6)}`
+  return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`
+}
+
+function formatarCEP(v: string): string {
+  const n = v.replace(/\D/g, '').slice(0, 8)
+  if (n.length <= 5) return n
+  return `${n.slice(0, 5)}-${n.slice(5)}`
+}
+
 export function PagarmeClient({
   escola,
   dados,
@@ -16,46 +40,83 @@ export function PagarmeClient({
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const [erro, setErro] = useState('')
+  const [detalhesErro, setDetalhesErro] = useState<any>(null)
   
   const temRecebedor = !!dados?.pagarme_recipient_id
   const status = dados?.pagarme_recipient_status || 'pendente'
   const kycUrl = dados?.pagarme_kyc_url
 
-  // Form (simplificado para a tela)
+  // Empresa
   const [nome, setNome] = useState(escola.nome)
-  const [documento, setDocumento] = useState(escola.cnpj?.replace(/\D/g, '') || '')
+  const [documento, setDocumento] = useState(escola.cnpj ? formatarCNPJ(escola.cnpj) : '')
   const [email, setEmail] = useState(escola.email_contato || '')
   
+  // Endereço da empresa
+  const [rua, setRua] = useState(escola.endereco || '')
+  const [numero, setNumero] = useState(escola.numero || '')
+  const [bairro, setBairro] = useState(escola.bairro || '')
+  const [cidade, setCidade] = useState(escola.cidade || '')
+  const [estado, setEstado] = useState(escola.estado || '')
+  const [cep, setCep] = useState(escola.cep ? formatarCEP(escola.cep) : '')
+
+  // Banco
   const [banco, setBanco] = useState('')
   const [agencia, setAgencia] = useState('')
   const [conta, setConta] = useState('')
   const [digito, setDigito] = useState('')
   const [tipoConta, setTipoConta] = useState('checking')
 
-  const [rua, setRua] = useState(escola.endereco || '')
-  const [cidade, setCidade] = useState(escola.cidade || '')
-  const [estado, setEstado] = useState(escola.estado || '')
-  const [cep, setCep] = useState('') // Precisaria do CEP real
-
+  // Sócio
   const [socioNome, setSocioNome] = useState('')
   const [socioCpf, setSocioCpf] = useState('')
   const [socioNascimento, setSocioNascimento] = useState('')
 
+  // ── AUTO-PREENCHER CEP ──────────────────────────────────────────
+  async function buscarCep(valor: string) {
+    const cepLimpo = valor.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) return
+
+    setBuscandoCep(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setRua(data.logradouro || '')
+        setBairro(data.bairro || '')
+        setCidade(data.localidade || '')
+        setEstado(data.uf || '')
+      }
+    } catch (e) {
+      console.error('Erro ao buscar CEP', e)
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
+    setDetalhesErro(null)
+    
+    if (!rua || !numero || !bairro || !cidade || !estado || !cep) {
+      return setErro('Preencha o endereço completo da empresa.')
+    }
+    if (socioCpf.replace(/\D/g, '').length !== 11) {
+      return setErro('O CPF do sócio deve ter 11 dígitos.')
+    }
+
     setLoading(true)
 
-    // Monta o payload exigido pela nova API da Pagar.me
     const payload = {
       nome,
       email,
-      documento,
+      documento: documento.replace(/\D/g, ''),
       tipo: 'company' as const,
       telefone: { country_code: '55', area_code: '21', number: '999999999' },
       endereco: {
-        line_1: rua,
+        line_1: `${rua}, ${numero}, ${bairro}`,
         zip_code: cep.replace(/\D/g, ''),
         city: cidade,
         state: estado,
@@ -68,20 +129,20 @@ export function PagarmeClient({
         digito,
         tipo: tipoConta as 'checking' | 'savings',
         titular_nome: nome,
-        titular_documento: documento,
+        titular_documento: documento.replace(/\D/g, ''),
       },
       registerInformation: {
         type: 'corporation' as const,
         company_name: nome,
         trading_name: nome,
-        document_number: documento,
+        document_number: documento.replace(/\D/g, ''),
         email: email,
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
         address: {
           street: rua,
           complementary: 'Sala 1',
-          street_number: '100',
-          neighborhood: 'Centro',
+          street_number: numero,
+          neighborhood: bairro,
           city: cidade,
           state: estado,
           zipcode: cep.replace(/\D/g, ''),
@@ -99,8 +160,8 @@ export function PagarmeClient({
             address: {
               street: rua,
               complementary: 'Sala 1',
-              street_number: '100',
-              neighborhood: 'Centro',
+              street_number: numero,
+              neighborhood: bairro,
               city: cidade,
               state: estado,
               zipcode: cep.replace(/\D/g, ''),
@@ -116,6 +177,7 @@ export function PagarmeClient({
 
     if (!r.success) {
       setErro(r.error || 'Erro ao cadastrar. Verifique os dados.')
+      if (r.detalhes) setDetalhesErro(r.detalhes)
       return
     }
 
@@ -189,8 +251,8 @@ export function PagarmeClient({
                   <input type="text" value={nome} onChange={e => setNome(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CNPJ (apenas números)</label>
-                  <input type="text" value={documento} onChange={e => setDocumento(e.target.value)} required placeholder="00000000000000" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CNPJ</label>
+                  <input type="text" value={documento} onChange={e => setDocumento(formatarCNPJ(e.target.value))} required placeholder="00.000.000/0000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
               </div>
 
@@ -201,26 +263,69 @@ export function PagarmeClient({
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CEP da empresa</label>
-                  <input type="text" value={cep} onChange={e => setCep(e.target.value)} required placeholder="00000000" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={cep} 
+                      onChange={e => {
+                        const formatado = formatarCEP(e.target.value)
+                        setCep(formatado)
+                        if (formatado.length === 9) buscarCep(formatado)
+                      }} 
+                      required 
+                      placeholder="00000-000" 
+                      className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5]" 
+                    />
+                    {buscandoCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-[#0d9488]" />}
+                  </div>
                 </div>
               </div>
 
+              {/* ENDEREÇO DA EMPRESA */}
               <div className="grid gap-5 md:grid-cols-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Código do Banco</label>
-                  <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Rua / Logradouro</label>
+                  <input type="text" value={rua} onChange={e => setRua(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Agência</label>
-                  <input type="text" value={agencia} onChange={e => setAgencia(e.target.value)} required placeholder="0001" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Número</label>
+                  <input type="text" value={numero} onChange={e => setNumero(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Conta</label>
-                  <input type="text" value={conta} onChange={e => setConta(e.target.value)} required placeholder="12345" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Bairro</label>
+                  <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+              <div className="grid gap-5 md:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Cidade</label>
+                  <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Dígito</label>
-                  <input type="text" value={digito} onChange={e => setDigito(e.target.value)} required placeholder="6" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Estado (UF)</label>
+                  <input type="text" value={estado} onChange={e => setEstado(e.target.value.toUpperCase())} required maxLength={2} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                </div>
+              </div>
+
+              <div className="border-t border-[#e5ecee] pt-6">
+                <h3 className="mb-4 text-sm font-bold text-[#12232b]">Dados Bancários</h3>
+                <div className="grid gap-5 md:grid-cols-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Código do Banco</label>
+                    <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Agência</label>
+                    <input type="text" value={agencia} onChange={e => setAgencia(e.target.value)} required placeholder="0001" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Conta</label>
+                    <input type="text" value={conta} onChange={e => setConta(e.target.value)} required placeholder="12345" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Dígito</label>
+                    <input type="text" value={digito} onChange={e => setDigito(e.target.value)} required placeholder="6" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  </div>
                 </div>
               </div>
 
@@ -233,7 +338,7 @@ export function PagarmeClient({
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CPF do sócio</label>
-                    <input type="text" value={socioCpf} onChange={e => setSocioCpf(e.target.value)} required placeholder="00000000000" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={socioCpf} onChange={e => setSocioCpf(formatarCPF(e.target.value))} required placeholder="000.000.000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Data de Nascimento</label>
@@ -242,7 +347,16 @@ export function PagarmeClient({
                 </div>
               </div>
 
-              {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">{erro}</p>}
+              {erro && (
+                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+                  <p className="text-sm font-bold text-red-600">{erro}</p>
+                  {detalhesErro && (
+                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-red-500/5 p-3 text-[11px] text-red-500">
+                      {JSON.stringify(detalhesErro, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
