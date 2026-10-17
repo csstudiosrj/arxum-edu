@@ -14,40 +14,25 @@ type AdminMode = 'school' | 'super'
 const COR_FALLBACK = '#0d9488'
 
 const schoolItems = [
-  ['Visão geral', '/dashboard', LayoutDashboard],
-  ['Relatórios', '/admin/relatorios', BarChart3],
-  ['Site', '/admin/site', Globe],
-  ['Personalização', '/admin/personalizacao', Palette],
-  ['Unidades', '/admin/unidades', Network],
-  ['Usuários', '/admin/usuarios', UserCog],
-  ['Matrículas', '/admin/matriculas', FileText],
-  ['Formulários', '/admin/formularios', SlidersHorizontal],
-  ['Alunos', '/admin/alunos', Users],
-  ['Professores', '/admin/professores', GraduationCap],
-  ['Notas', '/admin/notas', TrendingUp],
-  ['Ocorrências', '/admin/ocorrencias', AlertCircle],
-  ['Financeiro', '/admin/financeiro', WalletCards],
-  ['Comunicação', '/admin/comunicacao', Bell],
-  ['Mensagens', '/admin/mensagens', Inbox],
-  ['Agenda', '/admin/agenda', Calendar],
-  ['Autorizações', '/admin/autorizacoes', ShieldCheck],
-  ['Galeria', '/admin/galeria', ImageIcon],
-  ['EduFlix', '/admin/eduflix', BookOpen],
-  ['Sala virtual', '/admin/sala-virtual', BookOpen],
-  ['Loja', '/admin/loja', CircleDollarSign],
-  ['Exportação', '/admin/exportacao', Database],
+  ['Visão geral', '/dashboard', LayoutDashboard], ['Relatórios', '/admin/relatorios', BarChart3],
+  ['Site', '/admin/site', Globe], ['Personalização', '/admin/personalizacao', Palette],
+  ['Unidades', '/admin/unidades', Network], ['Usuários', '/admin/usuarios', UserCog],
+  ['Matrículas', '/admin/matriculas', FileText], ['Formulários', '/admin/formularios', SlidersHorizontal],
+  ['Alunos', '/admin/alunos', Users], ['Professores', '/admin/professores', GraduationCap],
+  ['Notas', '/admin/notas', TrendingUp], ['Ocorrências', '/admin/ocorrencias', AlertCircle],
+  ['Financeiro', '/admin/financeiro', WalletCards], ['Comunicação', '/admin/comunicacao', Bell],
+  ['Mensagens', '/admin/mensagens', Inbox], ['Agenda', '/admin/agenda', Calendar],
+  ['Autorizações', '/admin/autorizacoes', ShieldCheck], ['Galeria', '/admin/galeria', ImageIcon],
+  ['EduFlix', '/admin/eduflix', BookOpen], ['Sala virtual', '/admin/sala-virtual', BookOpen],
+  ['Loja', '/admin/loja', CircleDollarSign], ['Exportação', '/admin/exportacao', Database],
   ['Configurações', '/admin/configuracoes', Settings],
 ] as const
 
 const superItems = [
-  ['Visão geral', '/super-admin', LayoutDashboard],
-  ['Escolas', '/super-admin/escolas', Building2],
-  ['Planos', '/super-admin/planos', WalletCards],
-  ['Add-ons', '/super-admin/addons', Palette],
-  ['Faturamento', '/super-admin/faturamento', CircleDollarSign],
-  ['Suporte', '/super-admin/suporte', Headphones],
+  ['Visão geral', '/super-admin', LayoutDashboard], ['Escolas', '/super-admin/escolas', Building2],
+  ['Planos', '/super-admin/planos', WalletCards], ['Add-ons', '/super-admin/addons', Palette],
+  ['Faturamento', '/super-admin/faturamento', CircleDollarSign], ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
-  // TODO: 'Configurações' volta quando a página for implementada.
 ] as const
 
 function iniciaisDe(nome: string): string {
@@ -61,13 +46,15 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   const [open, setOpen] = useState(false)
   const [saindo, setSaindo] = useState(false)
   const [nomeUsuario, setNomeUsuario] = useState('')
+  const [emailUsuario, setEmailUsuario] = useState('')
   const [papelUsuario, setPapelUsuario] = useState('')
   const [corPrimaria, setCorPrimaria] = useState(COR_FALLBACK)
   const [nomeEscola, setNomeEscola] = useState('Carregando...')
+  const [menuAberto, setMenuAberto] = useState(false)
+  
   const router = useRouter()
   const items = mode === 'super' ? superItems : schoolItems
 
-  // Nome da escola + cor primária
   useEffect(() => {
     if (mode === 'super') {
       setNomeEscola('Painel ARXUM')
@@ -83,7 +70,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
     return () => { ativo = false }
   }, [mode])
 
-  // Usuário logado
   useEffect(() => {
     let ativo = true
     const supabase = createClient()
@@ -92,6 +78,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
       const meta = (data.user.user_metadata || {}) as Record<string, string>
       const nome = meta.nome || meta.full_name || meta.name || data.user.email?.split('@')[0] || 'Usuário'
       setNomeUsuario(nome)
+      setEmailUsuario(data.user.email || '')
       setPapelUsuario(mode === 'super' ? 'Super admin' : (meta.cargo || 'Administrador(a)'))
     })
     return () => { ativo = false }
@@ -119,37 +106,15 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         {items.map(([label, href, Icon]) => {
           const ativo = active === label
           return (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'
-              }`}
-              style={ativo ? { backgroundColor: `${corPrimaria}1a`, color: corPrimaria } : undefined}
-            >
-              <Icon className="size-[18px]" />
-              {label}
+            <Link key={label} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`} style={ativo ? { backgroundColor: `${corPrimaria}1a`, color: corPrimaria } : undefined}>
+              <Icon className="size-[18px]" />{label}
             </Link>
           )
         })}
       </div>
       <div className="border-t border-[#e5ecee] pt-4">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-          <div className="grid size-8 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">
-            {iniciais}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{nomeUsuario || 'Carregando...'}</p>
-            <p className="truncate text-xs text-[#82939a]">
-              {papelUsuario || (mode === 'super' ? 'Super admin' : 'Administrador(a)')}
-            </p>
-          </div>
-          <ChevronDown className="size-4 text-[#8da0a8]" />
-        </div>
         <button onClick={handleLogout} disabled={saindo} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#82939a] hover:bg-[#f1f5f6] disabled:opacity-50">
-          <LogOut className="size-[18px]" />
-          {saindo ? 'Saindo...' : 'Sair'}
+          <LogOut className="size-[18px]" />{saindo ? 'Saindo...' : 'Sair'}
         </button>
       </div>
     </aside>
@@ -158,11 +123,27 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
         <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
         <div className="ml-auto flex items-center gap-4">
-          {mode === 'school'
-            ? <SinoNotificacoesLoader papel="admin" />
-            : <div className="p-2"><Bell className="size-[19px] text-[#71838b]" /></div>}
-          <div className="grid size-9 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white">
-            {iniciais}
+          {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <div className="p-2"><Bell className="size-[19px] text-[#71838b]" /></div>}
+          
+          {/* BOLINHA DO USUÁRIO CLICÁVEL */}
+          <div className="relative">
+            <button onClick={() => setMenuAberto(!menuAberto)} className="grid size-9 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white hover:ring-2 hover:ring-[#0d9488] hover:ring-offset-2 transition-all">
+              {iniciais}
+            </button>
+            {menuAberto && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setMenuAberto(false)} />
+                <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border border-[#dce5e8] bg-white p-2 shadow-xl">
+                  <div className="border-b border-[#edf1f2] px-3 py-2 mb-1">
+                    <p className="truncate text-sm font-bold text-[#12232b]">{nomeUsuario}</p>
+                    <p className="truncate text-xs text-[#82939a]">{emailUsuario}</p>
+                  </div>
+                  <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] transition">
+                    <LogOut className="size-4" /> Sair da conta
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -174,14 +155,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 export function SectionHeading({ eyebrow, title, description }: { eyebrow?: string; title: string; description?: string }) {
   return (
     <div>
-      {eyebrow && (
-        <p
-          className="text-xs font-bold uppercase tracking-[.18em]"
-          style={{ color: 'var(--cor-primaria, #0d9488)' }}
-        >
-          {eyebrow}
-        </p>
-      )}
+      {eyebrow && <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{eyebrow}</p>}
       <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">{title}</h1>
       {description && <p className="mt-2 text-sm text-[#71838b]">{description}</p>}
     </div>
@@ -193,69 +167,28 @@ export const Panel = ({ children, className = '' }: { children: React.ReactNode;
 )
 
 export function ActionButton({ children, variant = 'primary' }: { children: React.ReactNode; variant?: 'primary' | 'secondary' | 'ghost' }) {
-  if (variant === 'primary') {
-    return (
-      <button
-        className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-90"
-        style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
-      >
-        {children}
-      </button>
-    )
-  }
-  if (variant === 'secondary') {
-    return (
-      <button
-        className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]"
-      >
-        {children}
-      </button>
-    )
-  }
-  return (
-    <button className="rounded-lg px-3.5 py-2 text-sm font-semibold text-[#60737c] transition hover:bg-[#f1f5f6]">
-      {children}
-    </button>
-  )
+  if (variant === 'primary') return <button className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-90" style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}>{children}</button>
+  if (variant === 'secondary') return <button className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]">{children}</button>
+  return <button className="rounded-lg px-3.5 py-2 text-sm font-semibold text-[#60737c] transition hover:bg-[#f1f5f6]">{children}</button>
 }
 
-export const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">{children}</label>
-)
+export const FieldLabel = ({ children }: { children: React.ReactNode }) => <label className="mb-1.5 block text-xs font-semibold text-[#536871]">{children}</label>
 
 const input = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10'
 
-export function TextInput({ value, placeholder }: { value?: string; placeholder?: string }) {
-  return <input className={input} defaultValue={value} placeholder={placeholder} />
-}
-export function TextArea({ value, placeholder }: { value?: string; placeholder?: string }) {
-  return <textarea className={`${input} min-h-20 resize-none`} defaultValue={value} placeholder={placeholder} />
-}
+export function TextInput({ value, placeholder }: { value?: string; placeholder?: string }) { return <input className={input} defaultValue={value} placeholder={placeholder} /> }
+export function TextArea({ value, placeholder }: { value?: string; placeholder?: string }) { return <textarea className={`${input} min-h-20 resize-none`} defaultValue={value} placeholder={placeholder} /> }
 export { input }
 
 export function SearchBox() {
-  return (
-    <div className="hidden w-64 items-center gap-2 rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm text-[#9aaab0] md:flex">
-      <span>⌕</span> Buscar...
-    </div>
-  )
+  return <div className="hidden w-64 items-center gap-2 rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm text-[#9aaab0] md:flex"><span>⌕</span> Buscar...</div>
 }
 
 export function TrendChart() {
   return (
     <svg viewBox="0 0 280 90" className="mt-3 h-20 w-full" role="img" aria-label="Tendência">
-      <path
-        d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15"
-        fill="none"
-        stroke="var(--cor-primaria, #0d9488)"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15 V90 H2Z"
-        fill="var(--cor-primaria, #0d9488)"
-        opacity=".08"
-      />
+      <path d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15" fill="none" stroke="var(--cor-primaria, #0d9488)" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M2 70 C30 58 34 65 55 54 S87 52 105 60 S132 43 150 48 S177 24 195 31 S225 18 246 28 S270 10 278 15 V90 H2Z" fill="var(--cor-primaria, #0d9488)" opacity=".08" />
     </svg>
   )
 }
