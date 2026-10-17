@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search, Building2, Users, DollarSign, Inbox, Eye, Edit, Trash2,
-  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText,
+  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText, MapPin, AlertCircle
 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarEscola, excluirEscola, type EscolaSuper, type Plano } from '../actions'
@@ -24,12 +24,7 @@ const statusLabel: Record<string, string> = {
 }
 
 function corPlano(slug: string): string {
-  const cores: Record<string, string> = {
-    semente: '#5e7a94',
-    raiz: '#0d9488',
-    copa: '#3b82f6',
-    rede: '#7c3aed',
-  }
+  const cores: Record<string, string> = { semente: '#5e7a94', raiz: '#0d9488', copa: '#3b82f6', rede: '#7c3aed' }
   return cores[slug] || '#6b7d86'
 }
 
@@ -47,8 +42,10 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
   const [busca, setBusca] = useState('')
   const [filtroPlano, setFiltroPlano] = useState('todos')
   const [filtroStatus, setFiltroStatus] = useState('todos')
+  
   const [editando, setEditando] = useState<EscolaSuper | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [confirmarMudancaPlano, setConfirmarMudancaPlano] = useState(false)
   const [processando, setProcessando] = useState(false)
 
   const [formPlano, setFormPlano] = useState('')
@@ -77,9 +74,22 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
     setFormContato(escola.contato_responsavel || '')
     setFormWhatsapp(escola.whatsapp || '')
     setFormObservacoes(escola.observacoes_admin || '')
+    setConfirmarMudancaPlano(false)
   }
 
-  async function handleSalvar() {
+  function handleSalvarClick(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editando) return
+
+    // Se o plano mudou, pede confirmação
+    if (formPlano !== editando.plano) {
+      setConfirmarMudancaPlano(true)
+    } else {
+      executarSalvamento()
+    }
+  }
+
+  async function executarSalvamento() {
     if (!editando) return
     setProcessando(true)
     const r = await atualizarEscola(editando.id, {
@@ -93,6 +103,7 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
     setProcessando(false)
     if (!r.success) { alert(r.error || 'Erro.'); return }
     setEditando(null)
+    setConfirmarMudancaPlano(false)
     router.refresh()
   }
 
@@ -227,6 +238,7 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
         </Panel>
       </main>
 
+      {/* DRAWER DE EDIÇÃO */}
       {editando && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setEditando(null)} />
@@ -240,9 +252,33 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
+              
+              {/* DADOS CADASTRAIS (SOMENTE LEITURA) */}
+              <div className="mb-8 rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#536871]">
+                  <Building2 className="size-4" /> Dados Cadastrais
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#82939a]">Razão Social</span>
+                    <span className="font-semibold text-right text-[#243942]">{editando.razao_social || 'Não informada'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#82939a]">CNPJ</span>
+                    <span className="font-mono text-[#243942]">{editando.cnpj || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-[#e5ecee] pt-2 mt-2">
+                    <span className="text-[#82939a] flex items-center gap-1"><MapPin size={12}/> Endereço</span>
+                    <span className="text-right text-[#243942]">
+                      {[editando.endereco, editando.numero, editando.bairro, editando.cidade, editando.estado].filter(Boolean).join(', ') || 'Não informado'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Plano</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Plano Atual</label>
                   <div className="grid grid-cols-2 gap-2">
                     {planos.map((p) => (
                       <button key={p.slug} type="button" onClick={() => setFormPlano(p.slug)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${formPlano === p.slug ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
@@ -287,7 +323,7 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setEditando(null)} disabled={processando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={processando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button onClick={handleSalvarClick} disabled={processando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {processando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {processando ? 'Salvando...' : 'Salvar'}
               </button>
@@ -296,6 +332,30 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
         </div>
       )}
 
+      {/* MODAL DE CONFIRMAÇÃO DE MUDANÇA DE PLANO */}
+      {confirmarMudancaPlano && editando && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarMudancaPlano(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fef3c7] text-[#d97706]">
+              <AlertCircle className="size-6" />
+            </div>
+            <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Alterar plano da escola?</h3>
+            <p className="mt-2 text-center text-sm text-[#82939a]">
+              Você está alterando o plano de <strong>{editando.plano}</strong> para <strong>{formPlano}</strong>.
+              Isso impactará diretamente no cálculo do seu MRR (Faturamento).
+            </p>
+            <div className="mt-6 flex gap-2">
+              <button onClick={() => setConfirmarMudancaPlano(false)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
+              <button onClick={executarSalvamento} disabled={processando} className="flex-1 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                {processando ? 'Salvando...' : 'Sim, alterar plano'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EXCLUSÃO */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
