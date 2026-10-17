@@ -41,7 +41,6 @@ export async function cadastrarEscola(data: CadastroInput) {
 
     const admin = createAdminClient()
 
-    // 1. Validar e-mail único
     const { data: perfilExistente } = await admin
       .from('perfis')
       .select('id')
@@ -52,22 +51,16 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Este e-mail já está cadastrado no sistema. Tente fazer login ou use outro e-mail.' }
     }
 
-    // 2. Gerar slug único
     let slug = gerarSlug(data.escola_nome)
     let contador = 0
     let slugFinal = slug
     while (true) {
-      const { data: existente } = await admin
-        .from('escolas')
-        .select('id')
-        .eq('slug', slugFinal)
-        .maybeSingle()
+      const { data: existente } = await admin.from('escolas').select('id').eq('slug', slugFinal).maybeSingle()
       if (!existente) break
       contador++
       slugFinal = `${slug}-${contador}`
     }
 
-    // 3. Criar escola
     const { data: escola, error: erroEscola } = await admin
       .from('escolas')
       .insert({
@@ -90,11 +83,9 @@ export async function cadastrarEscola(data: CadastroInput) {
       .single()
 
     if (erroEscola || !escola) {
-      console.error('Erro ao criar escola:', erroEscola)
       return { success: false, error: erroEscola?.message || 'Erro ao criar escola no banco.' }
     }
 
-    // 4. Criar usuário no Auth
     const { data: authUser, error: erroAuth } = await admin.auth.admin.createUser({
       email: data.admin_email,
       password: data.admin_senha,
@@ -107,15 +98,9 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: erroAuth?.message || 'Erro ao criar credenciais de acesso.' }
     }
 
-    // 5. Vincular perfil à escola
     const { error: erroPerfil } = await admin
       .from('perfis')
-      .update({
-        escola_id: escola.id,
-        nome: data.admin_nome,
-        papel: 'admin_escola',
-        ativo: true,
-      })
+      .update({ escola_id: escola.id, nome: data.admin_nome, papel: 'admin_escola', ativo: true })
       .eq('id', authUser.user.id)
 
     if (erroPerfil) {
@@ -124,21 +109,12 @@ export async function cadastrarEscola(data: CadastroInput) {
       return { success: false, error: 'Erro ao vincular perfil ao usuário.' }
     }
 
-    // 6. Registrar consentimentos
     try {
-      const consentimentoBase = {
-        escolaId: escola.id,
-        usuarioId: authUser.user.id,
-        responsavelEmail: data.admin_email,
-        alunoNome: null,
-      }
+      const consentimentoBase = { escolaId: escola.id, usuarioId: authUser.user.id, responsavelEmail: data.admin_email, alunoNome: null }
       await registrarConsentimento({ ...consentimentoBase, tipo: 'politica_privacidade', versao: POLITICA_VERSAO })
       await registrarConsentimento({ ...consentimentoBase, tipo: 'termos_uso', versao: TERMOS_VERSAO })
-    } catch (e) {
-      console.error('Erro ao registrar consentimentos (ignorado):', e)
-    }
+    } catch (e) {}
 
-    // 7. Gerar link de confirmação
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'signup',
       email: data.admin_email,
@@ -147,16 +123,9 @@ export async function cadastrarEscola(data: CadastroInput) {
     })
 
     if (erroLink || !linkData?.properties?.action_link) {
-      return {
-        success: true,
-        proximo_passo: 'confirmar_email',
-        email: data.admin_email,
-        slug: escola.slug,
-        aviso: 'Conta criada, mas houve falha ao gerar o link de confirmação.',
-      }
+      return { success: true, proximo_passo: 'confirmar_email', email: data.admin_email, slug: escola.slug, aviso: 'Conta criada, mas falha ao gerar link.' }
     }
 
-    // 8. Enviar e-mail
     const envio = await enviarConfirmacaoCadastro({
       para: data.admin_email,
       nome: data.admin_nome,
@@ -165,21 +134,11 @@ export async function cadastrarEscola(data: CadastroInput) {
     })
 
     if (!envio.success) {
-      return {
-        success: true,
-        proximo_passo: 'confirmar_email',
-        email: data.admin_email,
-        slug: escola.slug,
-        aviso: 'Conta criada. Houve problema ao enviar o e-mail de confirmação.',
-      }
+      // AQUI: retorna o erro real do Resend para a tela
+      return { success: false, error: `Erro no envio do e-mail (Resend): ${envio.error}` }
     }
 
-    return {
-      success: true,
-      proximo_passo: 'confirmar_email',
-      email: data.admin_email,
-      slug: escola.slug,
-    }
+    return { success: true, proximo_passo: 'confirmar_email', email: data.admin_email, slug: escola.slug }
   } catch (e: any) {
     console.error('Erro fatal no cadastro:', e)
     return { success: false, error: e.message || 'Erro inesperado ao criar a conta.' }
@@ -187,11 +146,11 @@ export async function cadastrarEscola(data: CadastroInput) {
 }
 
 export async function reenviarConfirmacao(email: string) {
+  // ... (manter a função reenviarConfirmacao igual)
   try {
     const admin = createAdminClient()
     const { data: usuarios } = await admin.auth.admin.listUsers()
     const user = (usuarios?.users || []).find((u) => u.email === email)
-
     if (!user) return { success: false, error: 'Conta não encontrada.' }
     if (user.email_confirmed_at) return { success: false, error: 'Este e-mail já foi confirmado.' }
 
@@ -218,7 +177,7 @@ export async function reenviarConfirmacao(email: string) {
       linkConfirmacao: linkData.properties.action_link,
     })
 
-    if (!envio.success) return { success: false, error: 'Erro ao enviar e-mail.' }
+    if (!envio.success) return { success: false, error: `Erro no Resend: ${envio.error}` }
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao reenviar.' }
