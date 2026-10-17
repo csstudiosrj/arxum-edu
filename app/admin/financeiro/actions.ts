@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { notificarFaturaGerada } from '@/lib/emails/notificacoes'
 import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
+import { criarOuAtualizarCliente, criarPedido, calcularSplitFatura } from '@/lib/pagarme'
 import { revalidatePath } from 'next/cache'
 
 export type Fatura = {
@@ -15,6 +16,7 @@ export type Fatura = {
   vencimento: string
   status: string
   criado_em: string
+  pagarme_qr_code_url: string | null
 }
 
 export type NovaFatura = {
@@ -50,7 +52,7 @@ export async function getFaturas(): Promise<Fatura[]> {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('faturas')
-      .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em')
+      .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em, pagarme_qr_code_url')
       .eq('escola_id', escola.id)
       .order('vencimento', { ascending: false })
 
@@ -66,28 +68,71 @@ export async function criarFatura(data: NovaFatura) {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    // 1. Verifica se a escola tem conta no Pagar.me
     const admin = createAdminClient()
-    const { data: aluno } = await admin
-      .from('alunos')
-      .select('id')
-      .eq('nome', data.aluno_nome)
-      .eq('responsavel_email', data.responsavel_email)
-      .eq('escola_id', escola.id)
-      .maybeSingle()
+    const { data: escolaPagarme } = await admin
+      .from('escolas')
+      .select('pagarme_recipient_id, taxa_fatura_bps')
+      .eq('id', escola.id)
+      .single()
 
+    if (!escolaPagarme?.pagarme_recipient_id) {
+      return { success: false, error: 'A escola precisa configurar a Conta de Recebimento (Pagar.me) antes de gerar faturas.' }
+    }
+
+    const arxumRecipientId = process.env.PAGARME_RECIPIENT_ARXUM_ID
+    if (!arxumRecipientId) {
+      return { success: false, error: 'Erro de configuração: PAGARME_RECIPIENT_ARXUM_ID não configurado na Vercel.' }
+    }
+
+    // 2. Cria ou atualiza o cliente no Pagar.me
+    const clientePagarme = await criarOuAtualizarCliente({
+      nome: data.aluno_nome + ' (Responsável)',
+      email: data.responsavel_email,
+    })
+
+    if (!clientePagarme.success) {
+      return { success: false, error: 'Erro ao criar cliente no Pagar.me: ' + clientePagarme.error }
+    }
+
+    // 3. Gera o Pedido (PIX) com Split
+    const taxaArxum = escolaPagarme.taxa_fatura_bps || 200 // Padrão 2% se não achar
+    const split = calcularSplitFatura({
+      taxaArxumBps: taxaArxum,
+      recipientEscolaId: escolaPagarme.pagarme_recipient_id,
+      recipientArxumId: arxumRecipientId,
+    })
+
+    const pedidoPagarme = await criarPedido({
+      code: `fat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      clienteId: clientePagarme.customerId,
+      itens: [{ amount: data.valor_centavos, description: data.descricao, quantity: 1 }],
+      metodo: { tipo: 'pix', expiresInSeconds: 3600 * 24 * 7 }, // PIX válido por 7 dias
+      split,
+      metadata: { escola_id: escola.id, responsavel_email: data.responsavel_email }
+    })
+
+    if (!pedidoPagarme.success) {
+      return { success: false, error: 'Erro ao gerar PIX no Pagar.me: ' + pedidoPagarme.error }
+    }
+
+    // 4. Salva a fatura no banco com os dados do PIX
     const { error } = await admin.from('faturas').insert({
       escola_id: escola.id,
-      aluno_id: aluno?.id || null,
       aluno_nome: data.aluno_nome,
       responsavel_email: data.responsavel_email,
       descricao: data.descricao,
       valor_centavos: data.valor_centavos,
       vencimento: data.vencimento,
+      pagarme_order_id: pedidoPagarme.orderId,
+      pagarme_qr_code: pedidoPagarme.qrCode,
+      pagarme_qr_code_url: pedidoPagarme.qrCodeUrl,
+      pagarme_status: pedidoPagarme.status,
     })
 
     if (error) return { success: false, error: error.message }
 
-    // Notifica o responsável — respeitando a config da escola.
+    // 5. Notifica o responsável
     try {
       if (data.responsavel_email) {
         enviarSeAtivo({
@@ -105,16 +150,15 @@ export async function criarFatura(data: NovaFatura) {
             }),
         }).catch((e) => console.error('[email fatura]', data.responsavel_email, e))
       }
-    } catch (e) {
-      console.error('Erro ao disparar e-mail de fatura:', e)
-    }
+    } catch (e) {}
 
     revalidatePath('/admin/financeiro')
     revalidatePath('/responsavel')
     revalidatePath('/dashboard')
     return { success: true }
   } catch (e) {
-    return { success: false, error: 'Erro ao criar fatura.' }
+    console.error('Erro ao criar fatura:', e)
+    return { success: false, error: 'Erro inesperado ao criar fatura.' }
   }
 }
 
