@@ -185,9 +185,7 @@ export function PublicFooter({
           <p className="max-w-xs text-sm leading-6 text-[#8aa0ad]">
             Educação que prepara para o futuro, com propósito, tecnologia e cuidado.
           </p>
-          <div className="mt-5">
-            <ByArxum />
-          </div>
+          {/* REMOVIDO O <ByArxum /> DAQUI */}
         </div>
         {colunas.map((col) => (
           <div key={col.titulo}>
@@ -206,6 +204,7 @@ export function PublicFooter({
       </div>
       <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/[.08] pt-6 text-xs text-[#617783] sm:flex-row sm:items-center sm:justify-between">
         <span>© 2026 {escolaNome || 'ARXUM Edu'}. Todos os direitos reservados.</span>
+        {/* MANTIDO APENAS O <ByArxum /> NO RODAPÉ */}
         <ByArxum />
       </div>
     </footer>
