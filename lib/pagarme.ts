@@ -1,8 +1,4 @@
 // ── Pagar.me V5 (agora Stone Digital) ──────────────────────────────
-// Doc: https://docs.pagar.me/reference
-// Auth: Basic <base64(sk_xxx:)>
-// API base: https://api.pagar.me/core/v5
-
 const PAGARME_API = 'https://api.pagar.me/core/v5'
 
 function getKey(): string | null {
@@ -44,7 +40,7 @@ export type DadosRecebedor = {
   banco: {
     codigo: string
     agencia: string
-    agenciaDigito?: string       // opcional — algumas contas não têm
+    agenciaDigito?: string
     conta: string
     digito: string
     tipo: 'checking' | 'savings'
@@ -53,6 +49,60 @@ export type DadosRecebedor = {
     titular_tipo?: 'individual' | 'company'
   }
   siteUrl?: string
+  // Novos campos exigidos pela API a partir de nov/2024:
+  registerInformation: {
+    type: 'corporation' | 'individual'
+    // PJ:
+    company_name?: string
+    trading_name?: string
+    annual_revenue?: string
+    corporation_type?: string
+    founding_date?: string
+    cnae?: string
+    // PF:
+    mother_name?: string
+    birthdate?: string
+    monthly_income?: string
+    professional_occupation?: string
+    // Comuns:
+    document_number: string
+    email: string
+    site_url?: string
+    phone_numbers: Array<{ ddd: string; number: string; type: string }>
+    address: {
+      street: string
+      complementary: string
+      street_number: string
+      neighborhood: string
+      city: string
+      state: string
+      zipcode: string
+      reference_point?: string
+    }
+    // Sócio responsável (só PJ):
+    managing_partners?: Array<{
+      type: 'individual'
+      name: string
+      document_number: string
+      mother_name?: string
+      birthdate: string
+      email: string
+      monthly_income: string
+      professional_occupation: string
+      self_declared_legal_representative: boolean
+      address: {
+        street: string
+        complementary: string
+        street_number: string
+        neighborhood: string
+        city: string
+        state: string
+        zipcode: string
+        reference_point?: string
+      }
+      phone_numbers: Array<{ ddd: string; number: string; type: string }>
+    }>
+  }
 }
 
 // ── Recebedores (escolas no marketplace) ──────────────────────────
@@ -95,6 +145,7 @@ export async function criarRecebedor(dados: DadosRecebedor) {
         automatic_anticipation_settings: {
           enabled: false,
         },
+        register_information: dados.registerInformation,
       }),
     })
 
