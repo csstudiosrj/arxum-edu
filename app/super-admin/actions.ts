@@ -129,6 +129,13 @@ export type EscolaSuper = {
   alunos: number
   usuarios: number
   mrrCentavos: number
+  // Novos campos para exibir no drawer de edição
+  razao_social: string | null
+  cnpj: string | null
+  cep: string | null
+  endereco: string | null
+  numero: string | null
+  bairro: string | null
 }
 
 export async function getTodasEscolas(): Promise<EscolaSuper[]> {
@@ -137,7 +144,7 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
 
     const { data: escolas, error } = await admin
       .from('escolas')
-      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em')
+      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em, razao_social, cnpj, cep, endereco, numero, bairro')
       .order('nome', { ascending: true })
 
     if (error || !escolas) return []
