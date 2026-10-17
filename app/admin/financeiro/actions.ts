@@ -68,7 +68,6 @@ export async function criarFatura(data: NovaFatura) {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
-    // 1. Verifica se a escola tem conta no Pagar.me
     const admin = createAdminClient()
     const { data: escolaPagarme } = await admin
       .from('escolas')
@@ -80,12 +79,7 @@ export async function criarFatura(data: NovaFatura) {
       return { success: false, error: 'A escola precisa configurar a Conta de Recebimento (Pagar.me) antes de gerar faturas.' }
     }
 
-    const arxumRecipientId = process.env.PAGARME_RECIPIENT_ARXUM_ID
-    if (!arxumRecipientId) {
-      return { success: false, error: 'Erro de configuração: PAGARME_RECIPIENT_ARXUM_ID não configurado na Vercel.' }
-    }
-
-    // 2. Cria ou atualiza o cliente no Pagar.me
+    // Cria/Atualiza cliente
     const clientePagarme = await criarOuAtualizarCliente({
       nome: data.aluno_nome + ' (Responsável)',
       email: data.responsavel_email,
@@ -95,19 +89,18 @@ export async function criarFatura(data: NovaFatura) {
       return { success: false, error: 'Erro ao criar cliente no Pagar.me: ' + clientePagarme.error }
     }
 
-    // 3. Gera o Pedido (PIX) com Split
-    const taxaArxum = escolaPagarme.taxa_fatura_bps || 200 // Padrão 2% se não achar
+    // Gera o Pedido com Split
+    const taxaArxum = escolaPagarme.taxa_fatura_bps || 200
     const split = calcularSplitFatura({
       taxaArxumBps: taxaArxum,
       recipientEscolaId: escolaPagarme.pagarme_recipient_id,
-      recipientArxumId: arxumRecipientId,
     })
 
     const pedidoPagarme = await criarPedido({
       code: `fat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       clienteId: clientePagarme.customerId,
       itens: [{ amount: data.valor_centavos, description: data.descricao, quantity: 1 }],
-      metodo: { tipo: 'pix', expiresInSeconds: 3600 * 24 * 7 }, // PIX válido por 7 dias
+      metodo: { tipo: 'pix', expiresInSeconds: 3600 * 24 * 7 },
       split,
       metadata: { escola_id: escola.id, responsavel_email: data.responsavel_email }
     })
@@ -116,7 +109,6 @@ export async function criarFatura(data: NovaFatura) {
       return { success: false, error: 'Erro ao gerar PIX no Pagar.me: ' + pedidoPagarme.error }
     }
 
-    // 4. Salva a fatura no banco com os dados do PIX
     const { error } = await admin.from('faturas').insert({
       escola_id: escola.id,
       aluno_nome: data.aluno_nome,
@@ -132,7 +124,6 @@ export async function criarFatura(data: NovaFatura) {
 
     if (error) return { success: false, error: error.message }
 
-    // 5. Notifica o responsável
     try {
       if (data.responsavel_email) {
         enviarSeAtivo({

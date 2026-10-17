@@ -1,4 +1,5 @@
 // ── Pagar.me V5 (agora Stone Digital) ──────────────────────────────
+
 const PAGARME_API = 'https://api.pagar.me/core/v5'
 
 function getKey(): string | null {
@@ -49,22 +50,18 @@ export type DadosRecebedor = {
     titular_tipo?: 'individual' | 'company'
   }
   siteUrl?: string
-  // Novos campos exigidos pela API a partir de nov/2024:
   registerInformation: {
     type: 'corporation' | 'individual'
-    // PJ:
     company_name?: string
     trading_name?: string
     annual_revenue?: string
     corporation_type?: string
     founding_date?: string
     cnae?: string
-    // PF:
     mother_name?: string
     birthdate?: string
     monthly_income?: string
     professional_occupation?: string
-    // Comuns:
     document_number: string
     email: string
     site_url?: string
@@ -79,7 +76,6 @@ export type DadosRecebedor = {
       zipcode: string
       reference_point?: string
     }
-    // Sócio responsável (só PJ):
     managing_partners?: Array<{
       type: 'individual'
       name: string
@@ -374,24 +370,19 @@ export async function obterPedido(orderId: string) {
 }
 
 // ── Cálculo de split ──────────────────────────────────────────────
+// A conta principal (ARXUM) não precisa de ID de recebedor. 
+// Ela automaticamente absorve o valor restante (remainder).
 export function calcularSplitFatura(params: {
   taxaArxumBps: number
   recipientEscolaId: string
-  recipientArxumId: string
 }): SplitRule[] {
   return [
     {
-      recipientId: params.recipientArxumId,
-      percentage: params.taxaArxumBps / 100,
-      liable: false,
-      chargeProcessingFee: false,
-      chargeRemainder: false,
-    },
-    {
       recipientId: params.recipientEscolaId,
+      percentage: 100 - (params.taxaArxumBps / 100), // Ex: 98% para a escola (2% para ARXUM)
       liable: true,
       chargeProcessingFee: true,
-      chargeRemainder: true,
+      chargeRemainder: false, // O remainder (2%) fica com a conta principal (ARXUM)
     },
   ]
 }
@@ -401,26 +392,20 @@ export function calcularSplitLoja(params: {
   taxaServicoCentavos: number
   taxaArxumBps: number
   recipientEscolaId: string
-  recipientArxumId: string
 }): { split: SplitRule[]; totalCobradoCentavos: number } {
   const totalCobradoCentavos = params.valorProdutosCentavos + params.taxaServicoCentavos
   const valorArxum = Math.round((params.valorProdutosCentavos * params.taxaArxumBps) / 10000) + params.taxaServicoCentavos
+  const valorEscola = totalCobradoCentavos - valorArxum
 
   return {
     totalCobradoCentavos,
     split: [
       {
-        recipientId: params.recipientArxumId,
-        amount: valorArxum,
-        liable: false,
-        chargeProcessingFee: false,
-        chargeRemainder: false,
-      },
-      {
         recipientId: params.recipientEscolaId,
+        amount: valorEscola,
         liable: true,
         chargeProcessingFee: true,
-        chargeRemainder: true,
+        chargeRemainder: false, // O resto (valorArxum + taxa) fica com a conta principal (ARXUM)
       },
     ],
   }
