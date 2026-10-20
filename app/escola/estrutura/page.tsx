@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
 import { getConteudoPaginasPublico } from '@/lib/cms/actions'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import { EstruturaClient } from './estrutura-client'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,7 @@ export default async function EstruturaPage() {
   if (!escola) notFound()
 
   const paginas = await getConteudoPaginasPublico()
+  const marca = marcaDaEscola(escola)
 
   return (
     <EstruturaClient
@@ -17,6 +19,8 @@ export default async function EstruturaPage() {
       slug={escola.slug}
       fontePar={escola.fonte_par}
       pagina={paginas.estrutura}
+      cor={marca.corPrimaria}
+      logoUrl={marca.logoUrl}
     />
   )
 }

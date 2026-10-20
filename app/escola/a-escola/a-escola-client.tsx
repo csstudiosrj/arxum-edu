@@ -11,11 +11,15 @@ export function AEscolaClient({
   slug,
   fontePar,
   pagina,
+  cor,
+  logoUrl,
 }: {
   escolaNome: string
   slug: string
   fontePar: string | null
   pagina: PaginaAEscola
+  cor: string
+  logoUrl: string | null
 }) {
   const base = `/edu/${slug}`
   const par = getFontePar(fontePar)
@@ -23,13 +27,14 @@ export function AEscolaClient({
   const estiloFontes = {
     '--font-heading-active': `var(${par.headingVar})`,
     '--font-body-active': `var(${par.bodyVar})`,
+    '--cor-primaria': cor,
   } as React.CSSProperties
 
   const paragrafos = pagina.texto.split('\n\n').filter(Boolean)
 
   return (
     <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloFontes}>
-      <PublicHeader slug={slug} />
+      <PublicHeader slug={slug} cor={cor} logoUrl={logoUrl} escolaNome={escolaNome} />
 
       <main className="mx-auto max-w-5xl px-6 py-16 lg:px-8">
         <Link href={base} className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -38,7 +43,7 @@ export function AEscolaClient({
 
         <div className="mt-10 mb-12">
           {pagina.eyebrow && (
-            <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">{pagina.eyebrow}</p>
+            <p className="text-xs font-semibold uppercase tracking-[.18em]" style={{ color: cor }}>{pagina.eyebrow}</p>
           )}
           <h1 className="mt-3 font-heading text-4xl font-bold tracking-[-.04em] text-white sm:text-5xl">
             {pagina.titulo}
@@ -81,7 +86,7 @@ export function AEscolaClient({
         )}
       </main>
 
-      <PublicFooter slug={slug} />
+      <PublicFooter slug={slug} cor={cor} escolaNome={escolaNome} />
     </div>
   )
 }

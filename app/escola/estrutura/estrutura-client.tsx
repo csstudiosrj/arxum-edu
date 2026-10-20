@@ -18,11 +18,15 @@ export function EstruturaClient({
   slug,
   fontePar,
   pagina,
+  cor,
+  logoUrl,
 }: {
   escolaNome: string
   slug: string
   fontePar: string | null
   pagina: PaginaEstrutura
+  cor: string
+  logoUrl: string | null
 }) {
   const base = `/edu/${slug}`
   const par = getFontePar(fontePar)
@@ -30,11 +34,12 @@ export function EstruturaClient({
   const estiloFontes = {
     '--font-heading-active': `var(${par.headingVar})`,
     '--font-body-active': `var(${par.bodyVar})`,
+    '--cor-primaria': cor,
   } as React.CSSProperties
 
   return (
     <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloFontes}>
-      <PublicHeader slug={slug} />
+      <PublicHeader slug={slug} cor={cor} logoUrl={logoUrl} escolaNome={escolaNome} />
 
       <main className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <Link href={base} className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -43,7 +48,7 @@ export function EstruturaClient({
 
         <div className="mt-10 mb-12 max-w-3xl">
           {pagina.eyebrow && (
-            <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">{pagina.eyebrow}</p>
+            <p className="text-xs font-semibold uppercase tracking-[.18em]" style={{ color: cor }}>{pagina.eyebrow}</p>
           )}
           <h1 className="mt-3 font-heading text-4xl font-bold tracking-[-.04em] text-white sm:text-5xl">
             {pagina.titulo}
@@ -64,15 +69,15 @@ export function EstruturaClient({
               return (
                 <article
                   key={item.id}
-                  className="overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-[#0d9488]/40"
+                  className="overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-white/20"
                 >
                   {item.imagem_url ? (
                     <div className="aspect-video w-full overflow-hidden">
                       <img src={item.imagem_url} alt={item.titulo} className="h-full w-full object-cover" />
                     </div>
                   ) : (
-                    <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-[#0d9488]/15 to-[#0f766e]/15">
-                      <Icone className="size-12 text-[#0d9488]" />
+                    <div className="flex aspect-video items-center justify-center" style={{ backgroundColor: `${cor}15` }}>
+                      <Icone className="size-12" style={{ color: cor }} />
                     </div>
                   )}
                   <div className="p-5">
@@ -86,7 +91,7 @@ export function EstruturaClient({
         )}
       </main>
 
-      <PublicFooter slug={slug} />
+      <PublicFooter slug={slug} cor={cor} escolaNome={escolaNome} />
     </div>
   )
 }
