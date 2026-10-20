@@ -2,15 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import { getConteudoHomePublico } from '@/lib/cms/actions'
 import { getFontePar } from '@/lib/fonts'
 import { PublicFooter, PublicHeader } from '@/components/arxum-brand'
 
 export const dynamic = 'force-dynamic'
-
-function formatarData(iso: string): string {
-  return iso
-}
 
 export default async function NoticiaDetalhePage({
   params,
@@ -31,15 +28,17 @@ export default async function NoticiaDetalhePage({
 
   const par = getFontePar(escola.fonte_par)
   const base = `/edu/${escola.slug}`
+  const marca = marcaDaEscola(escola)
 
   const estiloFontes = {
     '--font-heading-active': `var(${par.headingVar})`,
     '--font-body-active': `var(${par.bodyVar})`,
+    '--cor-primaria': marca.corPrimaria,
   } as React.CSSProperties
 
   return (
     <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloFontes}>
-      <PublicHeader slug={escola.slug} />
+      <PublicHeader slug={escola.slug} cor={marca.corPrimaria} logoUrl={marca.logoUrl} escolaNome={escola.nome} />
 
       <main className="mx-auto max-w-3xl px-6 py-16 lg:px-8">
         <Link href={`${base}/noticias`} className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -48,9 +47,9 @@ export default async function NoticiaDetalhePage({
 
         <article className="mt-8">
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-semibold tracking-widest text-[#0d9488]">{noticia.data}</span>
+            <span className="text-[11px] font-semibold tracking-widest text-[var(--cor-primaria)]">{noticia.data}</span>
             {noticia.categoria && (
-              <span className="rounded-full border border-[#0d9488]/30 px-2.5 py-0.5 text-[11px] font-semibold text-[#14b8a6]">
+              <span className="rounded-full border border-[var(--cor-primaria)]/30 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--cor-primaria)]">
                 {noticia.categoria}
               </span>
             )}
@@ -84,14 +83,14 @@ export default async function NoticiaDetalhePage({
         <div className="mt-16 border-t border-white/[.08] pt-8">
           <Link
             href={`${base}/noticias`}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-[#c7d5db] transition hover:border-[#0d9488] hover:text-white"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-[#c7d5db] transition hover:border-[var(--cor-primaria)] hover:text-white"
           >
             <ArrowLeft className="size-4" /> Ver todas as notícias
           </Link>
         </div>
       </main>
 
-      <PublicFooter slug={escola.slug} />
+      <PublicFooter slug={escola.slug} cor={marca.corPrimaria} escolaNome={escola.nome} />
     </div>
   )
 }

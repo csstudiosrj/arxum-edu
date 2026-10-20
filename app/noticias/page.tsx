@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import { getConteudoHomePublico } from '@/lib/cms/actions'
 import { getFontePar } from '@/lib/fonts'
 import { PublicFooter, PublicHeader } from '@/components/arxum-brand'
@@ -16,15 +17,17 @@ export default async function NoticiasPage() {
   const noticias = conteudo.blocos.noticias.itens
   const par = getFontePar(escola.fonte_par)
   const base = `/edu/${escola.slug}`
+  const marca = marcaDaEscola(escola)
 
   const estiloFontes = {
     '--font-heading-active': `var(${par.headingVar})`,
     '--font-body-active': `var(${par.bodyVar})`,
+    '--cor-primaria': marca.corPrimaria,
   } as React.CSSProperties
 
   return (
     <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloFontes}>
-      <PublicHeader slug={escola.slug} />
+      <PublicHeader slug={escola.slug} cor={marca.corPrimaria} logoUrl={marca.logoUrl} escolaNome={escola.nome} />
 
       <main className="mx-auto max-w-5xl px-6 py-16 lg:px-8">
         <Link href={base} className="inline-flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -32,7 +35,7 @@ export default async function NoticiasPage() {
         </Link>
 
         <div className="mt-8 mb-12">
-          <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">
+          <p className="text-xs font-semibold uppercase tracking-[.18em] text-[var(--cor-primaria)]">
             {conteudo.blocos.noticias.eyebrow || 'Notícias'}
           </p>
           <h1 className="mt-3 font-heading text-4xl font-bold tracking-[-.04em] text-white">
@@ -52,7 +55,7 @@ export default async function NoticiasPage() {
                 <Link
                   key={n.id}
                   href={`${base}/noticias/${slug}`}
-                  className="group overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-[#0d9488]/50"
+                  className="group overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-[var(--cor-primaria)]/50"
                 >
                   <div className="relative aspect-video bg-gradient-to-br from-[#154b45] to-[#132733]">
                     {n.imagem_url && (
@@ -61,9 +64,9 @@ export default async function NoticiasPage() {
                   </div>
                   <div className="p-5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-semibold tracking-widest text-[#0d9488]">{n.data}</span>
+                      <span className="text-[10px] font-semibold tracking-widest text-[var(--cor-primaria)]">{n.data}</span>
                       {n.categoria && (
-                        <span className="rounded-full border border-[#0d9488]/30 px-2 py-0.5 text-[10px] font-semibold text-[#14b8a6]">
+                        <span className="rounded-full border border-[var(--cor-primaria)]/30 px-2 py-0.5 text-[10px] font-semibold text-[var(--cor-primaria)]">
                           {n.categoria}
                         </span>
                       )}
@@ -80,7 +83,7 @@ export default async function NoticiasPage() {
         )}
       </main>
 
-      <PublicFooter slug={escola.slug} />
+      <PublicFooter slug={escola.slug} cor={marca.corPrimaria} escolaNome={escola.nome} />
     </div>
   )
 }
