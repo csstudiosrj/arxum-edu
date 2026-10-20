@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, BookOpen, Trash2, X, Loader2, TrendingUp, Users, Check } from 'lucide-react'
+import { Search, Plus, BookOpen, Trash2, X, Loader2, TrendingUp, Users, Check, Edit } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { lancarNota, excluirNota, type Nota } from './actions'
+import { lancarNota, excluirNota, type Nota, type NovaNota } from './actions'
 
 const disciplinas = ['Matemática', 'Português', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Inglês', 'Artes', 'Educação Física']
 
@@ -30,7 +30,9 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
   const [filtroPeriodo, setFiltroPeriodo] = useState('todos')
   const [busca, setBusca] = useState('')
   const [novaAberta, setNovaAberta] = useState(false)
+  const [editando, setEditando] = useState<Nota | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [alunoIdx, setAlunoIdx] = useState('')
   const [disciplina, setDisciplina] = useState('Matemática')
@@ -60,6 +62,21 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
     setFaltas('')
     setObservacao('')
     setErro('')
+    setEditando(null)
+  }
+
+  function abrirEdicao(n: Nota) {
+    // Encontra o index do aluno na lista para setar no select
+    const idx = alunos.findIndex((a) => a.id === n.aluno_id)
+    setAlunoIdx(String(idx))
+    setDisciplina(n.disciplina)
+    setPeriodo(n.periodo)
+    setNotaStr(n.nota !== null ? n.nota.toString() : '')
+    setFaltas(n.faltas.toString())
+    setObservacao(n.observacao || '')
+    setEditando(n)
+    setNovaAberta(true)
+    setErro('')
   }
 
   async function handleLancar() {
@@ -78,6 +95,8 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
 
     setSalvando(true)
     setErro('')
+    
+    // O upsert na action já resolve se for nova ou edição
     const result = await lancarNota({
       aluno_id: aluno.id,
       aluno_nome: aluno.nome,
@@ -99,7 +118,13 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
 
   async function handleExcluir() {
     if (!confirmarExclusao) return
-    await excluirNota(confirmarExclusao)
+    setExcluindo(true)
+    const r = await excluirNota(confirmarExclusao)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
@@ -204,8 +229,11 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
                           </td>
                           <td className="px-5 py-3.5 text-sm text-[#4d626c]">{n.faltas}</td>
                           <td className="px-5 py-3.5">
-                            <div className="flex justify-end">
-                              <button onClick={() => setConfirmarExclusao(n.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => abrirEdicao(n)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                                <Edit className="size-4" />
+                              </button>
+                              <button onClick={() => setConfirmarExclusao(n.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
                                 <Trash2 className="size-4" />
                               </button>
                             </div>
@@ -221,14 +249,15 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
         </Panel>
       </main>
 
+      {/* MODAL NOVA NOTA / EDITAR */}
       {novaAberta && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovaAberta(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Lançar nota</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Se a nota já existir, será atualizada</p>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar nota' : 'Lançar nota'}</h2>
+                <p className="mt-0.5 text-xs text-[#82939a]">Se a nota já existir, ela será atualizada</p>
               </div>
               <button onClick={() => setNovaAberta(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
                 <X className="size-5" />
@@ -238,7 +267,7 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
                     {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome}</option>)}
                   </select>
@@ -246,13 +275,13 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplina</label>
-                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {disciplinas.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Período</label>
-                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {periodos.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
                     </select>
                   </div>
@@ -278,16 +307,17 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
               <button onClick={() => setNovaAberta(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
               <button onClick={handleLancar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                {salvando ? 'Salvando...' : 'Salvar nota'}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Salvar nota'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL EXCLUIR */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
               <Trash2 className="size-5" />
@@ -295,8 +325,10 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir nota?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluir} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>
