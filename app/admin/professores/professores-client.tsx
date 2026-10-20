@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Users, Mail, Phone, Trash2, X, Loader2, Check, Eye, EyeOff, BookOpen, Send, CheckCircle2 } from 'lucide-react'
+import { Plus, Search, Users, Mail, Phone, Trash2, X, Loader2, Check, Eye, EyeOff, BookOpen, Send, CheckCircle2, Edit } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { convidarProfessor, reenviarConviteProfessor, alternarAtivoProfessor, excluirProfessor, type Professor } from './actions'
+import { convidarProfessor, atualizarProfessor, reenviarConviteProfessor, alternarAtivoProfessor, excluirProfessor, type Professor } from './actions'
 
 const DISCIPLINAS = [
   'Matemática', 'Português', 'Física', 'Química', 'Biologia', 'História',
@@ -25,6 +25,7 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
   const router = useRouter()
   const [busca, setBusca] = useState('')
   const [novoAberto, setNovoAberto] = useState(false)
+  const [editando, setEditando] = useState<Professor | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
 
   const [nome, setNome] = useState('')
@@ -54,6 +55,15 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
     setNome(''); setEmail(''); setTelefone(''); setDisciplinasSel([]); setErro(''); setSucesso(false)
   }
 
+  function abrirEdicao(p: Professor) {
+    setEditando(p)
+    setNome(p.nome)
+    setEmail(p.email)
+    setTelefone(p.telefone || '')
+    setDisciplinasSel(p.disciplinas || [])
+    setErro('')
+  }
+
   async function handleConvidar() {
     setErro('')
     if (!nome.trim()) return setErro('Informe o nome.')
@@ -74,6 +84,28 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
       setNovoAberto(false)
       limpar()
     }, 2200)
+  }
+
+  async function handleSalvarEdicao() {
+    if (!editando) return
+    setErro('')
+    if (!nome.trim()) return setErro('Informe o nome.')
+
+    setEnviando(true)
+    const r = await atualizarProfessor(editando.id, { nome, telefone, disciplinas: disciplinasSel })
+    setEnviando(false)
+
+    if (!r.success) {
+      setErro(r.error || 'Erro ao salvar.')
+      return
+    }
+
+    setSucesso(true)
+    router.refresh()
+    setTimeout(() => {
+      setEditando(null)
+      limpar()
+    }, 1500)
   }
 
   async function handleReenviar(p: Professor) {
@@ -102,8 +134,12 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
   async function handleExcluir() {
     if (!confirmarExclusao) return
     setProcessando(confirmarExclusao)
-    await excluirProfessor(confirmarExclusao)
+    const r = await excluirProfessor(confirmarExclusao)
     setProcessando(null)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
@@ -228,6 +264,13 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                         <td className="px-5 py-3.5">
                           <div className="flex justify-end gap-1">
                             <button
+                              onClick={() => abrirEdicao(p)}
+                              className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                              title="Editar dados"
+                            >
+                              <Edit className="size-4" />
+                            </button>
+                            <button
                               onClick={() => handleReenviar(p)}
                               disabled={reenviando === p.id || sucessoReenvio === p.id}
                               className={`rounded-lg p-1.5 transition ${
@@ -272,16 +315,21 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
         </Panel>
       </main>
 
-      {novoAberto && (
+      {/* DRAWER CRIAR / EDITAR */}
+      {(novoAberto || editando) && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && setNovoAberto(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && (novoAberto ? setNovoAberto(false) : setEditando(null))} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Convidar professor</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Enviaremos um link de acesso por e-mail</p>
+                <h2 className="text-lg font-bold text-[#12232b]">
+                  {editando ? editando.nome : 'Convidar professor'}
+                </h2>
+                <p className="mt-0.5 text-xs text-[#82939a]">
+                  {editando ? 'Editar informações da equipe' : 'Enviaremos um link de acesso por e-mail'}
+                </p>
               </div>
-              <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
+              <button onClick={() => { setNovoAberto(false); setEditando(null) }} disabled={enviando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -292,7 +340,7 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="professor@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!editando} placeholder="professor@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Telefone (opcional)</label>
@@ -319,17 +367,17 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
                 {sucesso && (
                   <div className="flex items-center gap-2 rounded-lg border border-[#0d9488]/30 bg-[#ccfbf1] px-3 py-2 text-xs text-[#0f766e]">
-                    <Check className="size-4" /> Convite enviado! O professor receberá o link por e-mail.
+                    <Check className="size-4" /> {editando ? 'Dados atualizados!' : 'Convite enviado! O professor receberá o link por e-mail.'}
                   </div>
                 )}
               </div>
             </div>
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-              <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Fechar</button>
-              <button onClick={handleConvidar} disabled={enviando || sucesso} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button onClick={() => { setNovoAberto(false); setEditando(null) }} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Fechar</button>
+              <button onClick={editando ? handleSalvarEdicao : handleConvidar} disabled={enviando || sucesso} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-                {enviando ? 'Enviando...' : 'Enviar convite'}
+                {enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Enviar convite'}
               </button>
             </footer>
           </aside>

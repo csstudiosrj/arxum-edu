@@ -115,6 +115,34 @@ export async function convidarProfessor(data: NovoProfessor) {
   }
 }
 
+export async function atualizarProfessor(id: string, data: { nome: string, telefone: string, disciplinas: string[] }) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    if (!data.nome.trim()) return { success: false, error: 'Informe o nome.' }
+
+    const admin = createAdminClient()
+
+    const { error } = await admin
+      .from('perfis')
+      .update({
+        nome: data.nome,
+        telefone: data.telefone || null,
+        disciplinas: data.disciplinas,
+      })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/professores')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar professor.' }
+  }
+}
+
 export async function reenviarConviteProfessor(professorId: string) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -132,7 +160,6 @@ export async function reenviarConviteProfessor(professorId: string) {
     if (!perfil) return { success: false, error: 'Professor não encontrado.' }
     if (!perfil.email) return { success: false, error: 'Este professor não tem e-mail cadastrado.' }
 
-    // Verifica se o usuário ainda existe no Auth
     const { data: usuario } = await admin.auth.admin.getUserById(professorId)
     if (!usuario?.user) {
       return { success: false, error: 'Usuário não encontrado. Convide novamente.' }
