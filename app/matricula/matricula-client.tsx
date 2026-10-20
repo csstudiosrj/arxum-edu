@@ -70,7 +70,7 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', requir
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[var(--cor-primaria)]"
       />
     </div>
   )
@@ -87,7 +87,7 @@ function Select({ label, value, onChange, options, required = false }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[#0d9488]"
+        className="w-full rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--cor-primaria)]"
       >
         <option value="">Selecione</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -107,13 +107,13 @@ function TextArea({ label, value, onChange, placeholder = '', rows = 3 }: {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+        className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[var(--cor-primaria)]"
       />
     </div>
   )
 }
 
-export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
+export function MatriculaClient({ escolaNome, slug, cor, logoUrl }: { escolaNome: string; slug: string; cor: string; logoUrl: string | null }) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<InscricaoInput>(initialForm)
@@ -174,13 +174,15 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
     router.push(`/matricula/sucesso?protocolo=${result.protocolo}&email=${encodeURIComponent(form.responsavel_email)}`)
   }
 
+  const estiloMarca = { '--cor-primaria': cor } as React.CSSProperties
+
   return (
-    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
-      <PublicHeader />
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
+      <PublicHeader slug={slug} cor={cor} logoUrl={logoUrl} escolaNome={escolaNome} />
       <main className="mx-auto max-w-6xl px-6 py-12 lg:px-8">
         <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#0d9488]">{escolaNome}</p>
-          <h1 className="mt-3 font-syne text-4xl font-bold tracking-[-.04em] text-white">Matrícula Online</h1>
+          <p className="text-xs font-semibold uppercase tracking-[.18em]" style={{ color: cor }}>{escolaNome}</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-[-.04em] text-white">Matrícula Online</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
             Sua inscrição será analisada pela escola antes da efetivação da matrícula.
           </p>
@@ -197,9 +199,12 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
                   const Icon = s.icon
                   return (
                     <li key={s.num} className="flex items-center gap-3">
-                      <div className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition ${
-                        done ? 'bg-[#0d9488] text-white' : active ? 'bg-[#0d9488] text-white' : 'bg-[#1a232b] text-[#5e7a94]'
-                      }`}>
+                      <div
+                        className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition ${
+                          done || active ? 'text-white' : 'bg-[#1a232b] text-[#5e7a94]'
+                        }`}
+                        style={done || active ? { backgroundColor: cor } : undefined}
+                      >
                         {done ? <Check className="size-4" /> : <Icon className="size-4" />}
                       </div>
                       <span className={`text-sm ${active ? 'font-semibold text-white' : done ? 'text-[#c7d5db]' : 'text-[#5e7a94]'}`}>
@@ -215,7 +220,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
           <section className="rounded-xl border border-white/[.08] bg-[#0e151a] p-6 lg:p-8">
             {step === 1 && (
               <div className="space-y-4">
-                <h2 className="mb-6 font-syne text-xl font-bold text-white">Dados do aluno</h2>
+                <h2 className="mb-6 text-xl font-bold text-white">Dados do aluno</h2>
                 <Field label="Nome completo do aluno" value={form.aluno_nome} onChange={(v) => update('aluno_nome', v)} required placeholder="Como consta na certidão" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Data de nascimento" type="date" value={form.aluno_data_nascimento} onChange={(v) => update('aluno_data_nascimento', v)} required />
@@ -230,7 +235,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
 
             {step === 2 && (
               <div className="space-y-4">
-                <h2 className="mb-6 font-syne text-xl font-bold text-white">Dados do responsável</h2>
+                <h2 className="mb-6 text-xl font-bold text-white">Dados do responsável</h2>
                 <Field label="Nome completo" value={form.responsavel_nome} onChange={(v) => update('responsavel_nome', v)} required />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="CPF" value={form.responsavel_cpf} onChange={(v) => update('responsavel_cpf', v)} placeholder="000.000.000-00" />
@@ -245,7 +250,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
 
             {step === 3 && (
               <div className="space-y-4">
-                <h2 className="mb-6 font-syne text-xl font-bold text-white">Endereço e contato de emergência</h2>
+                <h2 className="mb-6 text-xl font-bold text-white">Endereço e contato de emergência</h2>
                 <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
                   <Field label="CEP" value={form.endereco_cep} onChange={(v) => update('endereco_cep', v)} placeholder="00000-000" />
                   <Field label="Rua / Logradouro" value={form.endereco_rua} onChange={(v) => update('endereco_rua', v)} />
@@ -272,7 +277,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
 
             {step === 4 && (
               <div className="space-y-4">
-                <h2 className="mb-2 font-syne text-xl font-bold text-white">Documentos</h2>
+                <h2 className="mb-2 text-xl font-bold text-white">Documentos</h2>
                 <p className="mb-6 text-sm leading-6 text-[#8aa0ad]">
                   Anexe os documentos abaixo. Aceitamos PDF (até 8 MB) ou imagem (até 4 MB).
                   Você também pode enviar depois, pela área restrita.
@@ -286,7 +291,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
 
             {step === 5 && (
               <div className="space-y-4">
-                <h2 className="mb-6 font-syne text-xl font-bold text-white">Anamnese</h2>
+                <h2 className="mb-6 text-xl font-bold text-white">Anamnese</h2>
                 <TextArea label="Alergias" value={form.anamnese_alergias} onChange={(v) => update('anamnese_alergias', v)} placeholder="Alimentos, medicamentos, etc. Deixe em branco se não houver." />
                 <TextArea label="Condições médicas" value={form.anamnese_condicoes} onChange={(v) => update('anamnese_condicoes', v)} placeholder="Asma, diabetes, etc." />
                 <TextArea label="Medicamentos de uso contínuo" value={form.anamnese_medicamentos} onChange={(v) => update('anamnese_medicamentos', v)} placeholder="Se houver" />
@@ -296,23 +301,23 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
 
             {step === 6 && (
               <div className="space-y-6">
-                <h2 className="font-syne text-xl font-bold text-white">Revisão</h2>
+                <h2 className="text-xl font-bold text-white">Revisão</h2>
                 <div className="space-y-4 rounded-lg border border-white/[.08] bg-[#0b1115] p-5">
                   <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Dados do aluno</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: cor }}>Dados do aluno</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Nome:</strong> {form.aluno_nome || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Nascimento:</strong> {form.aluno_data_nascimento || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Série:</strong> {form.aluno_serie || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Turno:</strong> {form.aluno_turno || '—'}</p>
                   </div>
                   <div className="border-t border-white/[.08] pt-4">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Responsável</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: cor }}>Responsável</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Nome:</strong> {form.responsavel_nome || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>E-mail:</strong> {form.responsavel_email || '—'}</p>
                     <p className="text-sm text-[#c7d5db]"><strong>Telefone:</strong> {form.responsavel_telefone || '—'}</p>
                   </div>
                   <div className="border-t border-white/[.08] pt-4">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">Documentos anexados</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: cor }}>Documentos anexados</p>
                     {(['rg_aluno', 'cpf_responsavel', 'comprovante_residencia', 'historico_escolar'] as const).map((k) => (
                       <p key={k} className="text-sm text-[#c7d5db]">
                         {k === 'rg_aluno' && 'RG/Certidão do aluno'}{k === 'cpf_responsavel' && 'CPF do responsável'}{k === 'comprovante_residencia' && 'Comprovante de residência'}{k === 'historico_escolar' && 'Histórico escolar'}:{' '}
@@ -323,18 +328,19 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
                 </div>
 
                 <div className="space-y-4 rounded-lg border border-white/[.08] bg-[#0b1115] p-5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Consentimentos (LGPD)</p>
+                  <p className="text-xs font-bold uppercase tracking-wider" style={{ color: cor }}>Consentimentos (LGPD)</p>
 
                   <label className="flex items-start gap-3 text-sm text-[#c7d5db]">
                     <input
                       type="checkbox"
                       checked={form.consentimento_politica}
                       onChange={(e) => update('consentimento_politica', e.target.checked)}
-                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]"
+                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115]"
+                      style={{ accentColor: cor }}
                     />
                     <span>
                       Li e aceito a{' '}
-                      <Link href="/politica-privacidade" target="_blank" className="text-[#0d9488] hover:underline">
+                      <Link href="/politica-privacidade" target="_blank" className="hover:underline" style={{ color: cor }}>
                         Política de Privacidade
                       </Link>{' '}
                       do ARXUM Edu e autorizo o tratamento dos dados informados para fins de análise da inscrição. <span className="text-[#dc2626]">*</span>
@@ -346,7 +352,8 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
                       type="checkbox"
                       checked={form.consentimento_imagem}
                       onChange={(e) => update('consentimento_imagem', e.target.checked)}
-                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115] accent-[#0d9488]"
+                      className="mt-0.5 size-4 rounded border-white/20 bg-[#0b1115]"
+                      style={{ accentColor: cor }}
                     />
                     <span>
                       Autorizo o uso da imagem do aluno em fotos e vídeos institucionais da escola
@@ -368,11 +375,11 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
               </button>
               <span className="hidden text-xs text-[#5e7a94] sm:block">Etapa {step} de 6</span>
               {step < 6 ? (
-                <button onClick={next} className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e]">
+                <button onClick={next} className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90" style={{ backgroundColor: cor }}>
                   Avançar <ArrowRight className="size-4" />
                 </button>
               ) : (
-                <button onClick={submit} disabled={loading} className="flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50">
+                <button onClick={submit} disabled={loading} className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50" style={{ backgroundColor: cor }}>
                   {loading ? 'Enviando...' : 'Enviar inscrição'} <ArrowRight className="size-4" />
                 </button>
               )}
@@ -380,7 +387,7 @@ export function MatriculaClient({ escolaNome }: { escolaNome: string }) {
           </section>
         </div>
       </main>
-      <PublicFooter />
+      <PublicFooter slug={slug} cor={cor} escolaNome={escolaNome} />
     </div>
   )
 }

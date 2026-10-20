@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash2, X, Loader2, CheckCircle2, Package } from 'lucide-react'
-import { ArxumBrand } from '@/components/arxum-brand'
 import { criarPedido, type ProdutoLoja, type ItemCarrinho } from './actions'
 
 const categoriaLabel: Record<string, string> = {
@@ -19,7 +18,21 @@ function formatarMoeda(centavos: number): string {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; estaLogado: boolean }) {
+export function LojaClient({
+  produtos,
+  estaLogado,
+  escolaNome,
+  slug,
+  cor,
+  logoUrl,
+}: {
+  produtos: ProdutoLoja[]
+  estaLogado: boolean
+  escolaNome: string
+  slug: string
+  cor: string
+  logoUrl: string | null
+}) {
   const router = useRouter()
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
@@ -36,6 +49,7 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
 
   const totalItens = carrinho.reduce((s, i) => s + i.quantidade, 0)
   const totalCentavos = carrinho.reduce((s, i) => s + i.quantidade * i.preco_unitario_centavos, 0)
+  const base = `/edu/${slug}`
 
   function adicionar(produto: ProdutoLoja) {
     setCarrinho((prev) => {
@@ -90,23 +104,32 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
     }, 3000)
   }
 
+  const estiloMarca = { '--cor-primaria': cor } as React.CSSProperties
+
   return (
-    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
       <header className="sticky top-0 z-10 border-b border-white/[.08] bg-[#070b0f]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
+          <Link href={base} className="flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
             <ArrowLeft className="size-4" />
             <span className="hidden sm:inline">Voltar</span>
           </Link>
-          <ArxumBrand />
+          {logoUrl ? (
+            <Link href={base} className="flex items-center">
+              <img src={logoUrl} alt={escolaNome} className="h-9 w-auto max-w-[180px] object-contain" />
+            </Link>
+          ) : (
+            <Link href={base} className="text-lg font-bold" style={{ color: cor }}>{escolaNome}</Link>
+          )}
           <button
             onClick={() => setCarrinhoAberto(true)}
-            className="relative flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+            className="relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: cor }}
           >
             <ShoppingCart className="size-4" />
             <span className="hidden sm:inline">Carrinho</span>
             {totalItens > 0 && (
-              <span className="grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold text-[#0d9488]">{totalItens}</span>
+              <span className="grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold" style={{ color: cor }}>{totalItens}</span>
             )}
           </button>
         </div>
@@ -114,8 +137,8 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
 
       <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
         <div className="mb-10">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Loja virtual</p>
-          <h1 className="mt-3 font-syne text-4xl font-bold tracking-[-.04em] text-white">Produtos da escola</h1>
+          <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: cor }}>{escolaNome}</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-[-.04em] text-white">Loja da escola</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
             Uniformes, materiais e eventos. Finalize a compra e a escola entrará em contato para combinar a entrega.
           </p>
@@ -123,38 +146,38 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
 
         {produtos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
+            <div className="grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
               <Package className="size-7" />
             </div>
-            <h2 className="mt-5 font-syne text-2xl font-bold text-white">Nenhum produto disponível</h2>
+            <h2 className="mt-5 text-2xl font-bold text-white">Nenhum produto disponível</h2>
             <p className="mt-2 max-w-md text-sm text-[#8aa0ad]">Assim que a escola cadastrar produtos, eles aparecerão aqui.</p>
           </div>
         ) : (
           Object.entries(porCategoria).map(([cat, lista]) => (
             <section key={cat} className="mb-12">
-              <h2 className="mb-5 font-syne text-2xl font-bold text-white">{categoriaLabel[cat] || cat}</h2>
+              <h2 className="mb-5 text-2xl font-bold text-white">{categoriaLabel[cat] || cat}</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {lista.map((p) => {
                   const noCarrinho = carrinho.find((i) => i.produto_id === p.id)
                   return (
-                    <div key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-[#0d9488]/50">
-                      <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-[#0d9488]/20 to-[#0f766e]/20">
-                        <Package className="size-10 text-[#0d9488]" />
+                    <div key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-white/20">
+                      <div className="flex aspect-video items-center justify-center" style={{ background: `linear-gradient(135deg, ${cor}25, ${cor}10)` }}>
+                        <Package className="size-10" style={{ color: cor }} />
                       </div>
                       <div className="flex flex-1 flex-col p-4">
                         <h3 className="line-clamp-2 text-sm font-semibold text-white">{p.nome}</h3>
                         {p.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{p.descricao}</p>}
                         <div className="mt-auto pt-3">
-                          <p className="font-syne text-lg font-bold text-white">{formatarMoeda(p.preco_centavos)}</p>
+                          <p className="text-lg font-bold text-white">{formatarMoeda(p.preco_centavos)}</p>
                           <p className="mt-0.5 text-xs text-[#82939a]">{p.estoque > 0 ? `${p.estoque} em estoque` : 'Sem estoque'}</p>
                         </div>
                         {noCarrinho ? (
-                          <div className="mt-3 flex items-center justify-between rounded-lg border border-[#0d9488] bg-[#0d9488]/10 p-1">
-                            <button onClick={() => diminuir(p.id)} className="grid size-7 place-items-center rounded-md text-[#0d9488] hover:bg-[#0d9488]/20">
+                          <div className="mt-3 flex items-center justify-between rounded-lg border p-1" style={{ borderColor: cor, backgroundColor: `${cor}10` }}>
+                            <button onClick={() => diminuir(p.id)} className="grid size-7 place-items-center rounded-md hover:bg-white/5" style={{ color: cor }}>
                               <Minus className="size-3.5" />
                             </button>
                             <span className="text-sm font-semibold text-white">{noCarrinho.quantidade}</span>
-                            <button onClick={() => adicionar(p)} disabled={noCarrinho.quantidade >= p.estoque} className="grid size-7 place-items-center rounded-md text-[#0d9488] hover:bg-[#0d9488]/20 disabled:opacity-40">
+                            <button onClick={() => adicionar(p)} disabled={noCarrinho.quantidade >= p.estoque} className="grid size-7 place-items-center rounded-md hover:bg-white/5 disabled:opacity-40" style={{ color: cor }}>
                               <Plus className="size-3.5" />
                             </button>
                           </div>
@@ -162,7 +185,8 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
                           <button
                             onClick={() => adicionar(p)}
                             disabled={p.estoque === 0}
-                            className="mt-3 w-full rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-40"
+                            className="mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-40"
+                            style={{ backgroundColor: cor }}
                           >
                             {p.estoque === 0 ? 'Esgotado' : 'Adicionar ao carrinho'}
                           </button>
@@ -205,14 +229,14 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
                         <p className="truncate text-sm font-semibold text-white">{i.produto_nome}</p>
                         <p className="mt-0.5 text-xs text-[#82939a]">{formatarMoeda(i.preco_unitario_centavos)} cada</p>
                         <div className="mt-2 flex items-center gap-2">
-                          <button onClick={() => diminuir(i.produto_id)} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-[#0d9488] hover:text-white">
+                          <button onClick={() => diminuir(i.produto_id)} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-white/30 hover:text-white">
                             <Minus className="size-3" />
                           </button>
                           <span className="text-sm font-semibold text-white">{i.quantidade}</span>
                           <button onClick={() => {
                             const p = produtos.find((pr) => pr.id === i.produto_id)
                             if (p && i.quantidade < p.estoque) adicionar(p)
-                          }} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-[#0d9488] hover:text-white">
+                          }} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-white/30 hover:text-white">
                             <Plus className="size-3" />
                           </button>
                         </div>
@@ -233,7 +257,7 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
                       onChange={(e) => setObservacao(e.target.value)}
                       placeholder="Ex: Tamanho M para o uniforme"
                       rows={3}
-                      className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+                      className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[var(--cor-primaria)]"
                     />
                   </div>
 
@@ -246,7 +270,7 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
               <footer className="border-t border-white/[.08] bg-[#0b1115] px-6 py-4">
                 <div className="mb-4 flex items-center justify-between">
                   <span className="text-sm text-[#8aa0ad]">Total</span>
-                  <span className="font-syne text-xl font-bold text-white">{formatarMoeda(totalCentavos)}</span>
+                  <span className="text-xl font-bold text-white">{formatarMoeda(totalCentavos)}</span>
                 </div>
                 {!estaLogado && (
                   <p className="mb-3 rounded-lg border border-[#d97706]/30 bg-[#d97706]/10 px-3 py-2 text-xs text-[#fbbf24]">
@@ -256,7 +280,8 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
                 <button
                   onClick={finalizar}
                   disabled={enviando}
-                  className="w-full rounded-lg bg-[#0d9488] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+                  className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                  style={{ backgroundColor: cor }}
                 >
                   {enviando ? <><Loader2 className="mr-2 inline size-4 animate-spin" />Enviando...</> : estaLogado ? 'Finalizar compra' : 'Entrar e finalizar'}
                 </button>
@@ -270,10 +295,10 @@ export function LojaClient({ produtos, estaLogado }: { produtos: ProdutoLoja[]; 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-[#0e151a] p-8 text-center">
-            <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
+            <div className="mx-auto grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
               <CheckCircle2 className="size-8" />
             </div>
-            <h2 className="mt-5 font-syne text-2xl font-bold text-white">Pedido enviado!</h2>
+            <h2 className="mt-5 text-2xl font-bold text-white">Pedido enviado!</h2>
             <p className="mt-3 text-sm leading-6 text-[#8aa0ad]">
               Sua compra foi registrada. A escola entrará em contato para combinar pagamento e entrega.
             </p>
