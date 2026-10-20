@@ -1,9 +1,20 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // ── GUARD: seed só roda em produção com SEED_SECRET válido ──────
+  // Em desenvolvimento: liberado.
+  // Em produção: exige ?secret=SEED_SECRET. Sem SEED_SECRET definido → 404.
+  if (process.env.NODE_ENV === 'production') {
+    const seedSecret = process.env.SEED_SECRET
+    const providedSecret = request.nextUrl.searchParams.get('secret')
+    if (!seedSecret || providedSecret !== seedSecret) {
+      return new NextResponse('Not found', { status: 404 })
+    }
+  }
+
   try {
     const admin = createAdminClient()
 
