@@ -50,6 +50,9 @@ export async function criarVideoaula(data: NovaVideoaula) {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
+    if (!data.titulo.trim()) return { success: false, error: 'Informe o título.' }
+    if (!data.video_url.trim()) return { success: false, error: 'Informe a URL do vídeo.' }
+
     const admin = createAdminClient()
     const { error } = await admin.from('videoaulas').insert({
       escola_id: escola.id,
@@ -71,20 +74,33 @@ export async function criarVideoaula(data: NovaVideoaula) {
   }
 }
 
-export async function excluirVideoaula(id: string) {
+export async function atualizarVideoaula(id: string, data: NovaVideoaula) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
-    const { error } = await admin.from('videoaulas').delete().eq('id', id).eq('escola_id', escola.id)
+    const { error } = await admin
+      .from('videoaulas')
+      .update({
+        titulo: data.titulo,
+        descricao: data.descricao || null,
+        disciplina: data.disciplina,
+        serie: data.serie || null,
+        duracao_minutos: data.duracao_minutos,
+        video_url: data.video_url,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/eduflix')
     revalidatePath('/eduflix')
     return { success: true }
   } catch (e) {
-    return { success: false, error: 'Erro ao excluir.' }
+    return { success: false, error: 'Erro ao atualizar.' }
   }
 }
 
@@ -107,5 +123,22 @@ export async function alternarPublicacao(id: string, publicado: boolean) {
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao atualizar.' }
+  }
+}
+
+export async function excluirVideoaula(id: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin.from('videoaulas').delete().eq('id', id).eq('escola_id', escola.id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/eduflix')
+    revalidatePath('/eduflix')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir.' }
   }
 }
