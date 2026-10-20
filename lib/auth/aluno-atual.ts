@@ -23,15 +23,46 @@ export async function getAlunoDoUsuario(): Promise<AlunoCompleto | null> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.id) return null
+    if (!user?.id || !user.email) return null
 
     const admin = createAdminClient()
 
-    const { data: aluno } = await admin
+    // 1. Tenta buscar pelo usuario_id (caminho feliz)
+    let { data: aluno } = await admin
       .from('alunos')
       .select('id, escola_id, nome, data_nascimento, serie, turno, status, email_aluno, responsavel_nome, responsavel_email')
       .eq('usuario_id', user.id)
       .maybeSingle()
+
+    // 2. FALLBACK: Se não achou, tenta pelo email_aluno
+    if (!aluno) {
+      const { data: alunoPorEmail } = await admin
+        .from('alunos')
+        .select('id, escola_id, nome, data_nascimento, serie, turno, status, email_aluno, responsavel_nome, responsavel_email')
+        .eq('email_aluno', user.email)
+        .maybeSingle()
+      
+      if (alunoPorEmail) {
+        aluno = alunoPorEmail
+        // Auto-corrige o vínculo para a próxima vez
+        await admin.from('alunos').update({ usuario_id: user.id }).eq('id', aluno.id)
+      }
+    }
+
+    // 3. SEGUNDO FALLBACK: Se não achou, tenta pelo responsavel_email (caso o aluno esteja usando o login do pai)
+    if (!aluno) {
+      const { data: alunoPorResponsavel } = await admin
+        .from('alunos')
+        .select('id, escola_id, nome, data_nascimento, serie, turno, status, email_aluno, responsavel_nome, responsavel_email')
+        .eq('responsavel_email', user.email)
+        .limit(1)
+        .maybeSingle()
+      
+      if (alunoPorResponsavel) {
+        aluno = alunoPorResponsavel
+        await admin.from('alunos').update({ usuario_id: user.id }).eq('id', aluno.id)
+      }
+    }
 
     if (!aluno) return null
 
