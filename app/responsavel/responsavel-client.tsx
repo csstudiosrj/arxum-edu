@@ -11,10 +11,22 @@ import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, 
 import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
 
-type MenuItem = readonly [LucideIcon, string]
+type MenuItem = readonly [LucideIcon, string, string]
 type Atalho = readonly [string, LucideIcon, string]
 
-const menu: MenuItem[] = [[Home,'Início'],[Users,'Meus filhos'],[FileText,'Matrículas'],[BookOpen,'Boletim'],[WalletCards,'Financeiro'],[MessageSquare,'Comunicação'],[CalendarDays,'Agenda'],[ImageIcon,'Fotos'],[ShieldCheck,'Autorizações'],[Settings,'Configurações']]
+// Menu agora tem ancoras para navegar na página
+const menu: MenuItem[] = [
+  [Home,'Início','#inicio'],
+  [Users,'Meus filhos','#filhos'],
+  [FileText,'Matrículas','#matriculas'],
+  [BookOpen,'Boletim','#boletim'],
+  [WalletCards,'Financeiro','#financeiro'],
+  [MessageSquare,'Comunicação','#comunicacao'],
+  [CalendarDays,'Agenda','#agenda'],
+  [ImageIcon,'Fotos','#fotos'],
+  [ShieldCheck,'Autorizações','#autorizacoes'],
+  [Settings,'Configurações','#configuracoes']
+]
 
 const statusMap: Record<string, { label: string; style: string; icon: LucideIcon }> = {
   inscrito: { label: 'Inscrito', style: 'bg-[#e5ecee] text-[#5e7a94]', icon: Clock },
@@ -76,11 +88,12 @@ const periodosLabel: Record<string, string> = {
   '1_semestre': '1º Sem', '2_semestre': '2º Sem',
 }
 
+// Atalhos apontando para locais reais
 const atalhos: Atalho[] = [
   ['Solicitar matrícula',FileText,'/matricula'],
-  ['Enviar documento',ClipboardCheck,'#'],
-  ['Falar com a escola',MessageSquare,'#'],
-  ['Autorizar saída',ShieldCheck,'#'],
+  ['Enviar documento',ClipboardCheck,'/matricula'],
+  ['Falar com a escola',MessageSquare,'#comunicacao'],
+  ['Autorizar saída',ShieldCheck,'#autorizacoes'],
 ]
 
 const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> = [
@@ -112,7 +125,7 @@ function Sidebar({ onLogout, saindo, marca }: { onLogout: () => void; saindo: bo
     </div>
     <div className="px-3">
       <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[.16em] text-[#8aa0ad]">Área do responsável</p>
-      {menu.map(([Icon,label],i) => <Link key={label} href="#" className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0?'bg-[#e6faf3] text-[#087f5b]':'text-[#617783] hover:bg-[#f4f7f8]'}`}><Icon size={18}/>{label}</Link>)}
+      {menu.map(([Icon,label,href],i) => <Link key={label} href={href} className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0?'bg-[#e6faf3] text-[#087f5b]':'text-[#617783] hover:bg-[#f4f7f8]'}`}><Icon size={18}/>{label}</Link>)}
     </div>
     <div className="mt-auto border-t border-[#dbe5e8] p-4">
       <button onClick={onLogout} disabled={saindo} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-[#617783] disabled:opacity-50">
@@ -322,7 +335,7 @@ export function ResponsavelClient({
         <header className="flex items-center justify-between border-b border-[#dbe5e8] bg-white px-5 py-4 md:px-8">
           <div className="min-w-0">
             <p className="text-sm text-[#8aa0ad] capitalize">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            <h1 className="font-syne text-xl font-bold text-[#18313c]">Olá, responsável</h1>
+            <h1 className="text-xl font-bold text-[#18313c]">Olá, responsável</h1>
           </div>
           <div className="flex items-center gap-3">
             {filhos.length > 0 && (
@@ -378,10 +391,10 @@ export function ResponsavelClient({
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-5 py-8 md:px-8">
+        <div id="inicio" className="mx-auto max-w-7xl px-5 py-8 md:px-8">
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-[.15em] text-[#0d9488]">Visão geral</p>
-            <h2 className="mt-1 font-syne text-3xl font-bold tracking-[-.04em]">Tudo em um só lugar</h2>
+            <h2 className="mt-1 text-3xl font-bold tracking-[-.04em]">Tudo em um só lugar</h2>
             {filhoAtivo && (
               <p className="mt-2 text-sm text-[#82939a]">
                 Exibindo dados de <strong className="text-[#18313c]">{filhoAtivo.nome}</strong>. Use o seletor acima para trocar de filho.
@@ -390,8 +403,8 @@ export function ResponsavelClient({
           </div>
 
           {filhos.length > 1 && (
-            <section className="mb-8">
-              <h3 className="mb-4 font-syne text-lg font-bold">Meus filhos</h3>
+            <section id="filhos" className="mb-8">
+              <h3 className="mb-4 text-lg font-bold">Meus filhos</h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filhos.map((f) => {
                   const ativo = filhoAtivo?.id === f.id
@@ -419,9 +432,9 @@ export function ResponsavelClient({
           )}
 
           {autorizacoesPendentes.length > 0 && (
-            <section className="mb-10">
+            <section id="autorizacoes" className="mb-10">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-syne text-lg font-bold">Autorizações pendentes</h3>
+                <h3 className="text-lg font-bold">Autorizações pendentes</h3>
                 <span className="rounded-full bg-[#dc2626] px-2.5 py-0.5 text-[10px] font-bold text-white">{autorizacoesPendentes.length}</span>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -430,7 +443,7 @@ export function ResponsavelClient({
                   return (
                     <article key={a.id} className="rounded-xl border-2 border-[#dc2626]/20 bg-white p-5">
                       <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span>
-                      <h4 className="mt-2 font-syne text-base font-bold">{a.titulo}</h4>
+                      <h4 className="mt-2 text-base font-bold">{a.titulo}</h4>
                       {a.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{a.descricao}</p>}
                       {a.prazo_resposta && <p className="mt-2 text-xs font-semibold text-[#dc2626]">Responder até {formatarData(a.prazo_resposta)}</p>}
                       <button onClick={() => abrirAutorizacao(a)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">Responder</button>
@@ -441,15 +454,15 @@ export function ResponsavelClient({
             </section>
           )}
 
-          <section>
+          <section id="matriculas">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-syne text-lg font-bold">Minhas matrículas</h3>
+              <h3 className="text-lg font-bold">Minhas matrículas</h3>
               <Link href="/matricula" className="text-sm font-medium text-[#087f5b]">Nova matrícula <ChevronRight className="inline" size={15}/></Link>
             </div>
             {inscricoes.length === 0 ? (
               <div className="rounded-xl border border-[#dbe5e8] bg-white p-10 text-center">
                 <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#e6faf3] text-[#0d9488]"><FileText size={24}/></div>
-                <h4 className="mt-4 font-syne text-lg font-bold">Nenhuma inscrição ainda</h4>
+                <h4 className="mt-4 text-lg font-bold">Nenhuma inscrição ainda</h4>
                 <p className="mt-1 text-sm text-[#8aa0ad]">Quando você enviar uma matrícula pelo site, ela aparecerá aqui para acompanhamento.</p>
                 <Link href="/matricula" className="mt-6 inline-block rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white">Iniciar matrícula</Link>
               </div>
@@ -464,7 +477,7 @@ export function ResponsavelClient({
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-mono text-[11px] text-[#8aa0ad]">{i.protocolo}</p>
-                          <h4 className="mt-1 font-syne text-lg font-bold">{i.aluno_nome}</h4>
+                          <h4 className="mt-1 text-lg font-bold">{i.aluno_nome}</h4>
                           <p className="mt-0.5 text-sm text-[#8aa0ad]">{i.aluno_serie || 'Série não definida'}{i.aluno_turno ? ` · ${i.aluno_turno}` : ''}</p>
                         </div>
                         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}><Icone size={12} />{st.label}</span>
@@ -473,10 +486,9 @@ export function ResponsavelClient({
                         <div><p className="text-[#8aa0ad]">Enviada em</p><p className="mt-0.5 font-semibold text-[#243942]">{formatarData(i.criado_em)}</p></div>
                         <div><p className="text-[#8aa0ad]">Documentos</p><p className="mt-0.5 font-semibold text-[#243942]">{docsEnviados} de 4 enviados</p></div>
                       </div>
-                      <div className="mt-5 grid grid-cols-3 gap-2">
+                      <div className="mt-5 grid grid-cols-2 gap-2">
                         <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f1f8f6] px-2 py-2 text-center text-xs font-semibold text-[#087f5b] hover:bg-[#d9f2e7]">Ver detalhes</button>
                         <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Documentos</button>
-                        <button className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Comunicados</button>
                       </div>
                     </article>
                   )
@@ -486,20 +498,20 @@ export function ResponsavelClient({
           </section>
 
           {boletins.length > 0 && (
-            <section className="mt-10">
-              <h3 className="mb-4 font-syne text-lg font-bold">Boletim escolar</h3>
+            <section id="boletim" className="mt-10">
+              <h3 className="mb-4 text-lg font-bold">Boletim escolar</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 {boletins.map((b) => (
                   <article key={b.aluno_nome} className="rounded-xl border border-[#dbe5e8] bg-white p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-syne text-lg font-bold">{b.aluno_nome}</h4>
+                        <h4 className="text-lg font-bold">{b.aluno_nome}</h4>
                         <p className="mt-0.5 text-sm text-[#8aa0ad]">{b.notas.length} avaliações lançadas</p>
                       </div>
                       {b.media !== null && (
                         <div className="text-right">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-[#8aa0ad]">Média</p>
-                          <p className={`font-syne text-2xl font-bold ${corNota(b.media)}`}>{b.media.toFixed(1)}</p>
+                          <p className={`text-2xl font-bold ${corNota(b.media)}`}>{b.media.toFixed(1)}</p>
                         </div>
                       )}
                     </div>
@@ -517,7 +529,7 @@ export function ResponsavelClient({
           {ocorrencias.length > 0 && (
             <section className="mt-10">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-syne text-lg font-bold">Ocorrências</h3>
+                <h3 className="text-lg font-bold">Ocorrências</h3>
                 {ocorrenciasNaoLidas.length > 0 && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">{ocorrenciasNaoLidas.length} novas</span>}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -544,8 +556,8 @@ export function ResponsavelClient({
           )}
 
           <div className="mt-10 grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
-            <section>
-              <h3 className="mb-4 font-syne text-lg font-bold">Próximos eventos</h3>
+            <section id="agenda">
+              <h3 className="mb-4 text-lg font-bold">Próximos eventos</h3>
               {eventos.length === 0 ? (
                 <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center"><Calendar className="mx-auto text-[#a0afb4]" size={28}/><p className="mt-3 text-sm text-[#8aa0ad]">Nenhum evento agendado pela escola.</p></div>
               ) : (
@@ -556,7 +568,7 @@ export function ResponsavelClient({
                     return (
                       <article key={e.id} className="flex items-center gap-4 rounded-xl border border-[#dbe5e8] bg-white p-4">
                         <div className="w-12 shrink-0 rounded-lg py-2 text-center" style={{ backgroundColor: `${info.cor}15` }}>
-                          <strong className="block font-syne text-lg" style={{ color: info.cor }}>{dt.dia}</strong>
+                          <strong className="block text-lg" style={{ color: info.cor }}>{dt.dia}</strong>
                           <span className="text-[10px] font-bold" style={{ color: info.cor }}>{dt.mes}</span>
                         </div>
                         <div className="min-w-0 flex-1">
@@ -570,9 +582,9 @@ export function ResponsavelClient({
               )}
             </section>
 
-            <section>
+            <section id="comunicacao">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-syne text-lg font-bold">Últimos comunicados</h3>
+                <h3 className="text-lg font-bold">Últimos comunicados</h3>
                 {naoLidos > 0 && <span className="rounded-full bg-[#dc2626] px-2 py-0.5 text-[10px] font-bold text-white">{naoLidos} novos</span>}
               </div>
               {comunicados.length === 0 ? (
@@ -594,9 +606,9 @@ export function ResponsavelClient({
             </section>
           </div>
 
-          <section className="mt-10">
+          <section id="financeiro" className="mt-10">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-syne text-lg font-bold">Financeiro</h3>
+              <h3 className="text-lg font-bold">Financeiro</h3>
               <span className="text-sm text-[#8aa0ad]">{faturasEmAberto.length} em aberto</span>
             </div>
             <div className="rounded-xl border border-[#dbe5e8] bg-white">
@@ -616,7 +628,7 @@ export function ResponsavelClient({
                         <p className="text-sm font-semibold">{f.descricao} · {f.aluno_nome}</p>
                         <p className="mt-1 text-xs text-[#8aa0ad]">{f.status === 'pago' && f.pago_em ? `Pago em ${formatarData(f.pago_em)}` : `Vencimento ${formatarData(f.vencimento)}`}</p>
                       </div>
-                      <strong className="font-syne text-base">{formatarMoeda(f.valor_centavos)}</strong>
+                      <strong className="text-base">{formatarMoeda(f.valor_centavos)}</strong>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
                       
                       {(f.status === 'em_aberto' || f.status === 'vencido') && f.pagarme_qr_code_url && (
@@ -632,8 +644,8 @@ export function ResponsavelClient({
           </section>
 
           {albuns.length > 0 && (
-            <section className="mt-10">
-              <h3 className="mb-4 font-syne text-lg font-bold">Galeria de fotos</h3>
+            <section id="fotos" className="mt-10">
+              <h3 className="mb-4 text-lg font-bold">Galeria de fotos</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {albuns.map((a) => (
                   <button key={a.id} onClick={() => setAlbumAberto(a)} className="group overflow-hidden rounded-xl border border-[#dbe5e8] bg-white text-left transition hover:border-[#0d9488]">
@@ -653,7 +665,7 @@ export function ResponsavelClient({
           )}
 
           <section className="mt-10">
-            <h3 className="mb-4 font-syne text-lg font-bold">Atalhos rápidos</h3>
+            <h3 className="mb-4 text-lg font-bold">Atalhos rápidos</h3>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {atalhos.map(([label,Icon,href]) => (
                 <Link href={href} key={label} className="flex items-center gap-3 rounded-xl border border-[#dbe5e8] bg-white p-4 text-sm font-semibold hover:border-[#0d9488]">
@@ -664,8 +676,8 @@ export function ResponsavelClient({
             </div>
           </section>
 
-          <section className="mt-10">
-            <h3 className="mb-4 font-syne text-lg font-bold">Privacidade e meus dados</h3>
+          <section id="configuracoes" className="mt-10">
+            <h3 className="mb-4 text-lg font-bold">Privacidade e meus dados</h3>
             <div className="rounded-xl border border-[#dbe5e8] bg-white p-6">
               <div className="flex items-start gap-3">
                 <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#e6faf3] text-[#087f5b]">
@@ -731,7 +743,7 @@ export function ResponsavelClient({
                   </div>
                 )
               })()}
-              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{ocorrenciaAberta.titulo}</h2>
+              <h2 className="mt-3 text-xl font-bold text-[#12232b]">{ocorrenciaAberta.titulo}</h2>
               <p className="mt-1 text-xs text-[#82939a]">{ocorrenciaAberta.aluno_nome} · {formatarDataHora(ocorrenciaAberta.criado_em)}</p>
             </div>
             <button onClick={() => setOcorrenciaAberta(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
@@ -750,7 +762,7 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setAlbumAberto(null)} />
         <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div><h2 className="font-syne text-xl font-bold text-[#12232b]">{albumAberto.titulo}</h2>{albumAberto.descricao && <p className="mt-1 text-sm text-[#82939a]">{albumAberto.descricao}</p>}<p className="mt-1 text-xs text-[#82939a]">{albumAberto.fotos.length} fotos · {formatarData(albumAberto.criado_em)}</p></div>
+            <div><h2 className="text-xl font-bold text-[#12232b]">{albumAberto.titulo}</h2>{albumAberto.descricao && <p className="mt-1 text-sm text-[#82939a]">{albumAberto.descricao}</p>}<p className="mt-1 text-xs text-[#82939a]">{albumAberto.fotos.length} fotos · {formatarData(albumAberto.criado_em)}</p></div>
             <button onClick={() => setAlbumAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -776,19 +788,19 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setBoletimAberto(null)} />
         <div className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div><p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Boletim escolar</p><h2 className="mt-1 font-syne text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2></div>
+            <div><p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Boletim escolar</p><h2 className="mt-1 text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2></div>
             <button onClick={() => setBoletimAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="mb-5 grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Média geral</p><p className={`mt-1 font-syne text-2xl font-bold ${corNota(boletimAberto.media)}`}>{boletimAberto.media !== null ? boletimAberto.media.toFixed(1) : '—'}</p></div>
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Avaliações</p><p className="mt-1 font-syne text-2xl font-bold text-[#243942]">{boletimAberto.notas.length}</p></div>
-              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Faltas</p><p className={`mt-1 font-syne text-2xl font-bold ${boletimAberto.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{boletimAberto.total_faltas}</p></div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Média geral</p><p className={`mt-1 text-2xl font-bold ${corNota(boletimAberto.media)}`}>{boletimAberto.media !== null ? boletimAberto.media.toFixed(1) : '—'}</p></div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Avaliações</p><p className="mt-1 text-2xl font-bold text-[#243942]">{boletimAberto.notas.length}</p></div>
+              <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Faltas</p><p className={`mt-1 text-2xl font-bold ${boletimAberto.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{boletimAberto.total_faltas}</p></div>
             </div>
             <div className="overflow-hidden rounded-lg border border-[#e5ecee]">
               <table className="w-full">
                 <thead className="bg-[#fafcfc]"><tr className="border-b border-[#e5ecee]"><th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Disciplina</th><th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Período</th><th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Nota</th><th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Faltas</th></tr></thead>
-                <tbody>{boletimAberto.notas.map((n, i) => (<tr key={i} className="border-b border-[#f0f4f5] last:border-0"><td className="px-4 py-2.5 text-sm text-[#243942]">{n.disciplina}</td><td className="px-4 py-2.5 text-xs text-[#82939a]">{periodosLabel[n.periodo] || n.periodo}</td><td className={`px-4 py-2.5 text-center font-syne text-base font-bold ${corNota(n.nota)}`}>{n.nota !== null ? n.nota.toFixed(1) : '—'}</td><td className="px-4 py-2.5 text-center text-sm text-[#243942]">{n.faltas}</td></tr>))}</tbody>
+                <tbody>{boletimAberto.notas.map((n, i) => (<tr key={i} className="border-b border-[#f0f4f5] last:border-0"><td className="px-4 py-2.5 text-sm text-[#243942]">{n.disciplina}</td><td className="px-4 py-2.5 text-xs text-[#82939a]">{periodosLabel[n.periodo] || n.periodo}</td><td className={`px-4 py-2.5 text-center text-base font-bold ${corNota(n.nota)}`}>{n.nota !== null ? n.nota.toFixed(1) : '—'}</td><td className="px-4 py-2.5 text-center text-sm text-[#243942]">{n.faltas}</td></tr>))}</tbody>
               </table>
             </div>
           </div>
@@ -848,7 +860,7 @@ export function ResponsavelClient({
                 <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoAberto.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{comunicadoAberto.setor}</span>
                 {comunicadoAberto.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
               </div>
-              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{comunicadoAberto.titulo}</h2>
+              <h2 className="mt-3 text-xl font-bold text-[#12232b]">{comunicadoAberto.titulo}</h2>
               <p className="mt-1 text-xs text-[#82939a]">Por {comunicadoAberto.autor_nome} · {formatarDataHora(comunicadoAberto.criado_em)}</p>
             </div>
             <button onClick={() => setComunicadoAberto(null)} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
@@ -865,7 +877,7 @@ export function ResponsavelClient({
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
             <div className="flex-1">
               {(() => { const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro; return <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span> })()}
-              <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{autorizacaoAberta.titulo}</h2>
+              <h2 className="mt-3 text-xl font-bold text-[#12232b]">{autorizacaoAberta.titulo}</h2>
               {autorizacaoAberta.prazo_resposta && <p className="mt-1 text-xs text-[#dc2626]">Responder até {formatarData(autorizacaoAberta.prazo_resposta)}</p>}
             </div>
             <button onClick={() => setAutorizacaoAberta(null)} disabled={enviandoResposta} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
