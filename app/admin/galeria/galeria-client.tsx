@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Image as ImageIcon, Trash2, X, Loader2, Upload } from 'lucide-react'
+import { Plus, Image as ImageIcon, Trash2, X, Loader2, Upload, Edit, Check } from 'lucide-react'
 import { UploadDropzone } from '@/lib/uploadthing'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { criarAlbum, adicionarFotos, excluirFoto, excluirAlbum, type Album } from './actions'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { criarAlbum, atualizarAlbum, adicionarFotos, excluirFoto, excluirAlbum, type Album } from './actions'
 
 const publicos = [
   { key: 'todos', label: 'Toda a escola' },
@@ -26,9 +26,11 @@ const publicoLabel: Record<string, string> = {
 export function GaleriaClient({ albuns }: { albuns: Album[] }) {
   const router = useRouter()
   const [novoAberto, setNovoAberto] = useState(false)
+  const [editando, setEditando] = useState<Album | null>(null)
   const [albumAberto, setAlbumAberto] = useState<Album | null>(null)
   const [confirmarAlbum, setConfirmarAlbum] = useState<string | null>(null)
   const [confirmarFoto, setConfirmarFoto] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -41,17 +43,33 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
     setDescricao('')
     setPublico('todos')
     setErro('')
+    setEditando(null)
   }
 
-  async function handleCriar() {
+  function abrirEdicao(a: Album) {
+    setTitulo(a.titulo)
+    setDescricao(a.descricao || '')
+    setPublico(a.publico)
+    setEditando(a)
+    setNovoAberto(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
     if (!titulo.trim()) return setErro('Informe o título.')
 
     setSalvando(true)
     setErro('')
-    const result = await criarAlbum({ titulo, descricao, publico })
-    setSalvando(false)
 
-    if (!result.success) return setErro(result.error || 'Erro.')
+    if (editando) {
+      const result = await atualizarAlbum(editando.id, { titulo, descricao, publico })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    } else {
+      const result = await criarAlbum({ titulo, descricao, publico })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    }
 
     limpar()
     setNovoAberto(false)
@@ -66,14 +84,26 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
 
   async function handleExcluirAlbum() {
     if (!confirmarAlbum) return
-    await excluirAlbum(confirmarAlbum)
+    setExcluindo(true)
+    const r = await excluirAlbum(confirmarAlbum)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarAlbum(null)
     router.refresh()
   }
 
   async function handleExcluirFoto() {
     if (!confirmarFoto) return
-    await excluirFoto(confirmarFoto)
+    setExcluindo(true)
+    const r = await excluirFoto(confirmarFoto)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarFoto(null)
     router.refresh()
   }
@@ -89,12 +119,13 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
             title="Galeria de fotos"
             description="Organize fotos por turma ou evento para os responsáveis verem."
           />
-          <ActionButton variant="primary">
-            <button onClick={() => { limpar(); setNovoAberto(true) }} className="inline-flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Novo álbum
-            </button>
-          </ActionButton>
+          <button 
+            onClick={() => { limpar(); setNovoAberto(true) }} 
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          >
+            <Plus className="size-4" />
+            Novo álbum
+          </button>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -153,8 +184,16 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
                       Gerenciar fotos
                     </button>
                     <button
+                      onClick={() => abrirEdicao(a)}
+                      className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                      title="Editar álbum"
+                    >
+                      <Edit className="size-3.5" />
+                    </button>
+                    <button
                       onClick={() => setConfirmarAlbum(a.id)}
                       className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
+                      title="Excluir álbum"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -166,14 +205,15 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
         )}
       </main>
 
+      {/* MODAL CRIAR / EDITAR */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Novo álbum</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Depois de criar, você adiciona as fotos</p>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar álbum' : 'Novo álbum'}</h2>
+                <p className="mt-0.5 text-xs text-[#82939a]">{editando ? 'Atualize as informações do álbum' : 'Depois de criar, você adiciona as fotos'}</p>
               </div>
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
             </header>
@@ -202,15 +242,16 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : null}
-                {salvando ? 'Salvando...' : 'Criar álbum'}
+              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar álbum'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL GERENCIAR FOTOS */}
       {albumAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setAlbumAberto(null)} />
@@ -250,7 +291,7 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
                       <img src={f.url} alt="" className="h-full w-full object-cover" />
                       <button
                         onClick={() => setConfirmarFoto(f.id)}
-                        className="absolute right-2 top-2 rounded-lg bg-black/60 p-1.5 text-white opacity-0 transition group-hover:opacity-100"
+                        className="absolute right-2 top-2 rounded-lg bg-black/60 p-1.5 text-white opacity-0 transition group-hover:opacity-100 hover:bg-[#dc2626]"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -263,30 +304,36 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
         </div>
       )}
 
+      {/* MODAL EXCLUIR ÁLBUM */}
       {confirmarAlbum && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarAlbum(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarAlbum(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir álbum?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Todas as fotos serão removidas. Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarAlbum(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluirAlbum} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarAlbum(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluirAlbum} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL EXCLUIR FOTO */}
       {confirmarFoto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarFoto(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarFoto(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir foto?</h3>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarFoto(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluirFoto} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarFoto(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluirFoto} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>

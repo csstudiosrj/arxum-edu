@@ -87,6 +87,33 @@ export async function criarAlbum(data: NovoAlbum) {
   }
 }
 
+export async function atualizarAlbum(id: string, data: NovoAlbum) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('albuns')
+      .update({
+        titulo: data.titulo,
+        descricao: data.descricao || null,
+        publico: data.publico,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/galeria')
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar álbum.' }
+  }
+}
+
 export async function adicionarFotos(albumId: string, urls: string[]) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -94,7 +121,6 @@ export async function adicionarFotos(albumId: string, urls: string[]) {
 
     const admin = createAdminClient()
 
-    // Confirma que o álbum pertence à escola
     const { data: album } = await admin
       .from('albuns')
       .select('id, capa_url')
@@ -143,10 +169,9 @@ export async function excluirFoto(id: string) {
 
     const admin = createAdminClient()
 
-    // Confirma que a foto pertence a um álbum da escola
     const { data: foto } = await admin
       .from('fotos')
-      .select('id, album_id')
+      .select('id, album_id, url')
       .eq('id', id)
       .maybeSingle()
 
@@ -154,7 +179,7 @@ export async function excluirFoto(id: string) {
 
     const { data: album } = await admin
       .from('albuns')
-      .select('id')
+      .select('id, capa_url')
       .eq('id', foto.album_id)
       .eq('escola_id', escola.id)
       .maybeSingle()
@@ -163,6 +188,19 @@ export async function excluirFoto(id: string) {
 
     const { error } = await admin.from('fotos').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
+
+    // Se a foto excluída era a capa, busca outra foto para ser a capa, ou remove
+    if (album.capa_url === foto.url) {
+      const { data: fotosRestantes } = await admin
+        .from('fotos')
+        .select('url')
+        .eq('album_id', foto.album_id)
+        .order('ordem', { ascending: true })
+        .limit(1)
+
+      const novaCapa = fotosRestantes?.[0]?.url || null
+      await admin.from('albuns').update({ capa_url: novaCapa }).eq('id', foto.album_id)
+    }
 
     revalidatePath('/admin/galeria')
     revalidatePath('/responsavel')
