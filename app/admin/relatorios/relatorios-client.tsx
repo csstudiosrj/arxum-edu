@@ -255,15 +255,15 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-lg border border-[#d1fae5] bg-[#d1fae5]/30 p-3">
                 <span className="text-xs font-semibold text-[#065f46]">Recebido</span>
-                <span className="font-syne text-base font-bold text-[#065f46]">{formatarMoeda(data.receitaTotal)}</span>
+                <span className="text-base font-bold text-[#065f46]">{formatarMoeda(data.receitaTotal)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-[#dbeafe] bg-[#dbeafe]/30 p-3">
                 <span className="text-xs font-semibold text-[#1e40af]">Em aberto</span>
-                <span className="font-syne text-base font-bold text-[#1e40af]">{formatarMoeda(data.receitaEmAberto)}</span>
+                <span className="text-base font-bold text-[#1e40af]">{formatarMoeda(data.receitaEmAberto)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-[#fee2e2] bg-[#fee2e2]/30 p-3">
                 <span className="text-xs font-semibold text-[#991b1b]">Vencido</span>
-                <span className="font-syne text-base font-bold text-[#991b1b]">{formatarMoeda(data.receitaVencida)}</span>
+                <span className="text-base font-bold text-[#991b1b]">{formatarMoeda(data.receitaVencida)}</span>
               </div>
             </div>
           </Panel>
@@ -324,7 +324,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
               </div>
               <div className="rounded-lg border border-[#ede9fe] bg-[#ede9fe]/30 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#5b21b6]">Receita confirmada</p>
-                <p className="mt-1 font-syne text-lg font-bold text-[#5b21b6]">{formatarMoeda(data.receitaLoja)}</p>
+                <p className="mt-1 text-lg font-bold text-[#5b21b6]">{formatarMoeda(data.receitaLoja)}</p>
               </div>
             </div>
           </Panel>

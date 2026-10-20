@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 
 export type RelatorioData = {
   // Visão geral
@@ -45,12 +46,6 @@ export type RelatorioData = {
   receitaLoja: number
 }
 
-async function getEscolaId(): Promise<string | null> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('escolas').select('id').eq('slug', 'colegio-horizonte').single()
-  return data?.id || null
-}
-
 export async function getRelatorioData(): Promise<RelatorioData> {
   const vazio: RelatorioData = {
     alunosAtivos: 0, alunosInativos: 0, totalAlunos: 0, turmasUnicas: 0,
@@ -64,9 +59,11 @@ export async function getRelatorioData(): Promise<RelatorioData> {
   }
 
   try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return vazio
+
+    const escolaId = escola.id
     const admin = createAdminClient()
-    const escolaId = await getEscolaId()
-    if (!escolaId) return vazio
 
     // Alunos
     const { data: alunos } = await admin
