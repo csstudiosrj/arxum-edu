@@ -35,14 +35,44 @@ export async function getEscolaDoUsuario(): Promise<EscolaCompleta | null> {
     if (!user?.id) return null
 
     const admin = createAdminClient()
+
+    // 1. Tenta buscar escola via perfil (Admin, Professor, etc)
     const { data: perfil } = await admin
       .from('perfis')
-      .select('escola_id')
+      .select('escola_id, papel')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (!perfil?.escola_id) return null
-    return await getEscolaPorId(perfil.escola_id)
+    if (perfil?.escola_id) {
+      return await getEscolaPorId(perfil.escola_id)
+    }
+
+    // 2. Fallback: Se for aluno, busca a escola do aluno
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('escola_id')
+      .eq('usuario_id', user.id)
+      .maybeSingle()
+
+    if (aluno?.escola_id) {
+      return await getEscolaPorId(aluno.escola_id)
+    }
+
+    // 3. Fallback: Se for responsável, busca a escola do primeiro filho
+    if (user.email) {
+      const { data: alunoResp } = await admin
+        .from('alunos')
+        .select('escola_id')
+        .eq('responsavel_email', user.email)
+        .limit(1)
+        .maybeSingle()
+      
+      if (alunoResp?.escola_id) {
+        return await getEscolaPorId(alunoResp.escola_id)
+      }
+    }
+
+    return null
   } catch (e) {
     console.error('Erro ao buscar escola do usuário:', e)
     return null
