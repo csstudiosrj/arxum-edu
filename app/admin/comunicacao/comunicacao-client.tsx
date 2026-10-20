@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2, Check } from 'lucide-react'
+import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarComunicado, excluirComunicado, type Comunicado } from './actions'
 
@@ -315,7 +315,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                   <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoLido.setor] || 'bg-[#e5ecee] text-[#5e7a94]'}`}>{comunicadoLido.setor}</span>
                   {comunicadoLido.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
                 </div>
-                <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{comunicadoLido.titulo}</h2>
+                <h2 className="mt-3 text-xl font-bold text-[#12232b]">{comunicadoLido.titulo}</h2>
                 <p className="mt-1 text-xs text-[#82939a]">Por {comunicadoLido.autor_nome} · {formatarData(comunicadoLido.criado_em)}</p>
               </div>
               <button onClick={() => setComunicadoLido(null)} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
