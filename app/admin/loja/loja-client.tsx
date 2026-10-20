@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Package, ShoppingCart, TrendingUp, DollarSign, Trash2, X, Loader2, Check, Eye } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { criarProduto, excluirProduto, atualizarStatusPedido, type Produto, type Pedido } from './actions'
+import { Plus, Search, Package, ShoppingCart, TrendingUp, DollarSign, Trash2, X, Loader2, Check, Eye, Edit, EyeOff } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { criarProduto, atualizarProduto, alternarAtivoProduto, excluirProduto, atualizarStatusPedido, type Produto, type Pedido } from './actions'
 
 const categorias = ['Todas', 'Uniformes', 'Materiais', 'Eventos', 'Papelaria', 'Outros']
 
@@ -48,8 +48,10 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
   const [categoria, setCategoria] = useState('Todas')
   const [busca, setBusca] = useState('')
   const [novoAberto, setNovoAberto] = useState(false)
+  const [editando, setEditando] = useState<Produto | null>(null)
   const [detalhePedido, setDetalhePedido] = useState<Pedido | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [processando, setProcessando] = useState<string | null>(null)
 
   const [nome, setNome] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -76,9 +78,21 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
     setPreco('')
     setEstoque('')
     setErro('')
+    setEditando(null)
   }
 
-  async function handleCriar() {
+  function abrirEdicao(p: Produto) {
+    setNome(p.nome)
+    setDescricao(p.descricao || '')
+    setNovaCategoria(p.categoria)
+    setPreco((p.preco_centavos / 100).toFixed(2))
+    setEstoque(String(p.estoque))
+    setEditando(p)
+    setNovoAberto(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
     if (!nome.trim()) return setErro('Informe o nome.')
     if (!preco.trim()) return setErro('Informe o preço.')
 
@@ -90,10 +104,16 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
 
     setSalvando(true)
     setErro('')
-    const result = await criarProduto({ nome, descricao, categoria: novaCategoria, preco_centavos: precoCentavos, estoque: estoqueNum })
-    setSalvando(false)
 
-    if (!result.success) return setErro(result.error || 'Erro.')
+    if (editando) {
+      const result = await atualizarProduto(editando.id, { nome, descricao, categoria: novaCategoria, preco_centavos: precoCentavos, estoque: estoqueNum })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    } else {
+      const result = await criarProduto({ nome, descricao, categoria: novaCategoria, preco_centavos: precoCentavos, estoque: estoqueNum })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    }
 
     limpar()
     setNovoAberto(false)
@@ -102,13 +122,28 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
 
   async function handleExcluir() {
     if (!confirmarExclusao) return
-    await excluirProduto(confirmarExclusao)
+    setProcessando(confirmarExclusao)
+    const r = await excluirProduto(confirmarExclusao)
+    setProcessando(null)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
 
+  async function handleToggleAtivo(p: Produto) {
+    setProcessando(p.id)
+    await alternarAtivoProduto(p.id, !p.ativo)
+    setProcessando(null)
+    router.refresh()
+  }
+
   async function handleStatusPedido(id: string, status: string) {
+    setProcessando(id)
     await atualizarStatusPedido(id, status)
+    setProcessando(null)
     setDetalhePedido(null)
     router.refresh()
   }
@@ -123,12 +158,13 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
             description="Gerencie produtos, estoque e pedidos da escola."
           />
           {aba === 'produtos' && (
-            <ActionButton variant="primary">
-              <button onClick={() => { limpar(); setNovoAberto(true) }} className="inline-flex items-center gap-1.5">
-                <Plus className="size-4" />
-                Novo produto
-              </button>
-            </ActionButton>
+            <button 
+              onClick={() => { limpar(); setNovoAberto(true) }} 
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+            >
+              <Plus className="size-4" />
+              Novo produto
+            </button>
           )}
         </div>
 
@@ -212,9 +248,12 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
                       <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-[#82939a]">Nenhum produto encontrado.</td></tr>
                     ) : (
                       produtosFiltrados.map((p) => (
-                        <tr key={p.id} className="border-b border-[#f0f4f5] transition hover:bg-[#fafcfc]">
+                        <tr key={p.id} className={`border-b border-[#f0f4f5] transition hover:bg-[#fafcfc] ${!p.ativo ? 'opacity-60' : ''}`}>
                           <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">
-                            <div>{p.nome}</div>
+                            <div className="flex items-center gap-2">
+                              {p.nome}
+                              {!p.ativo && <span className="rounded bg-[#e5ecee] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#5e7a94]">Inativo</span>}
+                            </div>
                             {p.descricao && <div className="mt-0.5 truncate text-xs font-normal text-[#82939a]">{p.descricao}</div>}
                           </td>
                           <td className="px-5 py-3.5 text-sm text-[#4d626c] capitalize">{p.categoria}</td>
@@ -225,8 +264,16 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
-                            <div className="flex justify-end">
-                              <button onClick={() => setConfirmarExclusao(p.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"><Trash2 className="size-4" /></button>
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => abrirEdicao(p)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                                <Edit className="size-4" />
+                              </button>
+                              <button onClick={() => handleToggleAtivo(p)} disabled={processando === p.id} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee] disabled:opacity-50" title={p.ativo ? 'Desativar' : 'Ativar'}>
+                                {p.ativo ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                              </button>
+                              <button onClick={() => setConfirmarExclusao(p.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
+                                <Trash2 className="size-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -273,13 +320,14 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
         )}
       </main>
 
+      {/* MODAL CRIAR/EDITAR PRODUTO */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Novo produto</h2>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar produto' : 'Novo produto'}</h2>
                 <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá na loja virtual</p>
               </div>
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
@@ -319,15 +367,16 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : null}
-                {salvando ? 'Salvando...' : 'Criar produto'}
+              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar produto'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL DETALHES DO PEDIDO */}
       {detalhePedido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDetalhePedido(null)} />
@@ -356,7 +405,7 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
                 ))}
                 <div className="flex items-center justify-between border-t border-[#e5ecee] pt-3">
                   <span className="text-sm font-bold text-[#12232b]">Total</span>
-                  <span className="font-syne text-lg font-bold text-[#0d9488]">{formatarMoeda(detalhePedido.total_centavos)}</span>
+                  <span className="text-lg font-bold text-[#0d9488]">{formatarMoeda(detalhePedido.total_centavos)}</span>
                 </div>
               </div>
               {detalhePedido.observacao && (
@@ -369,28 +418,37 @@ export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pe
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               {detalhePedido.status === 'pendente' && (
                 <>
-                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'cancelado')} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e]">Cancelar</button>
-                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'pago')} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"><Check className="size-4" />Marcar como pago</button>
+                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'cancelado')} disabled={processando === detalhePedido.id} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'pago')} disabled={processando === detalhePedido.id} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                    {processando === detalhePedido.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                    Marcar como pago
+                  </button>
                 </>
               )}
               {detalhePedido.status === 'pago' && (
-                <button onClick={() => handleStatusPedido(detalhePedido.id, 'entregue')} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"><Check className="size-4" />Marcar como entregue</button>
+                <button onClick={() => handleStatusPedido(detalhePedido.id, 'entregue')} disabled={processando === detalhePedido.id} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                  {processando === detalhePedido.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  Marcar como entregue
+                </button>
               )}
             </footer>
           </div>
         </div>
       )}
 
+      {/* MODAL EXCLUIR PRODUTO */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir produto?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluir} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarExclusao(null)} disabled={!!processando} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={!!processando} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {processando ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>

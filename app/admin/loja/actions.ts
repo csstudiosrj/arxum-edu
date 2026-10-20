@@ -124,6 +124,57 @@ export async function criarProduto(data: NovoProduto) {
   }
 }
 
+export async function atualizarProduto(id: string, data: NovoProduto) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('produtos')
+      .update({
+        nome: data.nome,
+        descricao: data.descricao || null,
+        categoria: data.categoria,
+        preco_centavos: data.preco_centavos,
+        estoque: data.estoque,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/loja')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar produto.' }
+  }
+}
+
+export async function alternarAtivoProduto(id: string, ativo: boolean) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('produtos')
+      .update({ ativo, atualizado_em: new Date().toISOString() })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/loja')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar status.' }
+  }
+}
+
 export async function atualizarStatusPedido(id: string, novoStatus: string) {
   try {
     const escola = await getEscolaDoUsuario()
