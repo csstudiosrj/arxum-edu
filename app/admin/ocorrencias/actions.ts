@@ -106,7 +106,6 @@ export async function criarOcorrencia(data: NovaOcorrencia) {
 
     if (error) return { success: false, error: error.message }
 
-    // Notifica o responsável — respeitando a config da escola.
     try {
       if (data.responsavel_email) {
         enviarSeAtivo({
@@ -134,6 +133,36 @@ export async function criarOcorrencia(data: NovaOcorrencia) {
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao criar ocorrência.' }
+  }
+}
+
+export async function atualizarOcorrencia(id: string, data: Partial<NovaOcorrencia>) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    
+    const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
+    if (data.tipo) payload.tipo = data.tipo
+    if (data.gravidade) payload.gravidade = data.gravidade
+    if (data.titulo) payload.titulo = data.titulo
+    if (data.descricao) payload.descricao = data.descricao
+    if (data.providencias !== undefined) payload.providencias = data.providencias || null
+
+    const { error } = await admin
+      .from('ocorrencias')
+      .update(payload)
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/ocorrencias')
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar ocorrência.' }
   }
 }
 

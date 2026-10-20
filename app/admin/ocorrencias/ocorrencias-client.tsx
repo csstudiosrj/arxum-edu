@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, AlertCircle, BookOpen, Heart, Award, FileQuestion, ShieldAlert, Trash2, X, Loader2, Eye, Check } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { criarOcorrencia, excluirOcorrencia, type Ocorrencia } from './actions'
+import { Plus, Search, AlertCircle, BookOpen, Heart, Award, FileQuestion, ShieldAlert, Trash2, X, Loader2, Eye, Check, Edit } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { criarOcorrencia, atualizarOcorrencia, excluirOcorrencia, type Ocorrencia } from './actions'
 
 type IconeComponente = typeof AlertCircle
 
@@ -52,8 +52,10 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
   const [filtro, setFiltro] = useState('todas')
   const [busca, setBusca] = useState('')
   const [novaAberta, setNovaAberta] = useState(false)
+  const [editando, setEditando] = useState<Ocorrencia | null>(null)
   const [detalhe, setDetalhe] = useState<Ocorrencia | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [alunoIdx, setAlunoIdx] = useState('')
   const [tipo, setTipo] = useState('pedagogica')
@@ -79,31 +81,53 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
     setDescricao('')
     setProvidencias('')
     setErro('')
+    setEditando(null)
   }
 
-  async function handleCriar() {
-    if (!alunoIdx) return setErro('Selecione o aluno.')
+  function abrirEdicao(o: Ocorrencia) {
+    const idx = alunos.findIndex((a) => a.id === o.aluno_id)
+    setAlunoIdx(String(idx))
+    setTipo(o.tipo)
+    setGravidade(o.gravidade)
+    setTitulo(o.titulo)
+    setDescricao(o.descricao)
+    setProvidencias(o.providencias || '')
+    setEditando(o)
+    setNovaAberta(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
+    if (!alunoIdx && !editando) return setErro('Selecione o aluno.')
     if (!titulo.trim()) return setErro('Informe o título.')
     if (!descricao.trim()) return setErro('Informe a descrição.')
 
-    const aluno = alunos[parseInt(alunoIdx, 10)]
-    if (!aluno) return setErro('Aluno inválido.')
-
     setSalvando(true)
     setErro('')
-    const result = await criarOcorrencia({
-      aluno_id: aluno.id,
-      aluno_nome: aluno.nome,
-      responsavel_email: aluno.responsavel_email,
-      tipo,
-      gravidade,
-      titulo,
-      descricao,
-      providencias,
-    })
-    setSalvando(false)
-
-    if (!result.success) return setErro(result.error || 'Erro.')
+    
+    if (editando) {
+      const result = await atualizarOcorrencia(editando.id, { tipo, gravidade, titulo, descricao, providencias })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    } else {
+      const aluno = alunos[parseInt(alunoIdx, 10)]
+      if (!aluno) {
+        setSalvando(false)
+        return setErro('Aluno inválido.')
+      }
+      const result = await criarOcorrencia({
+        aluno_id: aluno.id,
+        aluno_nome: aluno.nome,
+        responsavel_email: aluno.responsavel_email,
+        tipo,
+        gravidade,
+        titulo,
+        descricao,
+        providencias,
+      })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    }
 
     limpar()
     setNovaAberta(false)
@@ -112,7 +136,13 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
 
   async function handleExcluir() {
     if (!confirmarExclusao) return
-    await excluirOcorrencia(confirmarExclusao)
+    setExcluindo(true)
+    const r = await excluirOcorrencia(confirmarExclusao)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
@@ -129,12 +159,13 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
             title="Ocorrências"
             description="Registre ocorrências pedagógicas, disciplinares e de saúde dos alunos."
           />
-          <ActionButton variant="primary">
-            <button onClick={() => { limpar(); setNovaAberta(true) }} className="inline-flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Nova ocorrência
-            </button>
-          </ActionButton>
+          <button 
+            onClick={() => { limpar(); setNovaAberta(true) }} 
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          >
+            <Plus className="size-4" />
+            Nova ocorrência
+          </button>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -212,6 +243,9 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
                         <p className="mt-1 text-[11px] text-[#a0afb4]">Por {o.autor_nome} · {formatarData(o.criado_em)}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
+                        <button onClick={() => abrirEdicao(o)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                          <Edit className="size-4" />
+                        </button>
                         <button onClick={() => setDetalhe(o)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ver detalhes">
                           <Eye className="size-4" />
                         </button>
@@ -228,13 +262,14 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
         </Panel>
       </main>
 
+      {/* MODAL NOVA/EDITAR OCORRÊNCIA */}
       {novaAberta && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovaAberta(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Nova ocorrência</h2>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar ocorrência' : 'Nova ocorrência'}</h2>
                 <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá para o responsável do aluno</p>
               </div>
               <button onClick={() => setNovaAberta(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
@@ -243,7 +278,7 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
                     {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome}</option>)}
                   </select>
@@ -288,15 +323,16 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovaAberta(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                {salvando ? 'Salvando...' : 'Registrar ocorrência'}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Registrar ocorrência'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL DETALHE */}
       {detalhe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDetalhe(null)} />
@@ -316,7 +352,7 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
                     </div>
                   )
                 })()}
-                <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{detalhe.titulo}</h2>
+                <h2 className="mt-3 text-xl font-bold text-[#12232b]">{detalhe.titulo}</h2>
                 <p className="mt-1 text-xs text-[#82939a]">{detalhe.aluno_nome} · {formatarData(detalhe.criado_em)}</p>
               </div>
               <button onClick={() => setDetalhe(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
@@ -338,16 +374,19 @@ export function OcorrenciasClient({ ocorrencias, alunos }: { ocorrencias: Ocorre
         </div>
       )}
 
+      {/* MODAL EXCLUIR */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir ocorrência?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluir} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>
