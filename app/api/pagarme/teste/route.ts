@@ -31,29 +31,29 @@ export async function GET(request: NextRequest) {
     documento: '11222333000181',
     tipo: 'company',
     telefone: { country_code: '55', area_code: '21', number: '999999999' },
-    endereco: { 
-      line_1: 'Rua de Teste, 100, Centro', 
-      zip_code: '20040020', 
-      city: 'Rio de Janeiro', 
-      state: 'RJ', 
-      country: 'BR' 
+    endereco: {
+      line_1: 'Rua de Teste, 100, Centro',
+      zip_code: '20040020',
+      city: 'Rio de Janeiro',
+      state: 'RJ',
+      country: 'BR'
     },
-    banco: { 
-      codigo: '341', 
-      agencia: '0001', 
-      conta: '12345', 
-      digito: '6', 
-      tipo: 'checking', 
-      titular_nome: 'Escola de Teste ARXUM LTDA', 
-      titular_documento: '11222333000181' 
+    banco: {
+      codigo: '341',
+      agencia: '0001',
+      conta: '12345',
+      digito: '6',
+      tipo: 'checking',
+      titular_nome: 'Escola de Teste ARXUM LTDA',
+      titular_documento: '11222333000181'
     },
     siteUrl: 'https://arxum.com.br',
     registerInformation: {
       type: 'corporation',
-      name: 'Escola de Teste ARXUM LTDA', // name dentro do register_information
+      name: 'Escola de Teste ARXUM LTDA',
       company_name: 'Escola de Teste ARXUM LTDA',
       trading_name: 'Escola de Teste',
-      annual_revenue: '500000', // string
+      annual_revenue: '500000',
       site_url: 'https://arxum.com.br',
       document: '11222333000181',
       email: 'recebedor-teste@arxum.com.br',
@@ -69,23 +69,23 @@ export async function GET(request: NextRequest) {
         reference_point: 'Próximo ao metrô',
       },
       managing_partners: [{
-        type: 'individual', 
-        name: 'Sócio de Teste', 
-        document: '11144477735', 
-        birthdate: '1980-01-01', 
+        type: 'individual',
+        name: 'Sócio de Teste',
+        document: '11144477735',
+        birthdate: '1980-01-01',
         email: 'socio@arxum.com.br',
-        monthly_income: '10000', 
-        professional_occupation: 'Empresário', 
+        monthly_income: '10000',
+        professional_occupation: 'Empresário',
         self_declared_legal_representative: true,
-        address: { 
-          street: 'Rua de Teste', 
-          complementary: 'Sala 1', 
-          street_number: '100', 
-          neighborhood: 'Centro', 
-          city: 'Rio de Janeiro', 
-          state: 'RJ', 
-          zip_code: '20040020', 
-          reference_point: 'Próximo ao metrô' 
+        address: {
+          street: 'Rua de Teste',
+          complementary: 'Sala 1',
+          street_number: '100',
+          neighborhood: 'Centro',
+          city: 'Rio de Janeiro',
+          state: 'RJ',
+          zip_code: '20040020',
+          reference_point: 'Próximo ao metrô'
         },
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
       }],
@@ -102,12 +102,12 @@ export async function GET(request: NextRequest) {
     email: `cliente-teste+${sufixo}@arxum.com.br`,
     documento: '11144477735',
     telefone: { country_code: '55', area_code: '21', number: '988888888' },
-    endereco: { 
-      line_1: 'Rua do Cliente, 200, Centro', 
-      zip_code: '20040020', 
-      city: 'Rio de Janeiro', 
-      state: 'RJ', 
-      country: 'BR' 
+    endereco: {
+      line_1: 'Rua do Cliente, 200, Centro',
+      zip_code: '20040020',
+      city: 'Rio de Janeiro',
+      state: 'RJ',
+      country: 'BR'
     },
   })
 
@@ -122,7 +122,16 @@ export async function GET(request: NextRequest) {
     itens: [{ amount: valorCentavos, description: 'Teste de integração', quantity: 1, code: 'teste-001' }],
     metodo: { tipo: 'pix', expiresInSeconds: 3600 },
     split: [
-      { recipientId: recebedor.recipientId, percentage: 98, liable: true, chargeProcessingFee: true, chargeRemainder: false },
+      {
+        recipientId: recebedor.recipientId,
+        amount: 98,
+        type: 'percentage',
+        options: {
+          liable: true,
+          chargeProcessingFee: true,
+          chargeRemainderFee: false,
+        },
+      },
     ],
     metadata: { origem: 'teste-fumaca-arxum' },
   })

@@ -52,10 +52,10 @@ export type DadosRecebedor = {
   siteUrl?: string
   registerInformation: {
     type: 'corporation' | 'individual'
-    name: string // Adicionado — agora vai dentro do register_information
+    name: string
     company_name?: string
     trading_name?: string
-    annual_revenue?: string // Alterado para string
+    annual_revenue?: string
     site_url?: string
     corporation_type?: string
     founding_date?: string
@@ -108,18 +108,24 @@ export async function criarRecebedor(dados: DadosRecebedor) {
   if (!auth) return { success: false as const, error: 'PAGARME_SECRET_KEY não configurada.' }
 
   try {
-    // Monta o register_information com todos os dados
+    // register_information leva os dados cadastrais detalhados.
+    // name, email, document e type também vão na raiz — é o que a API V5 exige.
     const registerInfo = {
       ...dados.registerInformation,
-      name: dados.nome, // name vai aqui
-      email: dados.email, // email vai aqui
-      document: dados.documento, // document vai aqui
-      type: dados.tipo === 'company' ? 'corporation' : 'individual', // type vai aqui
+      name: dados.nome,
+      email: dados.email,
+      document: dados.documento,
+      type: dados.tipo === 'company' ? 'corporation' : 'individual',
     }
 
-    // Monta o payload SEM name, email, document e type na raiz
     const payload = {
-      // NÃO envie name, email, document, type na raiz
+      // ── Campos obrigatórios na RAIZ ────────────────────────────
+      name: dados.nome,
+      email: dados.email,
+      document: dados.documento,
+      type: dados.tipo, // 'individual' ou 'company'
+
+      // ── Conta bancária ─────────────────────────────────────────
       default_bank_account: {
         holder_name: dados.banco.titular_nome,
         holder_type: dados.banco.titular_tipo || dados.tipo,
@@ -131,6 +137,8 @@ export async function criarRecebedor(dados: DadosRecebedor) {
         account_check_digit: dados.banco.digito,
         type: dados.banco.tipo,
       },
+
+      // ── Transferências ─────────────────────────────────────────
       transfer_settings: {
         transfer_enabled: true,
         transfer_interval: 'Daily',
@@ -139,6 +147,8 @@ export async function criarRecebedor(dados: DadosRecebedor) {
       automatic_anticipation_settings: {
         enabled: false,
       },
+
+      // ── Dados cadastrais detalhados (KYC) ──────────────────────
       register_information: registerInfo,
     }
 
@@ -242,11 +252,13 @@ export async function criarOuAtualizarCliente(params: {
 // ── Pedidos (orders com split) ────────────────────────────────────
 export type SplitRule = {
   recipientId: string
-  amount?: number
-  percentage?: number
-  chargeRemainder?: boolean
-  chargeProcessingFee?: boolean
-  liable?: boolean
+  amount: number
+  type: 'flat' | 'percentage'
+  options?: {
+    liable?: boolean
+    chargeProcessingFee?: boolean
+    chargeRemainderFee?: boolean
+  }
 }
 
 export type ItemPedido = {
@@ -313,11 +325,13 @@ export async function criarPedido(params: {
         payments,
         split: params.split.map((s) => ({
           recipient_id: s.recipientId,
-          ...(s.amount !== undefined ? { amount: s.amount } : {}),
-          ...(s.percentage !== undefined ? { percentage: s.percentage } : {}),
-          ...(s.chargeRemainder !== undefined ? { charge_remainder: s.chargeRemainder } : {}),
-          ...(s.chargeProcessingFee !== undefined ? { charge_processing_fee: s.chargeProcessingFee } : {}),
-          ...(s.liable !== undefined ? { liable: s.liable } : {}),
+          amount: s.amount,
+          type: s.type,
+          options: {
+            liable: s.options?.liable ?? false,
+            charge_processing_fee: s.options?.chargeProcessingFee ?? false,
+            charge_remainder_fee: s.options?.chargeRemainderFee ?? false,
+          },
         })),
         metadata: params.metadata || {},
       }),
@@ -383,10 +397,13 @@ export function calcularSplitFatura(params: {
   return [
     {
       recipientId: params.recipientEscolaId,
-      percentage: 100 - (params.taxaArxumBps / 100),
-      liable: true,
-      chargeProcessingFee: true,
-      chargeRemainder: false,
+      amount: 100 - (params.taxaArxumBps / 100),
+      type: 'percentage',
+      options: {
+        liable: true,
+        chargeProcessingFee: true,
+        chargeRemainderFee: false,
+      },
     },
   ]
 }
@@ -407,9 +424,12 @@ export function calcularSplitLoja(params: {
       {
         recipientId: params.recipientEscolaId,
         amount: valorEscola,
-        liable: true,
-        chargeProcessingFee: true,
-        chargeRemainder: false,
+        type: 'flat',
+        options: {
+          liable: true,
+          chargeProcessingFee: true,
+          chargeRemainderFee: false,
+        },
       },
     ],
   }
