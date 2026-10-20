@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
+import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2, Check } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarComunicado, excluirComunicado, type Comunicado } from './actions'
 
 const setorStyles: Record<string, string> = {
@@ -38,13 +38,16 @@ function formatarData(iso: string): string {
 export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }) {
   const router = useRouter()
   const [novoAberto, setNovoAberto] = useState(false)
+  const [comunicadoLido, setComunicadoLido] = useState<Comunicado | null>(null)
+  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
+
   const [titulo, setTitulo] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [setor, setSetor] = useState('Secretaria')
   const [prioridade, setPrioridade] = useState('normal')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
-  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
 
   function limparForm() {
     setTitulo('')
@@ -79,10 +82,14 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
     router.refresh()
   }
 
-  async function handleExcluir(id: string) {
-    const result = await excluirComunicado(id)
-    setConfirmarExclusao(null)
+  async function handleExcluir() {
+    if (!confirmarExclusao) return
+    setExcluindo(true)
+    const result = await excluirComunicado(confirmarExclusao)
+    setExcluindo(false)
+    
     if (result.success) {
+      setConfirmarExclusao(null)
       router.refresh()
     } else {
       alert(result.error || 'Erro ao excluir.')
@@ -101,12 +108,13 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
             title="Central de comunicação"
             description="Envie comunicados para os responsáveis da escola."
           />
-          <ActionButton variant="primary">
-            <button onClick={() => setNovoAberto(true)} className="inline-flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Novo comunicado
-            </button>
-          </ActionButton>
+          <button 
+            onClick={() => setNovoAberto(true)} 
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          >
+            <Plus className="size-4" />
+            Novo comunicado
+          </button>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -158,7 +166,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
               {comunicados.map((c) => (
                 <div key={c.id} className="px-5 py-4 transition hover:bg-[#fafcfc]">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setComunicadoLido(c)}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${setorStyles[c.setor] || 'bg-[#e5ecee] text-[#5e7a94]'}`}>
                           {c.setor}
@@ -167,7 +175,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                           {c.prioridade.charAt(0).toUpperCase() + c.prioridade.slice(1)}
                         </span>
                       </div>
-                      <h3 className="mt-2 text-sm font-semibold text-[#243942]">{c.titulo}</h3>
+                      <h3 className="mt-2 text-sm font-semibold text-[#243942] hover:text-[#0d9488] transition-colors">{c.titulo}</h3>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{c.mensagem}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#82939a]">
                         <span>Por: {c.autor_nome}</span>
@@ -177,13 +185,22 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                         <span className="inline-flex items-center gap-1"><Eye className="size-3" /> {c.total_leituras} leituras</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setConfirmarExclusao(c.id)}
-                      className="shrink-0 rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
-                      title="Excluir"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-1 items-end">
+                      <button
+                        onClick={() => setComunicadoLido(c)}
+                        className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]"
+                        title="Ler comunicado"
+                      >
+                        <Eye className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmarExclusao(c.id)}
+                        className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
+                        title="Excluir"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -192,6 +209,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
         </Panel>
       </main>
 
+      {/* MODAL NOVO COMUNICADO */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && setNovoAberto(false)} />
@@ -279,16 +297,48 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                 Cancelar
               </button>
               <button onClick={handleEnviar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {enviando ? 'Enviando...' : <><Send className="size-4" /> Enviar comunicado</>}
+                {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando...</> : <><Send className="size-4" /> Enviar comunicado</>}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL LER COMUNICADO */}
+      {comunicadoLido && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setComunicadoLido(null)} />
+          <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+            <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoLido.setor] || 'bg-[#e5ecee] text-[#5e7a94]'}`}>{comunicadoLido.setor}</span>
+                  {comunicadoLido.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
+                </div>
+                <h2 className="mt-3 font-syne text-xl font-bold text-[#12232b]">{comunicadoLido.titulo}</h2>
+                <p className="mt-1 text-xs text-[#82939a]">Por {comunicadoLido.autor_nome} · {formatarData(comunicadoLido.criado_em)}</p>
+              </div>
+              <button onClick={() => setComunicadoLido(null)} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
+            </header>
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+              <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{comunicadoLido.mensagem}</p>
+            </div>
+            <footer className="flex items-center justify-between border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#82939a]">
+                <Eye className="size-4" /> {comunicadoLido.total_leituras} responsáveis leram
+              </span>
+              <button onClick={() => setComunicadoLido(null)} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e]">
+                Fechar
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EXCLUIR */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
               <Trash2 className="size-5" />
@@ -298,11 +348,11 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
               O comunicado deixará de aparecer na área dos responsáveis. Essa ação não pode ser desfeita.
             </p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={() => handleExcluir(confirmarExclusao)} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">
-                Excluir
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
               </button>
             </div>
           </div>
