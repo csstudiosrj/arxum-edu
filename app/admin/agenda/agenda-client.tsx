@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Calendar, Trash2, X, Loader2, BookOpen, Users, Bus, PartyPopper, Clock } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { criarEvento, excluirEvento, type Evento } from './actions'
+import { Plus, Calendar, Trash2, X, Loader2, BookOpen, Users, Bus, PartyPopper, Edit, Check } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { criarEvento, atualizarEvento, excluirEvento, type Evento } from './actions'
 
 type IconeComponente = typeof Calendar
 
@@ -46,7 +46,9 @@ function ehFuturo(iso: string): boolean {
 export function AgendaClient({ eventos }: { eventos: Evento[] }) {
   const router = useRouter()
   const [novoAberto, setNovoAberto] = useState(false)
+  const [editando, setEditando] = useState<Evento | null>(null)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -70,18 +72,38 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
     setPublico('todos')
     setSerie('')
     setErro('')
+    setEditando(null)
   }
 
-  async function handleCriar() {
+  function abrirEdicao(e: Evento) {
+    setTitulo(e.titulo)
+    setDescricao(e.descricao || '')
+    setTipo(e.tipo)
+    setDataEvento(e.data_evento)
+    setHoraEvento(e.hora_evento || '')
+    setPublico(e.publico)
+    setSerie(e.serie || '')
+    setEditando(e)
+    setNovoAberto(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
     if (!titulo.trim()) return setErro('Informe o título.')
     if (!dataEvento) return setErro('Informe a data.')
 
     setSalvando(true)
     setErro('')
-    const result = await criarEvento({ titulo, descricao, tipo, data_evento: dataEvento, hora_evento: horaEvento, publico, serie })
-    setSalvando(false)
 
-    if (!result.success) return setErro(result.error || 'Erro.')
+    if (editando) {
+      const result = await atualizarEvento(editando.id, { titulo, descricao, tipo, data_evento: dataEvento, hora_evento: horaEvento, publico, serie })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    } else {
+      const result = await criarEvento({ titulo, descricao, tipo, data_evento: dataEvento, hora_evento: horaEvento, publico, serie })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    }
 
     limpar()
     setNovoAberto(false)
@@ -90,7 +112,13 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
 
   async function handleExcluir() {
     if (!confirmarExclusao) return
-    await excluirEvento(confirmarExclusao)
+    setExcluindo(true)
+    const r = await excluirEvento(confirmarExclusao)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
@@ -104,12 +132,13 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
             title="Agenda"
             description="Gerencie eventos, provas e reuniões da escola."
           />
-          <ActionButton variant="primary">
-            <button onClick={() => { limpar(); setNovoAberto(true) }} className="inline-flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Novo evento
-            </button>
-          </ActionButton>
+          <button 
+            onClick={() => { limpar(); setNovoAberto(true) }} 
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          >
+            <Plus className="size-4" />
+            Novo evento
+          </button>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -169,12 +198,14 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                         <span>{publicos.find((p) => p.key === e.publico)?.label || e.publico}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setConfirmarExclusao(e.id)}
-                      className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                        <Edit className="size-4" />
+                      </button>
+                      <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -200,9 +231,14 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                       <h3 className="text-sm text-[#536871]">{e.titulo}</h3>
                       <p className="text-xs text-[#a0afb4]">{formatarData(e.data_evento)}</p>
                     </div>
-                    <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#a0afb4] hover:bg-[#fee2e2] hover:text-[#dc2626]">
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#a0afb4] hover:bg-[#ccfbf1] hover:text-[#0d9488]" title="Editar">
+                        <Edit className="size-3.5" />
+                      </button>
+                      <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#a0afb4] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -211,13 +247,14 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
         )}
       </main>
 
+      {/* MODAL CRIAR / EDITAR */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Novo evento</h2>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar evento' : 'Novo evento'}</h2>
                 <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá na agenda dos responsáveis</p>
               </div>
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
@@ -299,18 +336,19 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : null}
-                {salvando ? 'Salvando...' : 'Criar evento'}
+              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar evento'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL EXCLUIR */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
               <Trash2 className="size-5" />
@@ -318,8 +356,10 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir evento?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluir} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>
