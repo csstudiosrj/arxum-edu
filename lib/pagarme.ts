@@ -108,8 +108,12 @@ export async function criarRecebedor(dados: DadosRecebedor) {
   if (!auth) return { success: false as const, error: 'PAGARME_SECRET_KEY não configurada.' }
 
   try {
-    // register_information leva os dados cadastrais detalhados.
-    // name, email, document e type também vão na raiz — é o que a API V5 exige.
+    // REGRA DA API V5:
+    // Quando register_information está presente, os campos name, email,
+    // document e type NÃO podem aparecer na raiz do payload — eles vão
+    // apenas dentro de register_information. Caso contrário a API
+    // responde: "The X field cannot be populated when the
+    // register_information field is populated."
     const registerInfo = {
       ...dados.registerInformation,
       name: dados.nome,
@@ -119,12 +123,6 @@ export async function criarRecebedor(dados: DadosRecebedor) {
     }
 
     const payload = {
-      // ── Campos obrigatórios na RAIZ ────────────────────────────
-      name: dados.nome,
-      email: dados.email,
-      document: dados.documento,
-      type: dados.tipo, // 'individual' ou 'company'
-
       // ── Conta bancária ─────────────────────────────────────────
       default_bank_account: {
         holder_name: dados.banco.titular_nome,
@@ -149,6 +147,7 @@ export async function criarRecebedor(dados: DadosRecebedor) {
       },
 
       // ── Dados cadastrais detalhados (KYC) ──────────────────────
+      // name, email, document e type vão AQUI, não na raiz.
       register_information: registerInfo,
     }
 
