@@ -209,6 +209,7 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
         </Panel>
       </main>
 
+      {/* MODAL DE LEITURA */}
       {selecionada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelecionada(null)} />
@@ -265,17 +266,17 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
                   <button
                     onClick={() => handleMarcarRespondida(selecionada.id)}
                     disabled={processando}
-                    className="rounded-lg border border-[#b8c9ce] bg-white px-3 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-3 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] disabled:opacity-50"
                   >
-                    Marcar como respondida
+                    <Check className="size-4" /> Marcar como respondida
                   </button>
                 )}
                 <button
                   onClick={() => setConfirmarExclusao(selecionada.id)}
-                  className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
-                  title="Excluir"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626]/30 bg-white px-3 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2]"
+                  title="Excluir mensagem"
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 className="size-4" /> Excluir
                 </button>
               </div>
             </footer>
@@ -283,6 +284,7 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
         </div>
       )}
 
+      {/* MODAL DE EXCLUSÃO */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
