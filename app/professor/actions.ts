@@ -115,7 +115,6 @@ export async function lancarNotaProfessor(data: {
 
     if (error) return { success: false, error: error.message }
 
-    // Notifica o responsável — respeitando a config da escola.
     try {
       if (data.responsavel_email) {
         enviarSeAtivo({
@@ -144,6 +143,29 @@ export async function lancarNotaProfessor(data: {
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao lançar nota.' }
+  }
+}
+
+export async function excluirNotaProfessor(id: string) {
+  try {
+    const prof = await getProfessorDoUsuario()
+    if (!prof) return { success: false, error: 'Sessão expirada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('notas')
+      .delete()
+      .eq('id', id)
+      .eq('escola_id', prof.escola_id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/professor/notas')
+    revalidatePath('/admin/notas')
+    revalidatePath('/aluno/boletim')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir nota.' }
   }
 }
 
@@ -197,7 +219,6 @@ export async function criarOcorrenciaProfessor(data: {
 
     if (error) return { success: false, error: error.message }
 
-    // Notifica o responsável — respeitando a config da escola.
     try {
       if (data.responsavel_email) {
         enviarSeAtivo({
@@ -226,5 +247,65 @@ export async function criarOcorrenciaProfessor(data: {
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao registrar ocorrência.' }
+  }
+}
+
+export async function atualizarOcorrenciaProfessor(id: string, data: Partial<{
+  tipo: string
+  gravidade: string
+  titulo: string
+  descricao: string
+  providencias: string
+}>) {
+  try {
+    const prof = await getProfessorDoUsuario()
+    if (!prof) return { success: false, error: 'Sessão expirada.' }
+
+    const admin = createAdminClient()
+    const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
+    
+    if (data.tipo) payload.tipo = data.tipo
+    if (data.gravidade) payload.gravidade = data.gravidade
+    if (data.titulo) payload.titulo = data.titulo
+    if (data.descricao) payload.descricao = data.descricao
+    if (data.providencias !== undefined) payload.providencias = data.providencias || null
+
+    const { error } = await admin
+      .from('ocorrencias')
+      .update(payload)
+      .eq('id', id)
+      .eq('escola_id', prof.escola_id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/professor/ocorrencias')
+    revalidatePath('/admin/ocorrencias')
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar ocorrência.' }
+  }
+}
+
+export async function excluirOcorrenciaProfessor(id: string) {
+  try {
+    const prof = await getProfessorDoUsuario()
+    if (!prof) return { success: false, error: 'Sessão expirada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('ocorrencias')
+      .delete()
+      .eq('id', id)
+      .eq('escola_id', prof.escola_id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/professor/ocorrencias')
+    revalidatePath('/admin/ocorrencias')
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao excluir ocorrência.' }
   }
 }

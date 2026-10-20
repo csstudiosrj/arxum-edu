@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, TrendingUp, Check, X, Loader2 } from 'lucide-react'
-import { lancarNotaProfessor, type AlunoResumo, type NotaProfessor } from '../actions'
+import { Search, Plus, TrendingUp, Check, X, Loader2, Edit, Trash2 } from 'lucide-react'
+import { lancarNotaProfessor, excluirNotaProfessor, type AlunoResumo, type NotaProfessor } from '../actions'
 
 const TODAS_DISCIPLINAS = [
   'Matemática', 'Português', 'Física', 'Química', 'Biologia', 'História',
@@ -39,6 +39,9 @@ export function NotasProfessorClient({
   const [busca, setBusca] = useState('')
   const [filtroDisciplina, setFiltroDisciplina] = useState('todas')
   const [novaAberta, setNovaAberta] = useState(false)
+  const [editando, setEditando] = useState<NotaProfessor | null>(null)
+  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [alunoIdx, setAlunoIdx] = useState('')
   const [disciplina, setDisciplina] = useState(disciplinasSugeridas[0] || 'Matemática')
@@ -61,10 +64,23 @@ export function NotasProfessorClient({
   })
 
   function limpar() {
-    setAlunoIdx(''); setNotaStr(''); setFaltas(''); setObservacao(''); setErro('')
+    setAlunoIdx(''); setNotaStr(''); setFaltas(''); setObservacao(''); setErro(''); setEditando(null)
   }
 
-  async function handleLancar() {
+  function abrirEdicao(n: NotaProfessor) {
+    const idx = alunos.findIndex((a) => a.id === n.aluno_id)
+    setAlunoIdx(String(idx))
+    setDisciplina(n.disciplina)
+    setPeriodo(n.periodo)
+    setNotaStr(n.nota !== null ? n.nota.toString() : '')
+    setFaltas(n.faltas.toString())
+    setObservacao(n.observacao || '')
+    setEditando(n)
+    setNovaAberta(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
     if (!alunoIdx) return setErro('Selecione o aluno.')
     const aluno = alunos[parseInt(alunoIdx, 10)]
     if (!aluno) return setErro('Aluno inválido.')
@@ -80,6 +96,8 @@ export function NotasProfessorClient({
 
     setEnviando(true)
     setErro('')
+    
+    // A ação lancarNotaProfessor já faz um upsert
     const r = await lancarNotaProfessor({
       aluno_id: aluno.id,
       aluno_nome: aluno.nome,
@@ -90,11 +108,25 @@ export function NotasProfessorClient({
       faltas: faltasValor,
       observacao,
     })
+    
     setEnviando(false)
 
     if (!r.success) return setErro(r.error || 'Erro.')
     limpar()
     setNovaAberta(false)
+    router.refresh()
+  }
+
+  async function handleExcluir() {
+    if (!confirmarExclusao) return
+    setExcluindo(true)
+    const r = await excluirNotaProfessor(confirmarExclusao)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
+    setConfirmarExclusao(null)
     router.refresh()
   }
 
@@ -146,6 +178,7 @@ export function NotasProfessorClient({
                   <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Período</th>
                   <th className="px-5 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Nota</th>
                   <th className="px-5 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Faltas</th>
+                  <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,6 +193,16 @@ export function NotasProfessorClient({
                       </span>
                     </td>
                     <td className="px-5 py-3 text-center text-sm text-[#4d626c]">{n.faltas}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => abrirEdicao(n)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                          <Edit className="size-4" />
+                        </button>
+                        <button onClick={() => setConfirmarExclusao(n.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -168,13 +211,14 @@ export function NotasProfessorClient({
         )}
       </div>
 
+      {/* MODAL NOVA / EDITAR NOTA */}
       {novaAberta && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !enviando && setNovaAberta(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Lançar nota</h2>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar nota' : 'Lançar nota'}</h2>
                 <p className="mt-0.5 text-xs text-[#82939a]">Se já existir, será atualizada</p>
               </div>
               <button onClick={() => setNovaAberta(false)} disabled={enviando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
@@ -184,7 +228,7 @@ export function NotasProfessorClient({
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
                     {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome} {a.serie ? `— ${a.serie}` : ''}</option>)}
                   </select>
@@ -192,13 +236,13 @@ export function NotasProfessorClient({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplina</label>
-                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {disciplinasDisponiveis.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Período</label>
-                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {PERIODOS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
                     </select>
                   </div>
@@ -223,12 +267,30 @@ export function NotasProfessorClient({
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovaAberta(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleLancar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button onClick={handleSalvar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                {enviando ? 'Salvando...' : 'Salvar nota'}
+                {enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Salvar nota'}
               </button>
             </footer>
           </aside>
+        </div>
+      )}
+
+      {/* MODAL EXCLUIR */}
+      {confirmarExclusao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
+            <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir nota?</h3>
+            <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
+            <div className="mt-6 flex gap-2">
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
