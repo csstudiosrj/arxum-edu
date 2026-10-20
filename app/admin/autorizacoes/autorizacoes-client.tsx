@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, X, Loader2, Bus, ShieldCheck, Image as ImageIcon, Pill, FileQuestion, CheckCircle2, XCircle, Clock, Users } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel, ActionButton } from '@/components/admin-shell'
-import { criarAutorizacao, excluirAutorizacao, getRespostas, type Autorizacao, type RespostaDetalhe } from './actions'
+import { Plus, Trash2, X, Loader2, Bus, ShieldCheck, Image as ImageIcon, Pill, FileQuestion, CheckCircle2, XCircle, Clock, Users, Edit, Check } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { criarAutorizacao, atualizarAutorizacao, excluirAutorizacao, getRespostas, type Autorizacao, type RespostaDetalhe } from './actions'
 
 type IconeComponente = typeof Bus
 
@@ -40,10 +40,12 @@ function formatarData(iso: string | null): string {
 export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao[] }) {
   const router = useRouter()
   const [novoAberto, setNovoAberto] = useState(false)
+  const [editando, setEditando] = useState<Autorizacao | null>(null)
   const [detalheId, setDetalheId] = useState<string | null>(null)
   const [respostas, setRespostas] = useState<RespostaDetalhe[] | null>(null)
   const [carregandoRespostas, setCarregandoRespostas] = useState(false)
   const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -62,18 +64,37 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
     setPrazo('')
     setPublico('todos')
     setErro('')
+    setEditando(null)
   }
 
-  async function handleCriar() {
+  function abrirEdicao(a: Autorizacao) {
+    setTitulo(a.titulo)
+    setDescricao(a.descricao || '')
+    setTipo(a.tipo)
+    setDataEvento(a.data_evento || '')
+    setPrazo(a.prazo_resposta || '')
+    setPublico(a.publico)
+    setEditando(a)
+    setNovoAberto(true)
+    setErro('')
+  }
+
+  async function handleSalvar() {
     if (!titulo.trim()) return setErro('Informe o título.')
     if (!descricao.trim()) return setErro('Informe a descrição.')
 
     setSalvando(true)
     setErro('')
-    const result = await criarAutorizacao({ titulo, descricao, tipo, data_evento: dataEvento, prazo_resposta: prazo, publico })
-    setSalvando(false)
 
-    if (!result.success) return setErro(result.error || 'Erro.')
+    if (editando) {
+      const result = await atualizarAutorizacao(editando.id, { titulo, descricao, tipo, data_evento: dataEvento, prazo_resposta: prazo, publico })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    } else {
+      const result = await criarAutorizacao({ titulo, descricao, tipo, data_evento: dataEvento, prazo_resposta: prazo, publico })
+      setSalvando(false)
+      if (!result.success) return setErro(result.error || 'Erro.')
+    }
 
     limpar()
     setNovoAberto(false)
@@ -90,7 +111,13 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
 
   async function handleExcluir() {
     if (!confirmarExclusao) return
-    await excluirAutorizacao(confirmarExclusao)
+    setExcluindo(true)
+    const r = await excluirAutorizacao(confirmarExclusao)
+    setExcluindo(false)
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
     setConfirmarExclusao(null)
     router.refresh()
   }
@@ -109,12 +136,13 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
             title="Autorizações"
             description="Crie autorizações e acompanhe as respostas dos responsáveis."
           />
-          <ActionButton variant="primary">
-            <button onClick={() => { limpar(); setNovoAberto(true) }} className="inline-flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Nova autorização
-            </button>
-          </ActionButton>
+          <button 
+            onClick={() => { limpar(); setNovoAberto(true) }} 
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+          >
+            <Plus className="size-4" />
+            Nova autorização
+          </button>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -175,18 +203,28 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
                         <span className="inline-flex items-center gap-1"><Users className="size-3" /> {a.total_respostas} respostas ({a.total_autorizados} autorizados)</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => abrirDetalhe(a.id)}
-                      className="hidden rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] sm:block"
-                    >
-                      Ver respostas
-                    </button>
-                    <button
-                      onClick={() => setConfirmarExclusao(a.id)}
-                      className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => abrirEdicao(a)}
+                        className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                        title="Editar"
+                      >
+                        <Edit className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => abrirDetalhe(a.id)}
+                        className="hidden rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] sm:block"
+                      >
+                        Ver respostas
+                      </button>
+                      <button
+                        onClick={() => setConfirmarExclusao(a.id)}
+                        className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
+                        title="Excluir"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -195,13 +233,14 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
         </Panel>
       </main>
 
+      {/* MODAL CRIAR / EDITAR */}
       {novoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Nova autorização</h2>
+                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar autorização' : 'Nova autorização'}</h2>
                 <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá para os responsáveis responderem</p>
               </div>
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
@@ -278,15 +317,16 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : null}
-                {salvando ? 'Salvando...' : 'Criar autorização'}
+              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar autorização'}
               </button>
             </footer>
           </aside>
         </div>
       )}
 
+      {/* MODAL DETALHES/RESPOSTAS */}
       {detalheId && detalhe && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setDetalheId(null); setRespostas(null) }} />
@@ -332,9 +372,10 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
         </div>
       )}
 
+      {/* MODAL EXCLUIR */}
       {confirmarExclusao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmarExclusao(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !excluindo && setConfirmarExclusao(null)} />
           <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
               <Trash2 className="size-5" />
@@ -342,8 +383,10 @@ export function AutorizacoesClient({ autorizacoes }: { autorizacoes: Autorizacao
             <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir autorização?</h3>
             <p className="mt-2 text-center text-sm text-[#82939a]">Todas as respostas vinculadas serão removidas. Essa ação não pode ser desfeita.</p>
             <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e]">Cancelar</button>
-              <button onClick={handleExcluir} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c]">Excluir</button>
+              <button onClick={() => setConfirmarExclusao(null)} disabled={excluindo} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
+              <button onClick={handleExcluir} disabled={excluindo} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
             </div>
           </div>
         </div>

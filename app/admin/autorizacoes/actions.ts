@@ -146,6 +146,36 @@ export async function criarAutorizacao(data: NovaAutorizacao) {
   }
 }
 
+export async function atualizarAutorizacao(id: string, data: NovaAutorizacao) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('autorizacoes')
+      .update({
+        titulo: data.titulo,
+        descricao: data.descricao || null,
+        tipo: data.tipo,
+        data_evento: data.data_evento || null,
+        prazo_resposta: data.prazo_resposta || null,
+        publico: data.publico,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/autorizacoes')
+    revalidatePath('/responsavel')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao atualizar autorização.' }
+  }
+}
+
 export async function excluirAutorizacao(id: string) {
   try {
     const escola = await getEscolaDoUsuario()
