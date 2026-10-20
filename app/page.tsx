@@ -1,11 +1,14 @@
-'use client'
-
 import Link from 'next/link'
-import { ArrowRight, Check, ChevronDown, CreditCard, FileText, GraduationCap, MessageSquare, PlayCircle, ShoppingBag, Sparkles, type LucideIcon } from 'lucide-react'
+import {
+  ArrowRight, Check, ChevronDown, CreditCard, FileText, GraduationCap,
+  MessageSquare, PlayCircle, ShoppingBag, Sparkles, type LucideIcon,
+} from 'lucide-react'
 import { ArxumBrand } from '@/components/arxum-brand'
+import { getPlanosPublicos } from '@/lib/planos-publicos'
+
+export const dynamic = 'force-dynamic'
 
 type Feature = [LucideIcon, string, string]
-type Plan = [string, string, string, string[]]
 
 const features: Feature[] = [
   [FileText, 'Matrícula online', 'Aprovação condicionada e fluxo digital completo.'],
@@ -14,13 +17,6 @@ const features: Feature[] = [
   [GraduationCap, 'Sala virtual', 'Aulas, tarefas e acompanhamento pedagógico.'],
   [PlayCircle, 'EduFlix', 'Videoaulas organizadas para cada turma.'],
   [ShoppingBag, 'Loja virtual', 'Materiais, uniformes e experiências da escola.'],
-]
-
-const plans: Plan[] = [
-  ['Semente', 'Até 100 alunos', 'R$ 199', ['Matrículas online', 'Comunicação escolar', 'Financeiro básico']],
-  ['Raiz', 'Até 300 alunos', 'R$ 399', ['Tudo do Semente', 'Sala virtual e EduFlix', 'Split automático']],
-  ['Copa', 'Até 800 alunos', 'R$ 699', ['Tudo do Raiz', 'Loja virtual', 'Relatórios avançados']],
-  ['Rede', 'Multiunidade', 'Sob consulta', ['Unidades ilimitadas', 'Gestão centralizada', 'Suporte dedicado']],
 ]
 
 const faqs = [
@@ -42,7 +38,18 @@ const navItems = [
 const schools = ['Horizonte', 'Colégio Uno', 'Aquarela', 'Integra', 'Núcleo']
 const chartBars = [35, 55, 44, 72, 60, 88, 78, 96]
 
-export default function HomePage() {
+function formatarPreco(centavos: number): string {
+  if (centavos === 0) return 'Sob consulta'
+  return (centavos / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  })
+}
+
+export default async function HomePage() {
+  const planos = await getPlanosPublicos()
+
   return (
     <main className="min-h-screen bg-[#061015] text-[#e7f1f5]">
       <header className="sticky top-0 z-10 border-b border-white/[.08] bg-[#061015]/90 backdrop-blur">
@@ -122,16 +129,46 @@ export default function HomePage() {
           <p className="text-center text-sm font-semibold uppercase tracking-[.2em] text-[#0d9488]">Planos simples e transparentes</p>
           <h2 className="mt-3 text-center text-4xl font-bold text-white">Escolha o próximo passo</h2>
           <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {plans.map(([name, desc, price, items]) => (
-              <article key={name} className={`relative rounded-xl border p-6 ${name==='Raiz'?'border-[#0d9488] bg-[#102932]':'border-white/10 bg-[#0b1a21]'}`}>
-                {name==='Raiz'&&<span className="absolute -top-3 right-4 rounded-full bg-[#0d9488] px-3 py-1 text-xs font-bold text-[#061015]">Mais popular</span>}
-                <h3 className="text-xl font-bold text-white">{name}</h3>
-                <p className="mt-1 text-sm text-[#8aa0ad]">{desc}</p>
-                <p className="mt-7 text-3xl font-bold text-white">{price}<span className="text-sm font-normal text-[#8aa0ad]">{price!=='Sob consulta'&&'/mês'}</span></p>
+            {planos.map((p) => (
+              <article
+                key={p.id}
+                className={`relative rounded-xl border p-6 ${
+                  p.destaque
+                    ? 'border-[#0d9488] bg-[#102932]'
+                    : 'border-white/10 bg-[#0b1a21]'
+                }`}
+              >
+                {p.destaque && (
+                  <span className="absolute -top-3 right-4 rounded-full bg-[#0d9488] px-3 py-1 text-xs font-bold text-[#061015]">
+                    Mais popular
+                  </span>
+                )}
+                <h3 className="text-xl font-bold text-white">{p.nome}</h3>
+                {p.descricao && (
+                  <p className="mt-1 text-sm text-[#8aa0ad]">{p.descricao}</p>
+                )}
+                <p className="mt-7 text-3xl font-bold text-white">
+                  {formatarPreco(p.preco_centavos)}
+                  {p.preco_centavos > 0 && (
+                    <span className="text-sm font-normal text-[#8aa0ad]">/mês</span>
+                  )}
+                </p>
                 <div className="my-7 flex flex-col gap-3 text-sm text-[#b9cbd4]">
-                  {items.map((item)=><span key={item}><Check className="mr-2 inline text-[#0d9488]" size={16}/>{item}</span>)}
+                  {p.recursos.map((item) => (
+                    <span key={item}>
+                      <Check className="mr-2 inline text-[#0d9488]" size={16}/>
+                      {item}
+                    </span>
+                  ))}
                 </div>
-                <Link href="/cadastro" className={`block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold ${name==='Raiz'?'bg-[#0d9488] text-[#061015]':'border border-white/15 text-white hover:border-white/30'}`}>
+                <Link
+                  href={`/cadastro?plano=${p.slug}`}
+                  className={`block w-full rounded-lg px-4 py-3 text-center text-sm font-semibold ${
+                    p.destaque
+                      ? 'bg-[#0d9488] text-[#061015]'
+                      : 'border border-white/15 text-white hover:border-white/30'
+                  }`}
+                >
                   Assinar
                 </Link>
               </article>
@@ -143,7 +180,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-3xl px-6 py-24">
         <h2 className="text-center text-4xl font-bold text-white">Perguntas frequentes</h2>
         <div className="mt-10 flex flex-col divide-y divide-white/10">
-          {faqs.map((faq)=>(
+          {faqs.map((faq) => (
             <details key={faq.q} className="group py-5">
               <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-white">
                 {faq.q}
