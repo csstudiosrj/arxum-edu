@@ -51,7 +51,11 @@ const fontVars = [
 ].join(' ')
 
 export const metadata: Metadata = {
-  title: 'ARXUM Edu — Plataforma escolar',
+  metadataBase: new URL('https://arxum.com.br'),
+  title: {
+    default: 'ARXUM Edu — Plataforma escolar',
+    template: '%s | ARXUM Edu',
+  },
   description: 'Matrículas, comunicação, financeiro, sala virtual e EduFlix em uma única plataforma.',
   generator: 'ARXUM Suite',
   icons: {
@@ -61,6 +65,11 @@ export const metadata: Metadata = {
       { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: '/apple-icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'ARXUM Edu',
   },
 }
 
