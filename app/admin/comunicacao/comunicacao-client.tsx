@@ -6,6 +6,7 @@ import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2 } from 'lucide-r
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarComunicado, excluirComunicado, type Comunicado } from './actions'
 
+// ── SEMÂNTICO: cores por setor ──────────────────────────────────────
 const setorStyles: Record<string, string> = {
   'Coordenação': 'bg-[#dbeafe] text-[#1e40af]',
   'Secretaria': 'bg-[#ccfbf1] text-[#0f766e]',
@@ -13,6 +14,7 @@ const setorStyles: Record<string, string> = {
   'Direção': 'bg-[#ede9fe] text-[#5b21b6]',
 }
 
+// ── SEMÂNTICO: cores por prioridade ─────────────────────────────────
 const prioridadeStyles: Record<string, string> = {
   'alta': 'bg-[#fee2e2] text-[#991b1b]',
   'normal': 'bg-[#e5ecee] text-[#5e7a94]',
@@ -110,7 +112,8 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
           />
           <button 
             onClick={() => setNovoAberto(true)} 
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" />
             Novo comunicado
@@ -119,7 +122,13 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Bell className="size-5" />
             </div>
             <div>
@@ -153,7 +162,13 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
           </div>
           {comunicados.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Bell className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum comunicado ainda</h3>
@@ -175,7 +190,13 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                           {c.prioridade.charAt(0).toUpperCase() + c.prioridade.slice(1)}
                         </span>
                       </div>
-                      <h3 className="mt-2 text-sm font-semibold text-[#243942] hover:text-[#0d9488] transition-colors">{c.titulo}</h3>
+                      <h3
+                        className="mt-2 text-sm font-semibold text-[#243942] transition-colors"
+                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--cor-primaria, #0d9488)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+                      >
+                        {c.titulo}
+                      </h3>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{c.mensagem}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#82939a]">
                         <span>Por: {c.autor_nome}</span>
@@ -233,7 +254,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                     value={titulo}
                     onChange={(e) => setTitulo(e.target.value)}
                     placeholder="Ex: Reunião de pais — 9º Ano A"
-                    className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                 </div>
 
@@ -244,43 +265,55 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                     onChange={(e) => setMensagem(e.target.value)}
                     placeholder="Escreva o comunicado completo..."
                     rows={8}
-                    className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Setor</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {setores.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setSetor(s)}
-                        className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                          setor === s ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {setores.map((s) => {
+                      const sel = setor === s
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSetor(s)}
+                          className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {s}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Prioridade</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {prioridades.map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => setPrioridade(p.key)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                          prioridade === p.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    {prioridades.map((p) => {
+                      const sel = prioridade === p.key
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setPrioridade(p.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {p.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -293,10 +326,15 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
             </div>
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-              <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] disabled:opacity-50">
+              <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handleEnviar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleEnviar}
+                disabled={enviando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando...</> : <><Send className="size-4" /> Enviar comunicado</>}
               </button>
             </footer>

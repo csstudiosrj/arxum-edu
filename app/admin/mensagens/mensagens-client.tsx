@@ -83,12 +83,18 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Inbox className="size-5" />
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Total</p>
-              <p className="text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{mensagens.length}</p>
+              <p className="text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{mensagens.length}</p>
             </div>
           </Panel>
           <Panel className="flex items-center gap-4 p-5">
@@ -119,17 +125,22 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
                   { key: 'todas', label: 'Todas' },
                   { key: 'nao_lidas', label: 'Não lidas' },
                   { key: 'nao_respondidas', label: 'Não respondidas' },
-                ].map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setFiltro(f.key as typeof filtro)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      filtro === f.key ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+                ].map((f) => {
+                  const ativo = filtro === f.key
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setFiltro(f.key as typeof filtro)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                      style={ativo ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {f.label}
+                    </button>
+                  )
+                })}
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-72">
                 <Search className="size-4 text-[#9aaab0]" />
@@ -146,7 +157,13 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
 
           {filtradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Inbox className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma mensagem</h3>
@@ -157,8 +174,15 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
           ) : (
             <div className="divide-y divide-[#f0f4f5]">
               {filtradas.map((m) => (
-                <div key={m.id} className={`flex items-start gap-4 px-5 py-4 transition hover:bg-[#fafcfc] ${!m.lida ? 'bg-[#f0fbf8]' : ''}`}>
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-full ${!m.lida ? 'bg-[#0d9488] text-white' : 'bg-[#f0f4f5] text-[#536871]'}`}>
+                <div
+                  key={m.id}
+                  className={`flex items-start gap-4 px-5 py-4 transition hover:bg-[#fafcfc] ${!m.lida ? '' : ''}`}
+                  style={!m.lida ? { backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 6%, white)' } : undefined}
+                >
+                  <div
+                    className={`grid size-10 shrink-0 place-items-center rounded-full ${!m.lida ? 'text-white' : 'bg-[#f0f4f5] text-[#536871]'}`}
+                    style={!m.lida ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                  >
                     <span className="text-xs font-bold">
                       {m.nome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()}
                     </span>
@@ -229,17 +253,30 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
             <div className="flex-1 overflow-y-auto px-6 py-5">
               <div className="mb-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid size-10 place-items-center rounded-full bg-[#0d9488] text-sm font-bold text-white">
+                  <div
+                    className="grid size-10 place-items-center rounded-full text-sm font-bold text-white"
+                    style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                  >
                     {selecionada.nome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[#243942]">{selecionada.nome}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#82939a]">
-                      <a href={`mailto:${selecionada.email}`} className="flex items-center gap-1 hover:text-[#0d9488]">
+                      <a
+                        href={`mailto:${selecionada.email}`}
+                        className="flex items-center gap-1"
+                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--cor-primaria, #0d9488)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+                      >
                         <Mail className="size-3.5" /> {selecionada.email}
                       </a>
                       {selecionada.telefone && (
-                        <a href={`tel:${selecionada.telefone.replace(/\D/g, '')}`} className="flex items-center gap-1 hover:text-[#0d9488]">
+                        <a
+                          href={`tel:${selecionada.telefone.replace(/\D/g, '')}`}
+                          className="flex items-center gap-1"
+                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--cor-primaria, #0d9488)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+                        >
                           <Phone className="size-3.5" /> {selecionada.telefone}
                         </a>
                       )}
@@ -257,7 +294,8 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
             <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <a
                 href={`mailto:${selecionada.email}?subject=${encodeURIComponent(selecionada.assunto ? `Re: ${selecionada.assunto}` : 'Resposta')}`}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 <ExternalLink className="size-4" /> Responder por e-mail
               </a>
@@ -266,7 +304,7 @@ export function MensagensClient({ mensagens }: { mensagens: Mensagem[] }) {
                   <button
                     onClick={() => handleMarcarRespondida(selecionada.id)}
                     disabled={processando}
-                    className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-3 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-3 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50"
                   >
                     <Check className="size-4" /> Marcar como respondida
                   </button>

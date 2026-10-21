@@ -121,7 +121,8 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
           />
           <button 
             onClick={() => { limpar(); setNovoAberto(true) }} 
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" />
             Novo álbum
@@ -130,11 +131,17 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <ImageIcon className="size-5" />
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Álbuns</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{albuns.length}</p>
+            <p className="mt-1 text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{albuns.length}</p>
           </Panel>
           <Panel className="p-5">
             <div className="grid size-10 place-items-center rounded-lg bg-[#dbeafe] text-[#3b82f6]">
@@ -148,7 +155,13 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
         {albuns.length === 0 ? (
           <Panel className="mt-8">
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <ImageIcon className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum álbum ainda</h3>
@@ -174,18 +187,19 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
                 <div className="p-4">
                   <h3 className="text-sm font-semibold text-[#243942]">{a.titulo}</h3>
                   {a.descricao && <p className="mt-1 line-clamp-2 text-xs text-[#82939a]">{a.descricao}</p>}
-                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-[#0d9488]">{publicoLabel[a.publico]}</p>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{publicoLabel[a.publico]}</p>
 
                   <div className="mt-4 flex items-center gap-2">
                     <button
                       onClick={() => setAlbumAberto(a)}
-                      className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                      className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                     >
                       Gerenciar fotos
                     </button>
                     <button
                       onClick={() => abrirEdicao(a)}
-                      className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                      className="rounded-lg p-1.5 transition hover:brightness-90"
+                      style={{ color: 'var(--cor-primaria, #0d9488)' }}
                       title="Editar álbum"
                     >
                       <Edit className="size-3.5" />
@@ -221,20 +235,33 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Festa Junina 2026" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Festa Junina 2026" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhes do álbum (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhes do álbum (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Público</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {publicos.map((p) => (
-                      <button key={p.key} type="button" onClick={() => setPublico(p.key)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${publico === p.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
-                        {p.label}
-                      </button>
-                    ))}
+                    {publicos.map((p) => {
+                      const sel = publico === p.key
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setPublico(p.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {p.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
@@ -242,7 +269,12 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleSalvar}
+                disabled={salvando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar álbum'}
               </button>
@@ -275,9 +307,9 @@ export function GaleriaClient({ albuns }: { albuns: Album[] }) {
                   onUploadError={(err) => alert(err.message)}
                   appearance={{
                     container: 'border-none bg-transparent p-0 cursor-pointer',
-                    label: 'text-xs text-[#82939a] hover:text-[#0d9488]',
+                    label: 'text-xs text-[#82939a] hover:text-[var(--cor-primaria,#0d9488)]',
                     allowedContent: 'text-[10px] text-[#a0afb4]',
-                    button: 'bg-[#0d9488] text-white text-xs font-semibold rounded px-3 py-1.5 hover:bg-[#0f766e] ut-uploading:bg-[#0f766e]',
+                    button: 'bg-[var(--cor-primaria,#0d9488)] text-white text-xs font-semibold rounded px-3 py-1.5 hover:brightness-90 ut-uploading:brightness-75',
                   }}
                 />
               </div>
