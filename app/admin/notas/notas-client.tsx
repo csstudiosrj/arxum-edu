@@ -17,6 +17,7 @@ const periodos = [
   { key: '2_semestre', label: '2º Semestre' },
 ]
 
+// ── SEMÂNTICO: nota por faixa, não muda com branding ────────────────
 function corNota(nota: number | null): string {
   if (nota === null) return 'bg-[#e5ecee] text-[#5e7a94]'
   if (nota >= 7) return 'bg-[#d1fae5] text-[#065f46]'
@@ -148,11 +149,17 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <BookOpen className="size-5" />
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Notas lançadas</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{notas.length}</p>
+            <p className="mt-1 text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{notas.length}</p>
           </Panel>
           <Panel className="p-5">
             <div className="grid size-10 place-items-center rounded-lg bg-[#dbeafe] text-[#3b82f6]">
@@ -174,11 +181,11 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-2">
-                <select value={filtroAluno} onChange={(e) => setFiltroAluno(e.target.value)} className="rounded-lg border border-[#d5e0e3] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b7d86] outline-none focus:border-[#0d9488]">
+                <select value={filtroAluno} onChange={(e) => setFiltroAluno(e.target.value)} className="rounded-lg border border-[#d5e0e3] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b7d86] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                   <option value="todos">Todos os alunos</option>
                   {alunosUnicos.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
-                <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="rounded-lg border border-[#d5e0e3] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b7d86] outline-none focus:border-[#0d9488]">
+                <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="rounded-lg border border-[#d5e0e3] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b7d86] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                   <option value="todos">Todos os períodos</option>
                   {periodos.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
                 </select>
@@ -192,7 +199,13 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
 
           {notas.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <BookOpen className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma nota lançada</h3>
@@ -230,7 +243,12 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
                           <td className="px-5 py-3.5 text-sm text-[#4d626c]">{n.faltas}</td>
                           <td className="px-5 py-3.5">
                             <div className="flex justify-end gap-1">
-                              <button onClick={() => abrirEdicao(n)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                              <button
+                                onClick={() => abrirEdicao(n)}
+                                className="rounded-lg p-1.5 transition hover:brightness-90"
+                                style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                                title="Editar"
+                              >
                                 <Edit className="size-4" />
                               </button>
                               <button onClick={() => setConfirmarExclusao(n.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
@@ -267,7 +285,7 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
                     {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome}</option>)}
                   </select>
@@ -275,13 +293,13 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplina</label>
-                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
+                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {disciplinas.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Período</label>
-                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
+                    <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                       {periodos.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
                     </select>
                   </div>
@@ -289,23 +307,28 @@ export function NotasClient({ notas, alunos }: { notas: Nota[]; alunos: Array<{ 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nota (0 a 10)</label>
-                    <input type="text" value={notaStr} onChange={(e) => setNotaStr(e.target.value)} placeholder="Ex: 8.5" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                    <input type="text" value={notaStr} onChange={(e) => setNotaStr(e.target.value)} placeholder="Ex: 8.5" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Faltas</label>
-                    <input type="number" value={faltas} onChange={(e) => setFaltas(e.target.value)} placeholder="0" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                    <input type="number" value={faltas} onChange={(e) => setFaltas(e.target.value)} placeholder="0" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação</label>
-                  <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Comentário sobre o desempenho (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Comentário sobre o desempenho (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
               </div>
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovaAberta(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleLancar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleLancar}
+                disabled={salvando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Salvar nota'}
               </button>
