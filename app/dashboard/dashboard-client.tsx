@@ -44,7 +44,7 @@ function formatarData(iso: string): string {
 
 export function DashboardClient({ data }: { data: DashboardData }) {
   const metrics = [
-    { label: 'Total de alunos', value: String(data.totalAlunos), sub: 'Alunos ativos', icon: Users, color: '#0d9488' },
+    { label: 'Total de alunos', value: String(data.totalAlunos), sub: 'Alunos ativos', icon: Users, color: 'var(--cor-primaria, #0d9488)' },
     { label: 'Matrículas pendentes', value: String(data.matriculasPendentes), sub: 'Aguardando análise', icon: FileText, color: '#d97706' },
     { label: 'Faturas em aberto', value: String(data.faturasEmAberto), sub: 'A receber', icon: WalletCards, color: '#3b82f6' },
     { label: 'Comunicados não lidos', value: String(data.comunicadosNaoLidos), sub: 'Ativos na escola', icon: Bell, color: '#dc2626' },
@@ -63,7 +63,13 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           {metrics.map((m) => (
             <Panel key={m.label} className="p-5">
               <div className="flex items-start justify-between">
-                <div className="grid size-10 place-items-center rounded-lg" style={{ backgroundColor: `${m.color}15`, color: m.color }}>
+                <div
+                  className="grid size-10 place-items-center rounded-lg"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${m.color} 15%, white)`,
+                    color: m.color,
+                  }}
+                >
                   <m.icon className="size-5" />
                 </div>
                 <TrendingUp className="size-4 text-[#a0afb4]" />
@@ -80,13 +86,19 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             <Link
               key={a.label}
               href={a.href}
-              className="group flex items-center gap-3 rounded-xl border border-[#dce5e8] bg-white px-4 py-3.5 transition hover:border-[#0d9488] hover:bg-[#f9fdfc]"
+              className="group flex items-center gap-3 rounded-xl border border-[#dce5e8] bg-white px-4 py-3.5 transition hover:border-[var(--cor-primaria,#0d9488)] hover:bg-black/[0.02]"
             >
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <a.icon className="size-[18px]" />
               </div>
-              <span className="flex-1 text-sm font-semibold text-[#30454e] group-hover:text-[#0f766e]">{a.label}</span>
-              <ArrowRight className="size-4 text-[#a0afb4] group-hover:text-[#0d9488]" />
+              <span className="flex-1 text-sm font-semibold text-[#30454e] transition">{a.label}</span>
+              <ArrowRight className="size-4 text-[#a0afb4] transition group-hover:text-[var(--cor-primaria,#0d9488)]" />
             </Link>
           ))}
         </div>
@@ -97,14 +109,20 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               <h2 className="text-base font-bold text-[#12232b]">Matrículas recentes</h2>
               <p className="mt-0.5 text-xs text-[#82939a]">Últimas inscrições recebidas pela escola</p>
             </div>
-            <Link href="/admin/matriculas" className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]">
+            <Link href="/admin/matriculas" className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]">
               Ver todas
             </Link>
           </div>
 
           {data.matriculasRecentes.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Inbox className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma matrícula ainda</h3>

@@ -74,14 +74,20 @@ export function AlunoDashboard({
   return (
     <main className="px-5 py-8 lg:px-8">
       <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Olá, {alunoNome.split(' ')[0]}</p>
+        <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Olá, {alunoNome.split(' ')[0]}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">Seu painel</h1>
         <p className="mt-2 text-sm text-[#71838b]">Acompanhe seu desempenho, aulas e novidades da escola.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-[#dce5e8] bg-white p-5">
-          <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+          <div
+            className="grid size-10 place-items-center rounded-lg"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+              color: 'var(--cor-primaria, #0d9488)',
+            }}
+          >
             <TrendingUp className="size-5" />
           </div>
           <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Média geral</p>
@@ -125,7 +131,7 @@ export function AlunoDashboard({
         <section>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#12232b]">Continue estudando</h2>
-            <Link href="/aluno/aulas" className="text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
+            <Link href="/aluno/aulas" className="text-sm font-medium transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
               Ver todas <ArrowRight className="ml-1 inline size-3.5" />
             </Link>
           </div>
@@ -143,19 +149,25 @@ export function AlunoDashboard({
                 <Link
                   key={a.id}
                   href="/aluno/aulas"
-                  className="group flex items-center gap-4 rounded-xl border border-[#dce5e8] bg-white p-4 transition hover:border-[#0d9488]"
+                  className="group flex items-center gap-4 rounded-xl border border-[#dce5e8] bg-white p-4 transition hover:border-[var(--cor-primaria,#0d9488)]"
                 >
-                  <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div
+                    className="grid size-10 shrink-0 place-items-center rounded-lg"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
                     <Video className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#0d9488]">{a.disciplina}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{a.disciplina}</p>
                     <h3 className="mt-0.5 truncate text-sm font-semibold text-[#243942]">{a.titulo}</h3>
                     <p className="mt-0.5 truncate text-xs text-[#82939a]">
                       {a.modulo_titulo}{a.duracao_minutos ? ` · ${a.duracao_minutos} min` : ''}
                     </p>
                   </div>
-                  <ArrowRight className="size-4 shrink-0 text-[#a0afb4] group-hover:text-[#0d9488]" />
+                  <ArrowRight className="size-4 shrink-0 text-[#a0afb4] transition group-hover:text-[var(--cor-primaria,#0d9488)]" />
                 </Link>
               ))}
             </div>
@@ -165,7 +177,7 @@ export function AlunoDashboard({
         <section>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#12232b]">Próximos eventos</h2>
-            <Link href="/aluno/agenda" className="text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
+            <Link href="/aluno/agenda" className="text-sm font-medium transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
               Ver agenda <ArrowRight className="ml-1 inline size-3.5" />
             </Link>
           </div>
@@ -203,7 +215,7 @@ export function AlunoDashboard({
       <section className="mt-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#12232b]">Comunicados recentes</h2>
-          <Link href="/aluno/comunicados" className="text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
+          <Link href="/aluno/comunicados" className="text-sm font-medium transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
             Ver todos <ArrowRight className="ml-1 inline size-3.5" />
           </Link>
         </div>
@@ -215,25 +227,34 @@ export function AlunoDashboard({
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-3">
-            {comunicados.slice(0, 3).map((c) => (
-              <Link
-                key={c.id}
-                href="/aluno/comunicados"
-                className={`rounded-xl border bg-white p-4 transition hover:border-[#0d9488] ${!c.lido ? 'border-[#dc2626]/30' : 'border-[#dce5e8]'}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>
-                    {c.setor}
-                  </span>
-                  <span className="text-xs text-[#82939a]">{formatarData(c.criado_em)}</span>
-                </div>
-                <h3 className="mt-3 text-sm font-semibold text-[#243942]">
-                  {!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]" />}
-                  {c.titulo}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{c.mensagem}</p>
-              </Link>
-            ))}
+            {comunicados.slice(0, 3).map((c) => {
+              const temEstiloSetor = !!setorStyles[c.setor]
+              return (
+                <Link
+                  key={c.id}
+                  href="/aluno/comunicados"
+                  className={`rounded-xl border bg-white p-4 transition hover:border-[var(--cor-primaria,#0d9488)] ${!c.lido ? 'border-[#dc2626]/30' : 'border-[#dce5e8]'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || ''}`}
+                      style={!temEstiloSetor ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {c.setor}
+                    </span>
+                    <span className="text-xs text-[#82939a]">{formatarData(c.criado_em)}</span>
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold text-[#243942]">
+                    {!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]" />}
+                    {c.titulo}
+                  </h3>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{c.mensagem}</p>
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>

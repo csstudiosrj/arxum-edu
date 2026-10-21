@@ -36,7 +36,7 @@ export function ProfessorDashboard({
   return (
     <main className="px-5 py-8 lg:px-8">
       <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Olá, {professorNome.split(' ')[0]}</p>
+        <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Olá, {professorNome.split(' ')[0]}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">Painel do professor</h1>
         <p className="mt-2 text-sm text-[#71838b]">
           {disciplinas.length > 0
@@ -47,9 +47,17 @@ export function ProfessorDashboard({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-[#dce5e8] bg-white p-5">
-          <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Users className="size-5" /></div>
+          <div
+            className="grid size-10 place-items-center rounded-lg"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+              color: 'var(--cor-primaria, #0d9488)',
+            }}
+          >
+            <Users className="size-5" />
+          </div>
           <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Alunos</p>
-          <p className="mt-1 text-3xl font-bold tracking-[-.03em] text-[#0d9488]">{totalAlunos}</p>
+          <p className="mt-1 text-3xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{totalAlunos}</p>
           <p className="mt-1 text-xs text-[#82939a]">na escola</p>
         </div>
         <div className="rounded-xl border border-[#dce5e8] bg-white p-5">
@@ -82,13 +90,19 @@ export function ProfessorDashboard({
           <Link
             key={a.label}
             href={a.href}
-            className="group flex items-center gap-3 rounded-xl border border-[#dce5e8] bg-white px-4 py-3.5 transition hover:border-[#0d9488] hover:bg-[#f9fdfc]"
+            className="group flex items-center gap-3 rounded-xl border border-[#dce5e8] bg-white px-4 py-3.5 transition hover:border-[var(--cor-primaria,#0d9488)] hover:bg-black/[0.02]"
           >
-            <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-9 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <a.icon className="size-[18px]" />
             </div>
-            <span className="flex-1 text-sm font-semibold text-[#30454e] group-hover:text-[#0f766e]">{a.label}</span>
-            <ArrowRight className="size-4 text-[#a0afb4] group-hover:text-[#0d9488]" />
+            <span className="flex-1 text-sm font-semibold text-[#30454e] transition">{a.label}</span>
+            <ArrowRight className="size-4 text-[#a0afb4] transition group-hover:text-[var(--cor-primaria,#0d9488)]" />
           </Link>
         ))}
       </div>
@@ -97,7 +111,7 @@ export function ProfessorDashboard({
         <section className="rounded-xl border border-[#dce5e8] bg-white">
           <div className="flex items-center justify-between border-b border-[#e5ecee] px-5 py-4">
             <h2 className="text-base font-bold text-[#12232b]">Notas recentes</h2>
-            <Link href="/professor/notas" className="text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
+            <Link href="/professor/notas" className="text-sm font-medium transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
               Ver todas <ArrowRight className="ml-1 inline size-3.5" />
             </Link>
           </div>
@@ -125,7 +139,7 @@ export function ProfessorDashboard({
         <section className="rounded-xl border border-[#dce5e8] bg-white">
           <div className="flex items-center justify-between border-b border-[#e5ecee] px-5 py-4">
             <h2 className="text-base font-bold text-[#12232b]">Alunos</h2>
-            <Link href="/professor/alunos" className="text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
+            <Link href="/professor/alunos" className="text-sm font-medium transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
               Ver todos <ArrowRight className="ml-1 inline size-3.5" />
             </Link>
           </div>
@@ -137,7 +151,13 @@ export function ProfessorDashboard({
             <div className="divide-y divide-[#f0f4f5]">
               {alunosRecentes.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ccfbf1] text-[10px] font-bold text-[#0f766e]">
+                  <div
+                    className="grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
                     {a.nome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
