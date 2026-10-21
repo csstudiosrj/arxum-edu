@@ -28,6 +28,7 @@ const menu: MenuItem[] = [
   [Settings,'Configurações','#configuracoes']
 ]
 
+// ── SEMÂNTICOS (não mudam com branding) ─────────────────────────────
 const statusMap: Record<string, { label: string; style: string; icon: LucideIcon }> = {
   inscrito: { label: 'Inscrito', style: 'bg-[#e5ecee] text-[#5e7a94]', icon: Clock },
   em_analise: { label: 'Em análise', style: 'bg-[#fef3c7] text-[#92400e]', icon: Clock },
@@ -125,7 +126,19 @@ function Sidebar({ onLogout, saindo, marca }: { onLogout: () => void; saindo: bo
     </div>
     <div className="px-3">
       <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[.16em] text-[#8aa0ad]">Área do responsável</p>
-      {menu.map(([Icon,label,href],i) => <Link key={label} href={href} className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0?'bg-[#e6faf3] text-[#087f5b]':'text-[#617783] hover:bg-[#f4f7f8]'}`}><Icon size={18}/>{label}</Link>)}
+      {menu.map(([Icon,label,href],i) => (
+        <Link
+          key={label}
+          href={href}
+          className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${i===0 ? '' : 'text-[#617783] hover:bg-[#f4f7f8]'}`}
+          style={i===0 ? {
+            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+            color: 'var(--cor-primaria, #0d9488)',
+          } : undefined}
+        >
+          <Icon size={18}/>{label}
+        </Link>
+      ))}
     </div>
     <div className="mt-auto border-t border-[#dbe5e8] p-4">
       <button onClick={onLogout} disabled={saindo} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-[#617783] disabled:opacity-50">
@@ -342,9 +355,12 @@ export function ResponsavelClient({
               <div className="relative">
                 <button
                   onClick={() => setDropdownAberto(!dropdownAberto)}
-                  className="flex items-center gap-2 rounded-lg border border-[#dbe5e8] bg-[#f7fafb] px-3 py-2 transition hover:border-[#0d9488]"
+                  className="flex items-center gap-2 rounded-lg border border-[#dbe5e8] bg-[#f7fafb] px-3 py-2 transition hover:border-[var(--cor-primaria,#0d9488)]"
                 >
-                  <div className="grid size-7 place-items-center rounded-full bg-[#0d9488] text-[10px] font-bold text-white">
+                  <div
+                    className="grid size-7 place-items-center rounded-full text-[10px] font-bold text-white"
+                    style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                  >
                     {iniciaisDe(filhoAtivo?.nome || '')}
                   </div>
                   <div className="hidden text-left sm:block">
@@ -363,20 +379,28 @@ export function ResponsavelClient({
                         <button
                           key={f.id}
                           onClick={() => selecionarFilho(f)}
-                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${filhoAtivo?.id === f.id ? 'bg-[#f0fbf8]' : 'hover:bg-[#f7fafb]'}`}
+                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${filhoAtivo?.id === f.id ? '' : 'hover:bg-[#f7fafb]'}`}
+                          style={filhoAtivo?.id === f.id ? { backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 10%, white)' } : undefined}
                         >
-                          <div className="grid size-8 place-items-center rounded-full bg-[#0d9488] text-[10px] font-bold text-white">
+                          <div
+                            className="grid size-8 place-items-center rounded-full text-[10px] font-bold text-white"
+                            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                          >
                             {iniciaisDe(f.nome)}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-[#243942]">{f.nome}</p>
                             <p className="truncate text-xs text-[#82939a]">{f.serie || '—'}{f.turno ? ` · ${f.turno}` : ''}</p>
                           </div>
-                          {filhoAtivo?.id === f.id && <CheckCircle2 className="size-4 text-[#0d9488]" />}
+                          {filhoAtivo?.id === f.id && <CheckCircle2 className="size-4" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
                         </button>
                       ))}
                       <div className="mt-2 border-t border-[#edf1f2] pt-2">
-                        <Link href="/matricula" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#0d9488] hover:bg-[#f0fbf8]">
+                        <Link
+                          href="/matricula"
+                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition hover:brightness-90"
+                          style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                        >
                           <Users className="size-3.5" /> Adicionar outro filho
                         </Link>
                       </div>
@@ -393,7 +417,7 @@ export function ResponsavelClient({
 
         <div id="inicio" className="mx-auto max-w-7xl px-5 py-8 md:px-8">
           <div className="mb-8">
-            <p className="text-sm font-semibold uppercase tracking-[.15em] text-[#0d9488]">Visão geral</p>
+            <p className="text-sm font-semibold uppercase tracking-[.15em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Visão geral</p>
             <h2 className="mt-1 text-3xl font-bold tracking-[-.04em]">Tudo em um só lugar</h2>
             {filhoAtivo && (
               <p className="mt-2 text-sm text-[#82939a]">
@@ -412,18 +436,23 @@ export function ResponsavelClient({
                     <button
                       key={f.id}
                       onClick={() => selecionarFilho(f)}
-                      className={`flex items-center gap-3 rounded-xl border-2 bg-white p-4 text-left transition ${
-                        ativo ? 'border-[#0d9488] bg-[#f0fbf8]' : 'border-[#dbe5e8] hover:border-[#0d9488]/40'
-                      }`}
+                      className={`flex items-center gap-3 rounded-xl border-2 bg-white p-4 text-left transition ${ativo ? '' : 'border-[#dbe5e8] hover:border-[var(--cor-primaria,#0d9488)]/40'}`}
+                      style={ativo ? {
+                        borderColor: 'var(--cor-primaria, #0d9488)',
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
+                      } : undefined}
                     >
-                      <div className={`grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${ativo ? 'bg-[#0d9488]' : 'bg-[#173b4a]'}`}>
+                      <div
+                        className={`grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${ativo ? '' : 'bg-[#173b4a]'}`}
+                        style={ativo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                      >
                         {iniciaisDe(f.nome)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-[#243942]">{f.nome}</p>
                         <p className="mt-0.5 truncate text-xs text-[#82939a]">{f.serie || '—'}{f.turno ? ` · ${f.turno}` : ''}</p>
                       </div>
-                      {ativo && <CheckCircle2 className="size-5 shrink-0 text-[#0d9488]" />}
+                      {ativo && <CheckCircle2 className="size-5 shrink-0" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
                     </button>
                   )
                 })}
@@ -446,7 +475,13 @@ export function ResponsavelClient({
                       <h4 className="mt-2 text-base font-bold">{a.titulo}</h4>
                       {a.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{a.descricao}</p>}
                       {a.prazo_resposta && <p className="mt-2 text-xs font-semibold text-[#dc2626]">Responder até {formatarData(a.prazo_resposta)}</p>}
-                      <button onClick={() => abrirAutorizacao(a)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">Responder</button>
+                      <button
+                        onClick={() => abrirAutorizacao(a)}
+                        className="mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+                        style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                      >
+                        Responder
+                      </button>
                     </article>
                   )
                 })}
@@ -457,14 +492,28 @@ export function ResponsavelClient({
           <section id="matriculas">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">Minhas matrículas</h3>
-              <Link href="/matricula" className="text-sm font-medium text-[#087f5b]">Nova matrícula <ChevronRight className="inline" size={15}/></Link>
+              <Link href="/matricula" className="text-sm font-medium" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Nova matrícula <ChevronRight className="inline" size={15}/></Link>
             </div>
             {inscricoes.length === 0 ? (
               <div className="rounded-xl border border-[#dbe5e8] bg-white p-10 text-center">
-                <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#e6faf3] text-[#0d9488]"><FileText size={24}/></div>
+                <div
+                  className="mx-auto grid size-14 place-items-center rounded-full"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                    color: 'var(--cor-primaria, #0d9488)',
+                  }}
+                >
+                  <FileText size={24}/>
+                </div>
                 <h4 className="mt-4 text-lg font-bold">Nenhuma inscrição ainda</h4>
                 <p className="mt-1 text-sm text-[#8aa0ad]">Quando você enviar uma matrícula pelo site, ela aparecerá aqui para acompanhamento.</p>
-                <Link href="/matricula" className="mt-6 inline-block rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white">Iniciar matrícula</Link>
+                <Link
+                  href="/matricula"
+                  className="mt-6 inline-block rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+                  style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                >
+                  Iniciar matrícula
+                </Link>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -487,7 +536,16 @@ export function ResponsavelClient({
                         <div><p className="text-[#8aa0ad]">Documentos</p><p className="mt-0.5 font-semibold text-[#243942]">{docsEnviados} de 4 enviados</p></div>
                       </div>
                       <div className="mt-5 grid grid-cols-2 gap-2">
-                        <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f1f8f6] px-2 py-2 text-center text-xs font-semibold text-[#087f5b] hover:bg-[#d9f2e7]">Ver detalhes</button>
+                        <button
+                          onClick={() => setDetalhes(i)}
+                          className="rounded-lg px-2 py-2 text-center text-xs font-semibold transition hover:brightness-95"
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          }}
+                        >
+                          Ver detalhes
+                        </button>
                         <button onClick={() => setDetalhes(i)} className="rounded-lg bg-[#f7fafb] px-2 py-2 text-center text-xs font-semibold text-[#617783] hover:bg-[#edf1f2]">Documentos</button>
                       </div>
                     </article>
@@ -519,7 +577,13 @@ export function ResponsavelClient({
                       <div><p className="text-[#8aa0ad]">Disciplinas avaliadas</p><p className="mt-0.5 font-semibold text-[#243942]">{new Set(b.notas.map((n) => n.disciplina)).size}</p></div>
                       <div><p className="text-[#8aa0ad]">Total de faltas</p><p className={`mt-0.5 font-semibold ${b.total_faltas > 10 ? 'text-[#991b1b]' : 'text-[#243942]'}`}>{b.total_faltas}</p></div>
                     </div>
-                    <button onClick={() => setBoletimAberto(b)} className="mt-4 w-full rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">Ver boletim completo</button>
+                    <button
+                      onClick={() => setBoletimAberto(b)}
+                      className="mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+                      style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                    >
+                      Ver boletim completo
+                    </button>
                   </article>
                 ))}
               </div>
@@ -537,7 +601,11 @@ export function ResponsavelClient({
                   const info = tipoOcorrencia[o.tipo] || tipoOcorrencia.outro
                   const Icone = info.icone
                   return (
-                    <button key={o.id} onClick={() => abrirOcorrencia(o)} className={`flex items-start gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-[#0d9488] ${!o.lida ? 'border-[#dc2626]/30' : 'border-[#dbe5e8]'}`}>
+                    <button
+                      key={o.id}
+                      onClick={() => abrirOcorrencia(o)}
+                      className={`flex items-start gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-[var(--cor-primaria,#0d9488)] ${!o.lida ? 'border-[#dc2626]/30' : 'border-[#dbe5e8]'}`}
+                    >
                       <div className="grid size-10 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}><Icone className="size-5" /></div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -591,16 +659,31 @@ export function ResponsavelClient({
                 <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center"><MessageSquare className="mx-auto text-[#a0afb4]" size={28}/><p className="mt-3 text-sm text-[#8aa0ad]">Nenhum comunicado recebido ainda.</p></div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {comunicados.slice(0, 5).map((c) => (
-                    <button key={c.id} onClick={() => abrirComunicado(c)} className="rounded-xl border border-[#dbe5e8] bg-white p-4 text-left transition hover:border-[#0d9488]">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{c.setor}</span>
-                        <span className="text-xs text-[#8aa0ad]">{formatarData(c.criado_em)}</span>
-                      </div>
-                      <h4 className="mt-3 text-sm font-semibold">{!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]"/>}{c.titulo}</h4>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{c.mensagem}</p>
-                    </button>
-                  ))}
+                  {comunicados.slice(0, 5).map((c) => {
+                    const temEstiloSetor = !!setorStyles[c.setor]
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => abrirComunicado(c)}
+                        className="rounded-xl border border-[#dbe5e8] bg-white p-4 text-left transition hover:border-[var(--cor-primaria,#0d9488)]"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[c.setor] || ''}`}
+                            style={!temEstiloSetor ? {
+                              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                              color: 'var(--cor-primaria, #0d9488)',
+                            } : undefined}
+                          >
+                            {c.setor}
+                          </span>
+                          <span className="text-xs text-[#8aa0ad]">{formatarData(c.criado_em)}</span>
+                        </div>
+                        <h4 className="mt-3 text-sm font-semibold">{!c.lido && <span className="mr-2 inline-block size-2 rounded-full bg-[#dc2626]"/>}{c.titulo}</h4>
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#8aa0ad]">{c.mensagem}</p>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </section>
@@ -613,7 +696,7 @@ export function ResponsavelClient({
             </div>
             <div className="rounded-xl border border-[#dbe5e8] bg-white">
               <div className="flex items-center gap-3 border-b border-[#edf1f2] p-5">
-                <CircleDollarSign className="text-[#0d9488]"/>
+                <CircleDollarSign style={{ color: 'var(--cor-primaria, #0d9488)' }}/>
                 <div><h4 className="font-semibold">Minhas faturas</h4><p className="text-xs text-[#8aa0ad]">Acompanhe os pagamentos da sua família</p></div>
               </div>
               {faturas.length === 0 ? (
@@ -632,7 +715,11 @@ export function ResponsavelClient({
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
                       
                       {(f.status === 'em_aberto' || f.status === 'vencido') && f.pagarme_qr_code_url && (
-                        <button onClick={() => setFaturaParaPagar(f)} className="ml-2 rounded-lg bg-[#0d9488] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0f766e]">
+                        <button
+                          onClick={() => setFaturaParaPagar(f)}
+                          className="ml-2 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:brightness-90"
+                          style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                        >
                           Pagar PIX
                         </button>
                       )}
@@ -648,7 +735,7 @@ export function ResponsavelClient({
               <h3 className="mb-4 text-lg font-bold">Galeria de fotos</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {albuns.map((a) => (
-                  <button key={a.id} onClick={() => setAlbumAberto(a)} className="group overflow-hidden rounded-xl border border-[#dbe5e8] bg-white text-left transition hover:border-[#0d9488]">
+                  <button key={a.id} onClick={() => setAlbumAberto(a)} className="group overflow-hidden rounded-xl border border-[#dbe5e8] bg-white text-left transition hover:border-[var(--cor-primaria,#0d9488)]">
                     <div className="relative aspect-video bg-[#f0f4f5]">
                       {a.capa_url ? (<img src={a.capa_url} alt={a.titulo} className="h-full w-full object-cover transition group-hover:scale-105" />) : (<div className="flex h-full items-center justify-center"><ImageIcon className="size-10 text-[#a0afb4]" /></div>)}
                       <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">{a.fotos.length} {a.fotos.length === 1 ? 'foto' : 'fotos'}</span>
@@ -668,8 +755,16 @@ export function ResponsavelClient({
             <h3 className="mb-4 text-lg font-bold">Atalhos rápidos</h3>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {atalhos.map(([label,Icon,href]) => (
-                <Link href={href} key={label} className="flex items-center gap-3 rounded-xl border border-[#dbe5e8] bg-white p-4 text-sm font-semibold hover:border-[#0d9488]">
-                  <span className="grid size-9 place-items-center rounded-lg bg-[#e6faf3] text-[#087f5b]"><Icon size={17}/></span>
+                <Link key={label} href={href} className="flex items-center gap-3 rounded-xl border border-[#dbe5e8] bg-white p-4 text-sm font-semibold hover:border-[var(--cor-primaria,#0d9488)]">
+                  <span
+                    className="grid size-9 place-items-center rounded-lg"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
+                    <Icon size={17}/>
+                  </span>
                   {label}
                 </Link>
               ))}
@@ -680,7 +775,13 @@ export function ResponsavelClient({
             <h3 className="mb-4 text-lg font-bold">Privacidade e meus dados</h3>
             <div className="rounded-xl border border-[#dbe5e8] bg-white p-6">
               <div className="flex items-start gap-3">
-                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#e6faf3] text-[#087f5b]">
+                <div
+                  className="grid size-10 shrink-0 place-items-center rounded-lg"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                    color: 'var(--cor-primaria, #0d9488)',
+                  }}
+                >
                   <ShieldCheck className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -696,7 +797,11 @@ export function ResponsavelClient({
                 <button
                   onClick={handleBaixarDados}
                   disabled={baixandoDados}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#0d9488] bg-white px-4 py-3 text-sm font-semibold text-[#0d9488] transition hover:bg-[#f0fbf8] disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm font-semibold transition hover:brightness-95 disabled:opacity-50"
+                  style={{
+                    borderColor: 'var(--cor-primaria, #0d9488)',
+                    color: 'var(--cor-primaria, #0d9488)',
+                  }}
                 >
                   {baixandoDados ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />}
                   {baixandoDados ? 'Gerando arquivo...' : 'Baixar meus dados'}
@@ -788,7 +893,7 @@ export function ResponsavelClient({
         <div className="absolute inset-0 bg-black/40" onClick={() => setBoletimAberto(null)} />
         <div className="relative z-10 flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-            <div><p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Boletim escolar</p><h2 className="mt-1 text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2></div>
+            <div><p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Boletim escolar</p><h2 className="mt-1 text-xl font-bold text-[#12232b]">{boletimAberto.aluno_nome}</h2></div>
             <button onClick={() => setBoletimAberto(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -819,7 +924,7 @@ export function ResponsavelClient({
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="mb-6"><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${(statusMap[detalhes.status] || statusMap.inscrito).style}`}>{(statusMap[detalhes.status] || statusMap.inscrito).label}</span></div>
             <section className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Dados da inscrição</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Dados da inscrição</h3>
               <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
                 <div><dt className="text-xs text-[#82939a]">Aluno</dt><dd className="text-[#243942]">{detalhes.aluno_nome}</dd></div>
                 <div><dt className="text-xs text-[#82939a]">Série pretendida</dt><dd className="text-[#243942]">{detalhes.aluno_serie || '—'}</dd></div>
@@ -828,18 +933,43 @@ export function ResponsavelClient({
               </dl>
             </section>
             <section className="mt-6 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Documentos enviados</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Documentos enviados</h3>
               <div className="space-y-2">
                 {nomesDocumentos.map(({ key, label }) => {
                   const doc = detalhes.documentos?.[key]
                   const temArquivo = doc && doc.url
                   return (
-                    <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'}`}>
+                    <div
+                      key={key}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${!temArquivo ? 'border-[#e5ecee] bg-[#fafcfc]' : ''}`}
+                      style={temArquivo ? {
+                        borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
+                      } : undefined}
+                    >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}><FileText className="size-4" /></div>
+                        <div
+                          className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}
+                          style={temArquivo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                        >
+                          <FileText className="size-4" />
+                        </div>
                         <div className="min-w-0"><p className="truncate text-xs font-semibold text-[#243942]">{label}</p><p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p></div>
                       </div>
-                      {temArquivo && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"><ExternalLink className="mr-1 inline size-3" />Abrir</a>}
+                      {temArquivo && (
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition hover:brightness-90"
+                          style={{
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          }}
+                        >
+                          <ExternalLink className="mr-1 inline size-3" />Abrir
+                        </a>
+                      )}
                     </div>
                   )
                 })}
@@ -857,7 +987,20 @@ export function ResponsavelClient({
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoAberto.setor] || 'bg-[#e6faf3] text-[#087f5b]'}`}>{comunicadoAberto.setor}</span>
+                {(() => {
+                  const temEstiloSetor = !!setorStyles[comunicadoAberto.setor]
+                  return (
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoAberto.setor] || ''}`}
+                      style={!temEstiloSetor ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {comunicadoAberto.setor}
+                    </span>
+                  )
+                })()}
                 {comunicadoAberto.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
               </div>
               <h2 className="mt-3 text-xl font-bold text-[#12232b]">{comunicadoAberto.titulo}</h2>
@@ -891,25 +1034,33 @@ export function ResponsavelClient({
                   <UserCheck className="size-3.5" /> Aluno desta autorização
                 </label>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {filhos.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setAlunoResposta(f.nome)}
-                      className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${
-                        alunoResposta === f.nome ? 'border-[#0d9488] bg-[#ccfbf1]' : 'border-[#d5e0e3] bg-white hover:border-[#0d9488]'
-                      }`}
-                    >
-                      <div className={`grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white ${alunoResposta === f.nome ? 'bg-[#0d9488]' : 'bg-[#173b4a]'}`}>
-                        {iniciaisDe(f.nome)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#243942]">{f.nome}</p>
-                        <p className="truncate text-[10px] text-[#82939a]">{f.serie || '—'}</p>
-                      </div>
-                      {alunoResposta === f.nome && <CheckCircle2 className="size-4 shrink-0 text-[#0d9488]" />}
-                    </button>
-                  ))}
+                  {filhos.map((f) => {
+                    const selecionado = alunoResposta === f.nome
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setAlunoResposta(f.nome)}
+                        className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${selecionado ? '' : 'border-[#d5e0e3] bg-white hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                        style={selecionado ? {
+                          borderColor: 'var(--cor-primaria, #0d9488)',
+                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                        } : undefined}
+                      >
+                        <div
+                          className={`grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white ${selecionado ? '' : 'bg-[#173b4a]'}`}
+                          style={selecionado ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                        >
+                          {iniciaisDe(f.nome)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-[#243942]">{f.nome}</p>
+                          <p className="truncate text-[10px] text-[#82939a]">{f.serie || '—'}</p>
+                        </div>
+                        {selecionado && <CheckCircle2 className="size-4 shrink-0" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -922,12 +1073,25 @@ export function ResponsavelClient({
 
             <div className="mt-5">
               <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label>
-              <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: Meu filho não poderá participar..." rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+              <textarea
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Ex: Meu filho não poderá participar..."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
+              />
             </div>
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
             <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar</button>
-            <button onClick={() => handleResponder('autorizado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar</button>
+            <button
+              onClick={() => handleResponder('autorizado')}
+              disabled={enviandoResposta}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
+              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar
+            </button>
           </footer>
         </div>
       </div>
@@ -955,7 +1119,7 @@ export function ResponsavelClient({
               onChange={(e) => setMotivoExclusao(e.target.value)}
               rows={3}
               placeholder="Se quiser, conte pra gente o motivo desta solicitação."
-              className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+              className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
             />
           </div>
 
@@ -1013,7 +1177,11 @@ export function ResponsavelClient({
                   value={faturaParaPagar.pagarme_qr_code || ''} 
                   className="w-full rounded-lg border border-[#d5e0e3] bg-[#fafcfc] px-3 py-2 text-xs font-mono text-[#243942] outline-none"
                 />
-                <button onClick={copiarPix} className="shrink-0 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] flex items-center gap-2">
+                <button
+                  onClick={copiarPix}
+                  className="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 flex items-center gap-2"
+                  style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                >
                   {copiouPix ? <Check size={16} /> : <Copy size={16} />} Copiar
                 </button>
               </div>
