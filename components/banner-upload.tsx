@@ -50,7 +50,9 @@ export function BannerUpload({
         <Upload className="size-4" />
         Enviar imagem do banner
       </div>
-      {enviando && <p className="mb-2 text-xs text-[#0d9488]">Enviando...</p>}
+      {enviando && (
+        <p className="mb-2 text-xs" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Enviando...</p>
+      )}
       <UploadDropzone
         endpoint="bannerHero"
         onUploadBegin={() => setEnviando(true)}
@@ -61,9 +63,10 @@ export function BannerUpload({
         }}
         appearance={{
           container: 'border-none bg-transparent p-0 cursor-pointer',
-          label: 'text-xs text-[#82939a] hover:text-[#0d9488]',
+          label: 'text-xs text-[#82939a] hover:text-[var(--cor-primaria,#0d9488)]',
           allowedContent: 'text-[10px] text-[#a0afb4]',
-          button: 'bg-[#0d9488] text-white text-xs font-semibold rounded px-3 py-1.5 hover:bg-[#0f766e] ut-uploading:bg-[#0f766e]',
+          button:
+            'bg-[var(--cor-primaria,#0d9488)] text-white text-xs font-semibold rounded px-3 py-1.5 hover:brightness-90 ut-uploading:brightness-75',
         }}
       />
       {erro && <p className="mt-2 text-xs text-red-500">{erro}</p>}

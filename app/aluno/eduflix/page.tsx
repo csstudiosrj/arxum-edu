@@ -35,13 +35,16 @@ export default async function EduflixAlunoPage() {
     <AlunoShell alunoNome={aluno.nome} alunoSerie={aluno.serie || 'Sem série'} escolaNome={aluno.escola_nome} escolaSlug={aluno.escola_slug} marca={marca}>
       <main className="px-5 py-8 lg:px-8">
         <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">EduFlix</p>
+          <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>EduFlix</p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">Videoaulas</h1>
           <p className="mt-2 text-sm text-[#71838b]">Catálogo de aulas em vídeo organizadas por disciplina.</p>
         </div>
 
         {videoaulas.length === 0 ? (
-          <div className="rounded-xl border border-[#dce5e8] bg-white p-12 text-center"><Play className="mx-auto text-[#a0afb4]" size={32} /><p className="mt-3 text-sm text-[#82939a]">Nenhuma videoaula publicada ainda.</p></div>
+          <div className="rounded-xl border border-[#dce5e8] bg-white p-12 text-center">
+            <Play className="mx-auto text-[#a0afb4]" size={32} />
+            <p className="mt-3 text-sm text-[#82939a]">Nenhuma videoaula publicada ainda.</p>
+          </div>
         ) : (
           <div className="space-y-10">
             {Object.entries(porDisciplina).map(([disciplina, lista]) => (
@@ -52,13 +55,23 @@ export default async function EduflixAlunoPage() {
                     <div key={v.id} className="overflow-hidden rounded-xl border border-[#dce5e8] bg-white">
                       <div className="relative aspect-video bg-black">
                         {v.video_url.includes('youtube') || v.video_url.includes('youtu.be') || v.video_url.includes('vimeo') ? (
-                          <iframe src={toEmbed(v.video_url)} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                        ) : (<video src={v.video_url} controls className="h-full w-full" />)}
+                          <iframe
+                            src={toEmbed(v.video_url)}
+                            className="h-full w-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video src={v.video_url} controls className="h-full w-full" />
+                        )}
                       </div>
                       <div className="p-4">
                         <h3 className="line-clamp-2 text-sm font-semibold text-[#243942]">{v.titulo}</h3>
                         {v.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{v.descricao}</p>}
-                        <div className="mt-3 flex items-center justify-between text-xs text-[#82939a]"><span>{v.serie || 'Todas as séries'}</span><span className="flex items-center gap-1"><Eye className="size-3" /> {v.visualizacoes}</span></div>
+                        <div className="mt-3 flex items-center justify-between text-xs text-[#82939a]">
+                          <span>{v.serie || 'Todas as séries'}</span>
+                          <span className="flex items-center gap-1"><Eye className="size-3" /> {v.visualizacoes}</span>
+                        </div>
                       </div>
                     </div>
                   ))}

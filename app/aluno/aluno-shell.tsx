@@ -71,8 +71,13 @@ export function AlunoShell({
   const iniciais = alunoNome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
   const temBranding = marca?.usaBranding && marca.logoUrl
 
+  // ── ESSENCIAL: define --cor-primaria no wrapper quando branding ativo ──
+  const estiloMarca = marca?.usaBranding
+    ? ({ '--cor-primaria': marca.corPrimaria } as React.CSSProperties)
+    : undefined
+
   return (
-    <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]">
+    <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]" style={estiloMarca}>
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white px-4 py-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-2">
           {temBranding ? (
@@ -138,7 +143,6 @@ export function AlunoShell({
           <div className="ml-auto flex items-center gap-4">
             <SinoNotificacoesLoader papel="aluno" />
 
-            {/* Avatar clicável com dropdown */}
             <div className="relative">
               <button
                 onClick={() => setMenuAberto(!menuAberto)}

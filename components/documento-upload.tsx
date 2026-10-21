@@ -34,14 +34,26 @@ export function DocumentoUpload({
   return (
     <div className="rounded-lg border border-white/[.08] bg-[#0b1115] p-4">
       <div className="mb-3 flex items-center gap-3">
-        <FileText className="size-4 text-[#0d9488]" />
+        <FileText
+          className="size-4"
+          style={{ color: 'var(--cor-primaria, #0d9488)' }}
+        />
         <span className="text-sm font-medium text-[#c7d5db]">{label}</span>
       </div>
 
       {url ? (
-        <div className="flex items-center justify-between rounded-lg border border-[#0d9488]/30 bg-[#0d9488]/5 px-3 py-2">
+        <div
+          className="flex items-center justify-between rounded-lg border px-3 py-2"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 5%, transparent)',
+          }}
+        >
           <div className="flex min-w-0 items-center gap-2">
-            <Check className="size-4 shrink-0 text-[#0d9488]" />
+            <Check
+              className="size-4 shrink-0"
+              style={{ color: 'var(--cor-primaria, #0d9488)' }}
+            />
             <span className="truncate text-xs text-[#c7d5db]">{fileName || 'Arquivo enviado'}</span>
           </div>
           <button
@@ -59,11 +71,11 @@ export function DocumentoUpload({
           onUploadError={(err) => setError(err.message)}
           appearance={{
             container:
-              'border border-dashed border-white/20 rounded-lg p-4 cursor-pointer transition hover:border-[#0d9488]/50 ut-uploading:opacity-50',
+              'border border-dashed border-white/20 rounded-lg p-4 cursor-pointer transition hover:border-[var(--cor-primaria,#0d9488)]/50 ut-uploading:opacity-50',
             label: 'text-xs text-[#8aa0ad] hover:text-white',
             allowedContent: 'text-[10px] text-[#5e7a94]',
             button:
-              'bg-[#0d9488] text-white text-xs font-semibold rounded px-3 py-1.5 hover:bg-[#0f766e] ut-uploading:bg-[#0f766e]',
+              'bg-[var(--cor-primaria,#0d9488)] text-white text-xs font-semibold rounded px-3 py-1.5 hover:brightness-90 ut-uploading:brightness-75',
           }}
         />
       )}
