@@ -15,6 +15,8 @@ function formatarMoeda(centavos: number): string {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
 
+// Paleta de cores sugeridas. O primeiro item (#0d9488) é o teal ARXUM padrão,
+// mantido hardcoded porque é uma opção da paleta — não a cor da marca.
 const CORES_SUGERIDAS = [
   '#0d9488', '#2563eb', '#7c3aed', '#dc2626', '#d97706',
   '#059669', '#0891b2', '#be185d', '#4f46e5', '#b45309',
@@ -101,7 +103,8 @@ export function PersonalizacaoClient({
             <button
               onClick={handleSalvar}
               disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
             >
               {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               {salvando ? 'Salvando...' : 'Salvar identidade'}
@@ -116,7 +119,13 @@ export function PersonalizacaoClient({
         <Panel className="mt-8">
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Palette className="size-4" />
               </div>
               <div>
@@ -154,7 +163,7 @@ export function PersonalizacaoClient({
                   type="text"
                   value={cor}
                   onChange={(e) => setCor(e.target.value)}
-                  className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                  className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                 />
                 <div className="flex gap-1.5">
                   {CORES_SUGERIDAS.map((c) => (
@@ -220,7 +229,10 @@ export function PersonalizacaoClient({
                   {a.descricao && (
                     <p className="mt-1 text-xs leading-5 text-[#82939a]">{a.descricao}</p>
                   )}
-                  <p className="mt-2 font-syne text-base font-bold" style={{ color: a.ativo_para_escola ? '#065f46' : '#0d9488' }}>
+                  <p
+                    className="mt-2 font-syne text-base font-bold"
+                    style={{ color: a.ativo_para_escola ? '#065f46' : 'var(--cor-primaria, #0d9488)' }}
+                  >
                     {a.preco_centavos > 0 ? `${formatarMoeda(a.preco_centavos)}/mês` : 'Incluso'}
                   </p>
                 </div>
@@ -228,11 +240,12 @@ export function PersonalizacaoClient({
                 <button
                   onClick={() => handleToggleAddon(a)}
                   disabled={processandoAddon === a.slug}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition hover:brightness-90 disabled:opacity-50 ${
                     a.ativo_para_escola
                       ? 'border border-[#dc2626] bg-white text-[#dc2626] hover:bg-[#fee2e2]'
-                      : 'bg-[#0d9488] text-white hover:bg-[#0f766e]'
+                      : 'text-white'
                   }`}
+                  style={!a.ativo_para_escola ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
                 >
                   {processandoAddon === a.slug ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -257,11 +270,17 @@ export function PersonalizacaoClient({
           {brandingAtivo && (
             <div className="border-t border-[#e5ecee] bg-[#f0fbf8] px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
+                <div
+                  className="grid size-8 shrink-0 place-items-center rounded-lg"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                    color: 'var(--cor-primaria, #0d9488)',
+                  }}
+                >
                   <Check className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#0f766e]">Branding ativo nos portais</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Branding ativo nos portais</p>
                   <p className="mt-0.5 text-xs leading-5 text-[#536871]">
                     Seu logo e cor serão aplicados nas telas do responsável, do aluno e do professor. A assinatura "by ARXUM Edu" continua visível em todas as telas.
                   </p>
@@ -275,7 +294,7 @@ export function PersonalizacaoClient({
           <p className="text-xs leading-6 text-[#82939a]">
             <strong className="text-[#536871]">Precisa de mais?</strong> Domínio próprio, integrações customizadas e onboarding assistido estão disponíveis sob consulta.
             {' '}
-            <a href="mailto:contato@arxum.com.br" className="font-semibold text-[#0d9488] hover:text-[#0f766e]">
+            <a href="mailto:contato@arxum.com.br" className="font-semibold transition hover:brightness-90" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
               Fale com o time ARXUM <ArrowRight className="ml-0.5 inline size-3" />
             </a>
           </p>

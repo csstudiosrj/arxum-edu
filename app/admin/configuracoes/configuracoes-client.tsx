@@ -245,7 +245,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   type="text"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
               <div>
@@ -255,7 +255,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   value={cnpj}
                   onChange={(e) => setCnpj(formatarCNPJ(e.target.value))}
                   placeholder="00.000.000/0000-00"
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
             </div>
@@ -267,7 +267,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                 value={endereco}
                 onChange={(e) => setEndereco(e.target.value)}
                 placeholder="Rua, número, bairro"
-                className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
               />
             </div>
 
@@ -278,7 +278,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   type="text"
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
               <div>
@@ -289,7 +289,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   onChange={(e) => setEstado(e.target.value)}
                   maxLength={2}
                   placeholder="RJ"
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
               <div>
@@ -299,7 +299,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   value={telefone}
                   onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                   placeholder="(21) 90000-0000"
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
             </div>
@@ -312,7 +312,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   value={emailContato}
                   onChange={(e) => setEmailContato(e.target.value)}
                   placeholder="contato@escola.com.br"
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
               <div>
@@ -322,7 +322,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                   value={site}
                   onChange={(e) => setSite(e.target.value)}
                   placeholder="https://escola.com.br"
-                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
               </div>
             </div>
@@ -363,7 +363,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                 >
                   <div
                     className="grid size-11 shrink-0 place-items-center rounded-lg"
-                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${c.cor} 15%, white)`, color: c.cor }}
                   >
                     <Icon className="size-5" />
                   </div>
@@ -407,7 +407,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                 <Panel key={c.titulo} className="flex flex-col p-5">
                   <div
                     className="grid size-11 place-items-center rounded-lg"
-                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${c.cor} 15%, white)`, color: c.cor }}
                   >
                     <Icon className="size-5" />
                   </div>
@@ -419,7 +419,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                     className={`mt-4 inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-70 ${
                       jaAvisado
                         ? 'border-[#d1fae5] bg-[#d1fae5]/40 text-[#065f46]'
-                        : 'border-[#b8c9ce] bg-white text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]'
+                        : 'border-[#b8c9ce] bg-white text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]'
                     }`}
                   >
                     {processando ? (
@@ -457,7 +457,7 @@ export function ConfiguracoesClient({ escola }: { escola: EscolaCompleta | null 
                 <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center">
                   <div
                     className="grid size-12 shrink-0 place-items-center rounded-lg"
-                    style={{ backgroundColor: `${c.cor}15`, color: c.cor }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${c.cor} 15%, white)`, color: c.cor }}
                   >
                     <Icon className="size-6" />
                   </div>
