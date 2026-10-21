@@ -8,6 +8,7 @@ import { criarEvento, atualizarEvento, excluirEvento, type Evento } from './acti
 
 type IconeComponente = typeof Calendar
 
+// ── SEMÂNTICO: cores por tipo de evento ─────────────────────────────
 const tipos: Array<{ key: string; label: string; icone: IconeComponente; cor: string }> = [
   { key: 'prova', label: 'Prova', icone: BookOpen, cor: '#3b82f6' },
   { key: 'reuniao', label: 'Reunião', icone: Users, cor: '#7c3aed' },
@@ -134,7 +135,8 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
           />
           <button 
             onClick={() => { limpar(); setNovoAberto(true) }} 
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" />
             Novo evento
@@ -143,11 +145,17 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Calendar className="size-5" />
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Próximos</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{proximos.length}</p>
+            <p className="mt-1 text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{proximos.length}</p>
           </Panel>
           <Panel className="p-5">
             <div className="grid size-10 place-items-center rounded-lg bg-[#dbeafe] text-[#3b82f6]">
@@ -171,7 +179,13 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
           </div>
           {proximos.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Calendar className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum evento agendado</h3>
@@ -199,7 +213,12 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                      <button
+                        onClick={() => abrirEdicao(e)}
+                        className="rounded-lg p-1.5 transition hover:brightness-90"
+                        style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                        title="Editar"
+                      >
                         <Edit className="size-4" />
                       </button>
                       <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
@@ -232,7 +251,14 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                       <p className="text-xs text-[#a0afb4]">{formatarData(e.data_evento)}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#a0afb4] hover:bg-[#ccfbf1] hover:text-[#0d9488]" title="Editar">
+                      <button
+                        onClick={() => abrirEdicao(e)}
+                        className="rounded-lg p-1.5 text-[#a0afb4] transition hover:brightness-90"
+                        style={{ '--tw-hover-color': 'var(--cor-primaria, #0d9488)' } as React.CSSProperties}
+                        onMouseEnter={(ev) => { (ev.currentTarget as HTMLButtonElement).style.color = 'var(--cor-primaria, #0d9488)'; (ev.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)'; }}
+                        onMouseLeave={(ev) => { (ev.currentTarget as HTMLButtonElement).style.color = ''; (ev.currentTarget as HTMLButtonElement).style.backgroundColor = ''; }}
+                        title="Editar"
+                      >
                         <Edit className="size-3.5" />
                       </button>
                       <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#a0afb4] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
@@ -266,12 +292,12 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Prova de Matemática" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Prova de Matemática" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhes do evento (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhes do evento (opcional)" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
                 <div>
@@ -279,14 +305,18 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                   <div className="grid grid-cols-3 gap-2">
                     {tipos.map((t) => {
                       const Icone = t.icone
+                      const sel = tipo === t.key
                       return (
                         <button
                           key={t.key}
                           type="button"
                           onClick={() => setTipo(t.key)}
-                          className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                            tipo === t.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'
-                          }`}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
                         >
                           <Icone className="size-3.5" />
                           {t.label}
@@ -299,35 +329,41 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Data</label>
-                    <input type="date" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                    <input type="date" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Hora</label>
-                    <input type="time" value={horaEvento} onChange={(e) => setHoraEvento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                    <input type="time" value={horaEvento} onChange={(e) => setHoraEvento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Público</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {publicos.map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => setPublico(p.key)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                          publico === p.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    {publicos.map((p) => {
+                      const sel = publico === p.key
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setPublico(p.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {p.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Série específica</label>
-                  <input type="text" value={serie} onChange={(e) => setSerie(e.target.value)} placeholder="Ex: 9º Ano A (opcional)" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={serie} onChange={(e) => setSerie(e.target.value)} placeholder="Ex: 9º Ano A (opcional)" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
@@ -336,7 +372,12 @@ export function AgendaClient({ eventos }: { eventos: Evento[] }) {
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleSalvar}
+                disabled={salvando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar evento'}
               </button>

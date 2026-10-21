@@ -7,6 +7,7 @@ import { Plus, Search, CircleDollarSign, Clock, CheckCircle2, AlertCircle, FileT
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarFatura, excluirFatura, type Fatura } from './actions'
 
+// ── SEMÂNTICO: cores por status financeiro ──────────────────────────
 const statusStyles: Record<string, string> = {
   pago: 'bg-[#d1fae5] text-[#065f46]',
   em_aberto: 'bg-[#fef3c7] text-[#92400e]',
@@ -38,7 +39,6 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
   const [processando, setProcessando] = useState(false)
   const [erro, setErro] = useState('')
 
-  // Form states
   const [alunoIdx, setAlunoIdx] = useState('')
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
@@ -102,10 +102,17 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
             description="Gerencie faturas e acompanhe a inadimplência da escola."
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/admin/financeiro/pagarme" className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]">
+            <Link
+              href="/admin/financeiro/pagarme"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]"
+            >
               <CreditCard className="size-4" /> Conta de Recebimento
             </Link>
-            <button onClick={() => { limpar(); setNovaFaturaAberta(true) }} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]">
+            <button
+              onClick={() => { limpar(); setNovaFaturaAberta(true) }}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
               <Plus className="size-4" /> Nova fatura
             </button>
           </div>
@@ -146,10 +153,32 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setFiltro('todas')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${filtro === 'todas' ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>Todas</button>
-                {Object.entries(statusLabels).map(([k, l]) => (
-                  <button key={k} onClick={() => setFiltro(k)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${filtro === k ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>{l}</button>
-                ))}
+                <button
+                  onClick={() => setFiltro('todas')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${filtro === 'todas' ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                  style={filtro === 'todas' ? {
+                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                    color: 'var(--cor-primaria, #0d9488)',
+                  } : undefined}
+                >
+                  Todas
+                </button>
+                {Object.entries(statusLabels).map(([k, l]) => {
+                  const ativo = filtro === k
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setFiltro(k)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                      style={ativo ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {l}
+                    </button>
+                  )
+                })}
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
                 <Search className="size-4 text-[#9aaab0]" />
@@ -160,7 +189,15 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
 
           {filtradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><CircleDollarSign className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <CircleDollarSign className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma fatura encontrada</h3>
               <p className="mt-1 max-w-sm text-sm text-[#82939a]">Gere a primeira cobrança e ela aparecerá aqui.</p>
             </div>
@@ -193,7 +230,10 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <button onClick={() => setDetalheFatura(f)} className="rounded-lg border border-[#b8c9ce] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#30454e] hover:border-[#0d9488]">
+                        <button
+                          onClick={() => setDetalheFatura(f)}
+                          className="rounded-lg border border-[#b8c9ce] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
+                        >
                           Ver
                         </button>
                       </td>
@@ -222,23 +262,23 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                     <option value="">Selecione o aluno</option>
                     {alunos.map((a, i) => <option key={a.nome} value={String(i)}>{a.nome} ({a.responsavel_email})</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição da cobrança</label>
-                  <input type="text" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex: Mensalidade Outubro" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex: Mensalidade Outubro" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Valor (R$)</label>
-                    <input type="text" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                    <input type="text" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Vencimento</label>
-                    <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                    <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
@@ -246,7 +286,12 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
             </div>
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovaFaturaAberta(false)} disabled={processando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={processando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleCriar}
+                disabled={processando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {processando ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
                 {processando ? 'Gerando...' : 'Gerar PIX'}
               </button>
@@ -270,7 +315,7 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
 
             <div className="rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4 mb-6">
               <p className="text-sm font-semibold text-[#243942]">{detalheFatura.descricao}</p>
-              <p className="text-2xl font-bold text-[#0d9488] mt-1">{formatarMoeda(detalheFatura.valor_centavos)}</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{formatarMoeda(detalheFatura.valor_centavos)}</p>
               <p className="text-xs text-[#82939a] mt-1">Vence em {formatarData(detalheFatura.vencimento)}</p>
               <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold mt-3 ${statusStyles[detalheFatura.status]}`}>
                 {statusLabels[detalheFatura.status]}
