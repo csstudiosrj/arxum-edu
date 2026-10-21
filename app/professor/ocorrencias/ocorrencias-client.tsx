@@ -7,6 +7,7 @@ import { criarOcorrenciaProfessor, atualizarOcorrenciaProfessor, excluirOcorrenc
 
 type IconeComponente = typeof AlertCircle
 
+// ── SEMÂNTICO: cores por tipo de ocorrência ─────────────────────────
 const TIPOS: Array<{ key: string; label: string; icone: IconeComponente; cor: string }> = [
   { key: 'pedagogica', label: 'Pedagógica', icone: BookOpen, cor: '#3b82f6' },
   { key: 'disciplinar', label: 'Disciplinar', icone: ShieldAlert, cor: '#dc2626' },
@@ -15,6 +16,7 @@ const TIPOS: Array<{ key: string; label: string; icone: IconeComponente; cor: st
   { key: 'outro', label: 'Outro', icone: FileQuestion, cor: '#6b7d86' },
 ]
 
+// ── SEMÂNTICO: cores por gravidade ──────────────────────────────────
 const GRAVIDADES = [
   { key: 'baixa', label: 'Baixa', style: 'bg-[#e5ecee] text-[#5e7a94]' },
   { key: 'media', label: 'Média', style: 'bg-[#fef3c7] text-[#92400e]' },
@@ -68,8 +70,6 @@ export function OcorrenciasProfessorClient({
   }
 
   function abrirEdicao(o: OcorrenciaProfessor) {
-    // Para editar ocorrência, o professor não precisa re-selecionar o aluno, 
-    // mas precisamos manter o estado limpo para o payload.
     setTipo(o.tipo)
     setGravidade(o.gravidade)
     setTitulo(o.titulo)
@@ -134,13 +134,14 @@ export function OcorrenciasProfessorClient({
     <main className="px-5 py-8 lg:px-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">Pedagógico</p>
+          <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Pedagógico</p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">Ocorrências</h1>
           <p className="mt-2 text-sm text-[#71838b]">Registre ocorrências pedagógicas, disciplinares e de saúde.</p>
         </div>
         <button
           onClick={() => { limpar(); setNovaAberta(true) }}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+          style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
         >
           <Plus className="size-4" /> Nova ocorrência
         </button>
@@ -150,8 +151,26 @@ export function OcorrenciasProfessorClient({
         <div className="border-b border-[#e5ecee] px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setMinhasApenas(false)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${!minhasApenas ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>Todas</button>
-              <button onClick={() => setMinhasApenas(true)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${minhasApenas ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>Minhas</button>
+              <button
+                onClick={() => setMinhasApenas(false)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${!minhasApenas ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                style={!minhasApenas ? {
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : undefined}
+              >
+                Todas
+              </button>
+              <button
+                onClick={() => setMinhasApenas(true)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${minhasApenas ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                style={minhasApenas ? {
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : undefined}
+              >
+                Minhas
+              </button>
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
               <Search className="size-4 text-[#9aaab0]" />
@@ -162,7 +181,15 @@ export function OcorrenciasProfessorClient({
 
         {filtradas.length === 0 ? (
           <div className="px-5 py-16 text-center">
-            <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><AlertCircle className="size-6" /></div>
+            <div
+              className="mx-auto grid size-14 place-items-center rounded-full"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <AlertCircle className="size-6" />
+            </div>
             <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma ocorrência</h3>
             <p className="mt-1 text-sm text-[#82939a]">Registre a primeira ocorrência clicando em "Nova ocorrência".</p>
           </div>
@@ -188,7 +215,12 @@ export function OcorrenciasProfessorClient({
                     <p className="mt-1 text-[11px] text-[#a0afb4]">Por {o.autor_nome} · {formatarData(o.criado_em)}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={() => abrirEdicao(o)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                    <button
+                      onClick={() => abrirEdicao(o)}
+                      className="rounded-lg p-1.5 transition hover:brightness-90"
+                      style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                      title="Editar"
+                    >
                       <Edit className="size-4" />
                     </button>
                     <button onClick={() => setConfirmarExclusao(o.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
@@ -219,7 +251,7 @@ export function OcorrenciasProfessorClient({
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
-                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
+                  <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
                     {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome} {a.serie ? `— ${a.serie}` : ''}</option>)}
                   </select>
@@ -229,8 +261,19 @@ export function OcorrenciasProfessorClient({
                   <div className="grid grid-cols-3 gap-2">
                     {TIPOS.map((t) => {
                       const Icone = t.icone
+                      const sel = tipo === t.key
                       return (
-                        <button key={t.key} type="button" onClick={() => setTipo(t.key)} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition ${tipo === t.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setTipo(t.key)}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
                           <Icone className="size-3.5" />{t.label}
                         </button>
                       )
@@ -240,24 +283,37 @@ export function OcorrenciasProfessorClient({
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Gravidade</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {GRAVIDADES.map((g) => (
-                      <button key={g.key} type="button" onClick={() => setGravidade(g.key)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${gravidade === g.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
-                        {g.label}
-                      </button>
-                    ))}
+                    {GRAVIDADES.map((g) => {
+                      const sel = gravidade === g.key
+                      return (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => setGravidade(g.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {g.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Conversa durante a aula" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Conversa durante a aula" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} placeholder="O que aconteceu" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} placeholder="O que aconteceu" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Providências (opcional)</label>
-                  <textarea value={providencias} onChange={(e) => setProvidencias(e.target.value)} rows={3} placeholder="O que foi feito" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={providencias} onChange={(e) => setProvidencias(e.target.value)} rows={3} placeholder="O que foi feito" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
               </div>
@@ -265,7 +321,12 @@ export function OcorrenciasProfessorClient({
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovaAberta(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleSalvar}
+                disabled={enviando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Registrar'}
               </button>
