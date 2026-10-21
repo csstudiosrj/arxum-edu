@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Bell, FileText, AlertCircle, WalletCards, ShieldCheck, MessageSquare,
@@ -19,6 +19,8 @@ const tipoIcone: Record<string, { icone: LucideIcon; cor: string }> = {
   evento: { icone: Calendar, cor: '#0891b2' },
   mensagem: { icone: Inbox, cor: '#be185d' },
 }
+
+const INTERVALO_POLLING_MS = 60_000
 
 function formatarTempo(iso: string): string {
   try {
@@ -45,32 +47,66 @@ export function SinoNotificacoes({
   carregarNotificacoes: () => Promise<ResultadoNotificacoes>
 }) {
   const [aberto, setAberto] = useState(false)
-  const [carregando, setCarregando] = useState(false)
+  const [carregandoInicial, setCarregandoInicial] = useState(true)
+  const [atualizando, setAtualizando] = useState(false)
   const [notificacoes, setNotificacoes] = useState<ResultadoNotificacoes>({ total: 0, itens: [] })
   const [carregado, setCarregado] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  const recarregar = useCallback(
+    async (silencioso: boolean) => {
+      if (silencioso) setAtualizando(true)
+      else setCarregandoInicial(true)
+      try {
+        const r = await carregarNotificacoes()
+        setNotificacoes(r)
+        setCarregado(true)
+      } catch {
+        // mantém estado anterior; não pisca
+      } finally {
+        if (silencioso) setAtualizando(false)
+        else setCarregandoInicial(false)
+      }
+    },
+    [carregarNotificacoes]
+  )
+
+  // Carrega na montagem + polling + refresh no foco da aba
   useEffect(() => {
     let ativo = true
-    setCarregando(true)
-    carregarNotificacoes()
-      .then((r) => {
+
+    const executar = async (silencioso: boolean) => {
+      if (!ativo) return
+      if (silencioso) setAtualizando(true)
+      else setCarregandoInicial(true)
+      try {
+        const r = await carregarNotificacoes()
         if (ativo) {
           setNotificacoes(r)
           setCarregado(true)
         }
-      })
-      .catch(() => {
-        if (ativo) setCarregado(true)
-      })
-      .finally(() => {
-        if (ativo) setCarregando(false)
-      })
+      } catch {
+        // silencioso
+      } finally {
+        if (ativo) {
+          if (silencioso) setAtualizando(false)
+          else setCarregandoInicial(false)
+        }
+      }
+    }
+
+    executar(false)
+
+    const interval = setInterval(() => executar(true), INTERVALO_POLLING_MS)
+    const onFocus = () => executar(true)
+    window.addEventListener('focus', onFocus)
+
     return () => {
       ativo = false
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [carregarNotificacoes])
 
   useEffect(() => {
     function handleClickFora(e: MouseEvent) {
@@ -84,12 +120,19 @@ export function SinoNotificacoes({
     }
   }, [aberto])
 
+  // Ao abrir o painel, força refresh silencioso (pode ter chegado coisa nova)
+  function handleToggle() {
+    const vaiAbrir = !aberto
+    setAberto(vaiAbrir)
+    if (vaiAbrir && carregado) recarregar(true)
+  }
+
   const temNaoLidas = notificacoes.total > 0
 
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setAberto(!aberto)}
+        onClick={handleToggle}
         className="relative rounded-lg p-2 text-[#71838b] transition hover:bg-[#f1f5f6]"
         aria-label="Notificações"
       >
@@ -98,6 +141,9 @@ export function SinoNotificacoes({
           <span className="absolute -right-0.5 -top-0.5 grid min-w-[18px] place-items-center rounded-full bg-[#dc2626] px-1 text-[10px] font-bold leading-[18px] text-white">
             {notificacoes.total > 9 ? '9+' : notificacoes.total}
           </span>
+        )}
+        {atualizando && (
+          <span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-[#0d9488] animate-pulse" />
         )}
       </button>
 
@@ -112,10 +158,10 @@ export function SinoNotificacoes({
                 </p>
               )}
             </div>
-            {carregando && <Loader2 className="size-4 animate-spin text-[#0d9488]" />}
+            {atualizando && <Loader2 className="size-3.5 animate-spin text-[#0d9488]" />}
           </div>
 
-          {!carregado ? (
+          {!carregado && carregandoInicial ? (
             <div className="px-4 py-12 text-center">
               <Loader2 className="mx-auto size-5 animate-spin text-[#a0afb4]" />
             </div>

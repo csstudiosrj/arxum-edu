@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, type LucideIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
@@ -38,8 +38,20 @@ export function ProfessorShell({
 }) {
   const [open, setOpen] = useState(false)
   const [saindo, setSaindo] = useState(false)
+  const [menuAberto, setMenuAberto] = useState(false)
+  const [emailUsuario, setEmailUsuario] = useState('')
   const pathname = usePathname()
   const router = useRouter()
+
+  useEffect(() => {
+    let ativo = true
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (!ativo || !data.user) return
+      setEmailUsuario(data.user.email || '')
+    })
+    return () => { ativo = false }
+  }, [])
 
   async function handleLogout() {
     setSaindo(true)
@@ -120,8 +132,35 @@ export function ProfessorShell({
           <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{escolaNome}</div>
           <div className="ml-auto flex items-center gap-4">
             <SinoNotificacoesLoader papel="professor" />
-            <div className="grid size-9 place-items-center rounded-full bg-[#0d9488] text-xs font-bold text-white">
-              {iniciais}
+
+            {/* Avatar clicável com dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setMenuAberto(!menuAberto)}
+                className="grid size-9 place-items-center rounded-full bg-[#0d9488] text-xs font-bold text-white hover:ring-2 hover:ring-[#0d9488] hover:ring-offset-2 transition-all"
+                aria-label="Menu da conta"
+              >
+                {iniciais}
+              </button>
+              {menuAberto && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuAberto(false)} />
+                  <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border border-[#dce5e8] bg-white p-2 shadow-xl">
+                    <div className="border-b border-[#edf1f2] px-3 py-2 mb-1">
+                      <p className="truncate text-sm font-bold text-[#12232b]">{professorNome}</p>
+                      {emailUsuario && (
+                        <p className="truncate text-xs text-[#82939a]">{emailUsuario}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] transition"
+                    >
+                      <LogOut className="size-4" /> Sair da conta
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
