@@ -31,7 +31,7 @@ function formatarCEP(v: string): string {
   return `${n.slice(0, 5)}-${n.slice(5)}`
 }
 
-// Nova máscara de moeda
+// Máscara de moeda — formata enquanto digita
 function formatarMoedaInput(valor: string): string {
   const apenasNumeros = valor.replace(/\D/g, '')
   if (!apenasNumeros) return ''
@@ -132,7 +132,6 @@ export function PagarmeClient({
     const faturamentoLimpo = faturamentoAnual.replace(/\D/g, '')
 
     const payload = {
-      // Não envie name, email, document, type na raiz
       nome,
       email,
       documento: documento.replace(/\D/g, ''),
@@ -156,11 +155,11 @@ export function PagarmeClient({
       },
       registerInformation: {
         type: 'corporation' as const,
-        name: nome, // name dentro do register_information
+        name: nome,
         company_name: nome,
         trading_name: nome,
-        annual_revenue: faturamentoLimpo, // string
-        site_url: 'https://arxum.com.br', // obrigatório para corporation
+        annual_revenue: faturamentoLimpo,
+        site_url: 'https://arxum.com.br',
         document: documento.replace(/\D/g, ''),
         email: email,
         phone_numbers: [{ ddd: '21', number: '999999999', type: 'mobile' }],
@@ -224,7 +223,7 @@ export function PagarmeClient({
       <main className="px-5 py-8 lg:px-8">
         <SectionHeading
           eyebrow="Financeiro"
-          title="Conta de Recebimento" // Título sem "Pagar.me"
+          title="Conta de Recebimento"
           description="Configure os dados bancários para receber os repasses das mensalidades e vendas da loja."
         />
 
@@ -249,11 +248,21 @@ export function PagarmeClient({
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   {kycUrl && (
-                    <a href={kycUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]">
+                    <a
+                      href={kycUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+                      style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                    >
                       <ExternalLink size={16} /> Enviar documentos (KYC)
                     </a>
                   )}
-                  <button onClick={handleSincronizar} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] disabled:opacity-50">
+                  <button
+                    onClick={handleSincronizar}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50"
+                  >
                     <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Atualizar status
                   </button>
                 </div>
@@ -276,18 +285,18 @@ export function PagarmeClient({
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Razão Social</label>
-                  <input type="text" value={nome} onChange={e => setNome(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={nome} onChange={e => setNome(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CNPJ</label>
-                  <input type="text" value={documento} onChange={e => setDocumento(formatarCNPJ(e.target.value))} required placeholder="00.000.000/0000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={documento} onChange={e => setDocumento(formatarCNPJ(e.target.value))} required placeholder="00.000.000/0000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail financeiro</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Faturamento Anual (R$)</label>
@@ -297,7 +306,7 @@ export function PagarmeClient({
                     onChange={e => setFaturamentoAnual(formatarMoedaInput(e.target.value))} 
                     required 
                     placeholder="R$ 0,00" 
-                    className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" 
+                    className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" 
                   />
                 </div>
               </div>
@@ -316,9 +325,14 @@ export function PagarmeClient({
                       }} 
                       required 
                       placeholder="00000-000" 
-                      className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488] disabled:bg-[#f0f4f5]" 
+                      className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5]" 
                     />
-                    {buscandoCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-[#0d9488]" />}
+                    {buscandoCep && (
+                      <Loader2
+                        className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin"
+                        style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -327,35 +341,35 @@ export function PagarmeClient({
               <div className="grid gap-5 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Rua / Logradouro</label>
-                  <input type="text" value={rua} onChange={e => setRua(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={rua} onChange={e => setRua(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Número</label>
-                  <input type="text" value={numero} onChange={e => setNumero(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={numero} onChange={e => setNumero(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Bairro</label>
-                  <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
               </div>
               <div className="grid gap-5 md:grid-cols-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Complemento</label>
-                  <input type="text" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Sala, bloco (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Sala, bloco (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Ponto de Referência</label>
-                  <input type="text" value={pontoReferencia} onChange={e => setPontoReferencia(e.target.value)} placeholder="Ex: Próximo ao metrô (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={pontoReferencia} onChange={e => setPontoReferencia(e.target.value)} placeholder="Ex: Próximo ao metrô (opcional)" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
               </div>
               <div className="grid gap-5 md:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Cidade</label>
-                  <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Estado (UF)</label>
-                  <input type="text" value={estado} onChange={e => setEstado(e.target.value.toUpperCase())} required maxLength={2} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={estado} onChange={e => setEstado(e.target.value.toUpperCase())} required maxLength={2} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
               </div>
 
@@ -364,19 +378,19 @@ export function PagarmeClient({
                 <div className="grid gap-5 md:grid-cols-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Código do Banco</label>
-                    <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" maxLength={3} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={banco} onChange={e => setBanco(e.target.value)} required placeholder="Ex: 341" maxLength={3} className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Agência</label>
-                    <input type="text" value={agencia} onChange={e => setAgencia(e.target.value)} required placeholder="0001" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={agencia} onChange={e => setAgencia(e.target.value)} required placeholder="0001" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Conta</label>
-                    <input type="text" value={conta} onChange={e => setConta(e.target.value)} required placeholder="12345" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={conta} onChange={e => setConta(e.target.value)} required placeholder="12345" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Dígito</label>
-                    <input type="text" value={digito} onChange={e => setDigito(e.target.value)} required placeholder="6" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={digito} onChange={e => setDigito(e.target.value)} required placeholder="6" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
               </div>
@@ -386,15 +400,15 @@ export function PagarmeClient({
                 <div className="grid gap-5 md:grid-cols-3">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nome completo do sócio</label>
-                    <input type="text" value={socioNome} onChange={e => setSocioNome(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={socioNome} onChange={e => setSocioNome(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">CPF do sócio</label>
-                    <input type="text" value={socioCpf} onChange={e => setSocioCpf(formatarCPF(e.target.value))} required placeholder="000.000.000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="text" value={socioCpf} onChange={e => setSocioCpf(formatarCPF(e.target.value))} required placeholder="000.000.000-00" className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Data de Nascimento</label>
-                    <input type="date" value={socioNascimento} onChange={e => setSocioNascimento(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[#0d9488]" />
+                    <input type="date" value={socioNascimento} onChange={e => setSocioNascimento(e.target.value)} required className="w-full rounded-lg border border-[#d5e0e3] px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
               </div>
@@ -411,7 +425,12 @@ export function PagarmeClient({
               )}
 
               <div className="flex justify-end">
-                <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-6 py-3 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                >
                   {loading ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
                   {loading ? 'Enviando para Pagar.me...' : 'Criar conta de recebimento'}
                 </button>
