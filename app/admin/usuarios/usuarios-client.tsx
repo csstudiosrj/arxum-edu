@@ -161,7 +161,8 @@ export function UsuariosClient({
           />
           <button
             onClick={() => { limparNovo(); setNovoAberto(true) }}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" /> Convidar usuário
           </button>
@@ -169,10 +170,18 @@ export function UsuariosClient({
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Users className="size-5" /></div>
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <Users className="size-5" />
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Usuários</p>
-              <p className="text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{usuarios.length}</p>
+              <p className="text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{usuarios.length}</p>
             </div>
           </Panel>
           <Panel className="flex items-center gap-4 p-5">
@@ -195,10 +204,22 @@ export function UsuariosClient({
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setFiltroPapel('todos')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtroPapel === 'todos' ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>Todos</button>
-                {PAPEIS_INTERNOS.map((p) => (
-                  <button key={p.key} onClick={() => setFiltroPapel(p.key)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtroPapel === p.key ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>{p.label}</button>
-                ))}
+                {[{ key: 'todos', label: 'Todos' }, ...PAPEIS_INTERNOS].map((p) => {
+                  const ativo = filtroPapel === p.key
+                  return (
+                    <button
+                      key={p.key}
+                      onClick={() => setFiltroPapel(p.key)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                      style={ativo ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {p.label}
+                    </button>
+                  )
+                })}
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
                 <Search className="size-4 text-[#9aaab0]" />
@@ -209,7 +230,15 @@ export function UsuariosClient({
 
           {filtrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><Users className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <Users className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum usuário encontrado</h3>
               <p className="mt-1 max-w-sm text-sm text-[#82939a]">Ajuste os filtros ou convide um novo usuário.</p>
             </div>
@@ -278,7 +307,10 @@ export function UsuariosClient({
                           <button
                             onClick={() => handleReenviar(u)}
                             disabled={reenviando === u.id || sucessoReenvio === u.id}
-                            className={`rounded-lg p-1.5 transition ${sucessoReenvio === u.id ? 'bg-[#d1fae5] text-[#065f46]' : 'text-[#0d9488] hover:bg-[#ccfbf1]'} disabled:opacity-60`}
+                            className={`rounded-lg p-1.5 transition ${sucessoReenvio === u.id ? 'bg-[#d1fae5] text-[#065f46]' : 'hover:brightness-90'} disabled:opacity-60`}
+                            style={sucessoReenvio === u.id ? undefined : {
+                              color: 'var(--cor-primaria, #0d9488)',
+                            }}
                             title={sucessoReenvio === u.id ? 'Convite reenviado' : 'Reenviar convite'}
                           >
                             {reenviando === u.id ? <Loader2 className="size-4 animate-spin" /> : sucessoReenvio === u.id ? <CheckCircle2 className="size-4" /> : <Send className="size-4" />}
@@ -319,7 +351,15 @@ export function UsuariosClient({
         <Panel className="mt-6">
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><ShieldCheck className="size-4" /></div>
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <ShieldCheck className="size-4" />
+              </div>
               <div>
                 <h2 className="text-base font-bold text-[#12232b]">Papéis disponíveis</h2>
                 <p className="text-xs text-[#82939a]">O que cada papel pode fazer</p>
@@ -358,42 +398,49 @@ export function UsuariosClient({
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nome completo</label>
-                  <input type="text" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Ex: Ana Paula" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Ex: Ana Paula" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail</label>
-                  <input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="pessoa@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="pessoa@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Telefone (opcional)</label>
-                  <input type="tel" value={novoTelefone} onChange={(e) => setNovoTelefone(e.target.value)} placeholder="(21) 90000-0000" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="tel" value={novoTelefone} onChange={(e) => setNovoTelefone(e.target.value)} placeholder="(21) 90000-0000" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Papel</label>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {PAPEIS_INTERNOS.map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => setNovoPapel(p.key)}
-                        className={`rounded-lg border p-3 text-left transition ${novoPapel === p.key ? 'border-[#0d9488] bg-[#ccfbf1]' : 'border-[#d5e0e3] bg-white hover:border-[#0d9488]'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="grid size-6 place-items-center rounded" style={{ backgroundColor: `${papelCor(p.key)}15`, color: papelCor(p.key) }}>
-                            <ShieldCheck className="size-3" />
+                    {PAPEIS_INTERNOS.map((p) => {
+                      const sel = novoPapel === p.key
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => setNovoPapel(p.key)}
+                          className={`rounded-lg border p-3 text-left transition ${sel ? '' : 'border-[#d5e0e3] bg-white hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                          } : undefined}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="grid size-6 place-items-center rounded" style={{ backgroundColor: `${papelCor(p.key)}15`, color: papelCor(p.key) }}>
+                              <ShieldCheck className="size-3" />
+                            </div>
+                            <span className="text-xs font-bold text-[#12232b]">{p.label}</span>
+                            {sel && <Check className="ml-auto size-3.5" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
                           </div>
-                          <span className="text-xs font-bold text-[#12232b]">{p.label}</span>
-                          {novoPapel === p.key && <Check className="ml-auto size-3.5 text-[#0d9488]" />}
-                        </div>
-                        <p className="mt-1 text-[10px] leading-4 text-[#82939a]">{p.descricao}</p>
-                      </button>
-                    ))}
+                          <p className="mt-1 text-[10px] leading-4 text-[#82939a]">{p.descricao}</p>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 {unidades.length > 0 && (
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Unidade (opcional)</label>
-                    <select value={novaUnidade} onChange={(e) => setNovaUnidade(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={novaUnidade} onChange={(e) => setNovaUnidade(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                       <option value="">Matriz (todas as unidades)</option>
                       {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
                     </select>
@@ -405,7 +452,12 @@ export function UsuariosClient({
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={processando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={processando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleCriar}
+                disabled={processando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {processando ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
                 {processando ? 'Enviando...' : 'Enviar convite'}
               </button>
@@ -430,7 +482,7 @@ export function UsuariosClient({
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nome completo</label>
-                  <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={editNome} onChange={(e) => setEditNome(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail</label>
@@ -439,7 +491,7 @@ export function UsuariosClient({
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Telefone</label>
-                  <input type="tel" value={editTelefone} onChange={(e) => setEditTelefone(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <input type="tel" value={editTelefone} onChange={(e) => setEditTelefone(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Papel</label>
@@ -455,37 +507,44 @@ export function UsuariosClient({
                     </div>
                   ) : (
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {PAPEIS_INTERNOS.filter((p) => p.key !== 'admin_escola').map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => setEditPapel(p.key)}
-                          className={`rounded-lg border p-3 text-left transition ${editPapel === p.key ? 'border-[#0d9488] bg-[#ccfbf1]' : 'border-[#d5e0e3] bg-white hover:border-[#0d9488]'}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="grid size-6 place-items-center rounded" style={{ backgroundColor: `${papelCor(p.key)}15`, color: papelCor(p.key) }}>
-                              <ShieldCheck className="size-3" />
+                      {PAPEIS_INTERNOS.filter((p) => p.key !== 'admin_escola').map((p) => {
+                        const sel = editPapel === p.key
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => setEditPapel(p.key)}
+                            className={`rounded-lg border p-3 text-left transition ${sel ? '' : 'border-[#d5e0e3] bg-white hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                            style={sel ? {
+                              borderColor: 'var(--cor-primaria, #0d9488)',
+                              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            } : undefined}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="grid size-6 place-items-center rounded" style={{ backgroundColor: `${papelCor(p.key)}15`, color: papelCor(p.key) }}>
+                                <ShieldCheck className="size-3" />
+                              </div>
+                              <span className="text-xs font-bold text-[#12232b]">{p.label}</span>
+                              {sel && <Check className="ml-auto size-3.5" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
                             </div>
-                            <span className="text-xs font-bold text-[#12232b]">{p.label}</span>
-                            {editPapel === p.key && <Check className="ml-auto size-3.5 text-[#0d9488]" />}
-                          </div>
-                          <p className="mt-1 text-[10px] leading-4 text-[#82939a]">{p.descricao}</p>
-                        </button>
-                      ))}
+                            <p className="mt-1 text-[10px] leading-4 text-[#82939a]">{p.descricao}</p>
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
                 {unidades.length > 0 && (
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Unidade</label>
-                    <select value={editUnidade} onChange={(e) => setEditUnidade(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={editUnidade} onChange={(e) => setEditUnidade(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                       <option value="">Matriz (todas as unidades)</option>
                       {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
                     </select>
                   </div>
                 )}
                 <label className="flex items-center gap-2 text-sm text-[#243942]">
-                  <input type="checkbox" checked={editAtivo} onChange={(e) => setEditAtivo(e.target.checked)} disabled={editando.e_admin} className="size-4 accent-[#0d9488] disabled:opacity-50" />
+                  <input type="checkbox" checked={editAtivo} onChange={(e) => setEditAtivo(e.target.checked)} disabled={editando.e_admin} className="size-4 disabled:opacity-50" style={{ accentColor: 'var(--cor-primaria, #0d9488)' }} />
                   Usuário ativo
                 </label>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
@@ -494,7 +553,12 @@ export function UsuariosClient({
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setEditando(null)} disabled={processando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvarEdicao} disabled={processando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleSalvarEdicao}
+                disabled={processando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {processando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {processando ? 'Salvando...' : 'Salvar'}
               </button>

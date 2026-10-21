@@ -147,7 +147,8 @@ export function UnidadesClient({
           />
           <button
             onClick={abrirNova}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" /> Nova unidade
           </button>
@@ -155,10 +156,18 @@ export function UnidadesClient({
 
         <div className="mt-8 grid gap-4 sm:grid-cols-4">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Building2 className="size-5" /></div>
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <Building2 className="size-5" />
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Unidades</p>
-              <p className="text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{unidades.length}</p>
+              <p className="text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{unidades.length}</p>
             </div>
           </Panel>
           <Panel className="flex items-center gap-4 p-5">
@@ -187,7 +196,15 @@ export function UnidadesClient({
         {unidades.length === 0 ? (
           <Panel className="mt-8">
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><Building2 className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <Building2 className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma unidade cadastrada</h3>
               <p className="mt-1 max-w-md text-sm leading-6 text-[#82939a]">
                 Se a sua escola funciona em uma única sede, você não precisa cadastrar unidades aqui.
@@ -195,7 +212,8 @@ export function UnidadesClient({
               </p>
               <button
                 onClick={abrirNova}
-                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 <Plus className="size-4" /> Cadastrar primeira unidade
               </button>
@@ -211,13 +229,19 @@ export function UnidadesClient({
                   </div>
                 )}
                 <div className="flex items-start gap-3">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div
+                    className="grid size-11 shrink-0 place-items-center rounded-lg"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
                     <Building2 className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-bold text-[#12232b]">{u.nome}</h3>
                     {u.slug && (
-                      <p className="mt-0.5 truncate font-mono text-[11px] text-[#0d9488]">/{u.slug}</p>
+                      <p className="mt-0.5 truncate font-mono text-[11px]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>/{u.slug}</p>
                     )}
                   </div>
                 </div>
@@ -265,7 +289,7 @@ export function UnidadesClient({
                 <div className="mt-4 flex items-center gap-2">
                   <button
                     onClick={() => abrirEdicao(u)}
-                    className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                    className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                   >
                     <Edit className="mr-1 inline size-3.5" /> Editar
                   </button>
@@ -348,7 +372,7 @@ export function UnidadesClient({
                           }
                         }}
                         placeholder="Ex: Colégio Horizonte - Unidade Centro"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                     <div>
@@ -359,7 +383,7 @@ export function UnidadesClient({
                         onChange={(e) => atualizar('slug', e.target.value)}
                         disabled={!!editando}
                         placeholder="unidade-centro"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]"
                       />
                     </div>
                   </div>
@@ -375,7 +399,7 @@ export function UnidadesClient({
                         value={form.endereco}
                         onChange={(e) => atualizar('endereco', e.target.value)}
                         placeholder="Rua, número, bairro"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-3">
@@ -385,7 +409,7 @@ export function UnidadesClient({
                           type="text"
                           value={form.cidade}
                           onChange={(e) => atualizar('cidade', e.target.value)}
-                          className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                          className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                         />
                       </div>
                       <div>
@@ -396,7 +420,7 @@ export function UnidadesClient({
                           onChange={(e) => atualizar('estado', e.target.value)}
                           maxLength={2}
                           placeholder="RJ"
-                          className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                          className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                         />
                       </div>
                       <div>
@@ -405,7 +429,7 @@ export function UnidadesClient({
                           type="text"
                           value={form.pais}
                           onChange={(e) => atualizar('pais', e.target.value)}
-                          className="w-full rounded-lg border border-[#d5e0d3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                          className="w-full rounded-lg border border-[#d5e0d3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                         />
                       </div>
                     </div>
@@ -422,7 +446,7 @@ export function UnidadesClient({
                         value={form.telefone}
                         onChange={(e) => atualizar('telefone', e.target.value)}
                         placeholder="(21) 90000-0000"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                     <div>
@@ -432,7 +456,7 @@ export function UnidadesClient({
                         value={form.email_contato}
                         onChange={(e) => atualizar('email_contato', e.target.value)}
                         placeholder="unidade@escola.com.br"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                   </div>
@@ -447,7 +471,7 @@ export function UnidadesClient({
                         type="text"
                         value={form.responsavel_nome}
                         onChange={(e) => atualizar('responsavel_nome', e.target.value)}
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                     <div>
@@ -456,7 +480,7 @@ export function UnidadesClient({
                         type="email"
                         value={form.responsavel_email}
                         onChange={(e) => atualizar('responsavel_email', e.target.value)}
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
                   </div>
@@ -469,7 +493,7 @@ export function UnidadesClient({
                     onChange={(e) => atualizar('observacoes', e.target.value)}
                     rows={3}
                     placeholder="Informações internas sobre esta unidade"
-                    className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                 </section>
 
@@ -479,7 +503,8 @@ export function UnidadesClient({
                       type="checkbox"
                       checked={ativa}
                       onChange={(e) => setAtiva(e.target.checked)}
-                      className="size-4 accent-[#0d9488]"
+                      className="size-4"
+                      style={{ accentColor: 'var(--cor-primaria, #0d9488)' }}
                     />
                     Unidade ativa
                   </label>
@@ -504,7 +529,8 @@ export function UnidadesClient({
               <button
                 onClick={editando ? handleSalvarEdicao : handleCriar}
                 disabled={processando}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {processando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {processando ? 'Salvando...' : editando ? 'Salvar' : 'Criar unidade'}

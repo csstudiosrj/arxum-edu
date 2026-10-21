@@ -24,6 +24,7 @@ type FormularioComContagem = {
   total_respostas: number
 }
 
+// ── SEMÂNTICO: cores por status de publicação ───────────────────────
 const statusStyles: Record<string, string> = {
   rascunho: 'bg-[#fef3c7] text-[#92400e]',
   publicado: 'bg-[#d1fae5] text-[#065f46]',
@@ -86,7 +87,8 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
           />
           <button
             onClick={() => { limpar(); setNovoAberto(true) }}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" /> Novo formulário
           </button>
@@ -94,10 +96,18 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><FileText className="size-5" /></div>
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <FileText className="size-5" />
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Formulários</p>
-              <p className="text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{formularios.length}</p>
+              <p className="text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{formularios.length}</p>
             </div>
           </Panel>
           <Panel className="flex items-center gap-4 p-5">
@@ -119,7 +129,15 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
         <Panel className="mt-8">
           {formularios.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><FileText className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <FileText className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum formulário criado</h3>
               <p className="mt-1 max-w-sm text-sm text-[#82939a]">
                 Crie seu primeiro formulário personalizado e compartilhe com os responsáveis.
@@ -129,7 +147,13 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
             <div className="divide-y divide-[#f0f4f5]">
               {formularios.map((f) => (
                 <div key={f.id} className="flex items-center gap-4 px-5 py-4 transition hover:bg-[#fafcfc]">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div
+                    className="grid size-11 shrink-0 place-items-center rounded-lg"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
                     <FileText className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -166,7 +190,8 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
                     </Link>
                     <Link
                       href={`/admin/formularios/${f.id}`}
-                      className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                      className="rounded-lg p-1.5 transition hover:brightness-90"
+                      style={{ color: 'var(--cor-primaria, #0d9488)' }}
                       title="Editar"
                     >
                       <Edit className="size-4" />
@@ -202,20 +227,33 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Matrícula 2027" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Matrícula 2027" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição (opcional)</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} placeholder="Texto que aparece acima do formulário" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} placeholder="Texto que aparece acima do formulário" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Tipo</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {TIPOS_FORMULARIO.map((t) => (
-                      <button key={t.key} type="button" onClick={() => setTipo(t.key)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${tipo === t.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
-                        {t.label}
-                      </button>
-                    ))}
+                    {TIPOS_FORMULARIO.map((t) => {
+                      const sel = tipo === t.key
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setTipo(t.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {t.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
@@ -224,7 +262,12 @@ export function FormulariosClient({ formularios }: { formularios: FormularioComC
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleCriar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleCriar}
+                disabled={enviando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {enviando ? 'Criando...' : 'Criar e editar'}
               </button>
