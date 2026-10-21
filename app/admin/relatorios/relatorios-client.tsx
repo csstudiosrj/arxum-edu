@@ -4,6 +4,7 @@ import { Users, TrendingUp, WalletCards, MessageSquare, AlertCircle, Award, Chec
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import type { RelatorioData } from './actions'
 
+// ── SEMÂNTICO: cores por status ─────────────────────────────────────
 const statusLabels: Record<string, string> = {
   inscrito: 'Inscrito',
   em_analise: 'Em análise',
@@ -26,6 +27,7 @@ const statusCores: Record<string, string> = {
   cancelado: '#82939a',
 }
 
+// ── SEMÂNTICO: cores por tipo de ocorrência ─────────────────────────
 const tipoOcorrencia: Record<string, { label: string; cor: string; icone: typeof AlertCircle }> = {
   pedagogica: { label: 'Pedagógica', cor: '#3b82f6', icone: BookOpen },
   disciplinar: { label: 'Disciplinar', cor: '#dc2626', icone: ShieldAlert },
@@ -73,12 +75,18 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Panel className="p-5">
             <div className="flex items-start justify-between">
-              <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-10 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Users className="size-5" />
               </div>
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Alunos ativos</p>
-            <p className="mt-1 text-3xl font-bold tracking-[-.03em] text-[#0d9488]">{data.alunosAtivos}</p>
+            <p className="mt-1 text-3xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{data.alunosAtivos}</p>
             <p className="mt-1 text-xs text-[#82939a]">{data.turmasUnicas} turmas · {data.totalAlunos} total</p>
           </Panel>
 
@@ -115,7 +123,13 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           <Panel className="p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Users className="size-4" />
               </div>
               <div>
@@ -178,7 +192,13 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Panel className="p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <BarChart3 className="size-4" />
               </div>
               <div>
@@ -295,7 +315,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Autorizadas</p>
-                  <p className="mt-1 text-xl font-bold text-[#0d9488]">{data.totalAutorizados}</p>
+                  <p className="mt-1 text-xl font-bold" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{data.totalAutorizados}</p>
                 </div>
               </div>
             </div>
