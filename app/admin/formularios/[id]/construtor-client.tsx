@@ -155,7 +155,10 @@ export function ConstrutorClient({
   return (
     <AdminShell mode="school" active="Formulários">
       <main className="px-5 py-8 lg:px-8">
-        <Link href="/admin/formularios" className="inline-flex items-center gap-2 text-sm text-[#6b7d86] hover:text-[#0d9488]">
+        <Link
+          href="/admin/formularios"
+          className="inline-flex items-center gap-2 text-sm text-[#6b7d86] hover:brightness-75"
+        >
           <ArrowLeft className="size-4" /> Todos os formulários
         </Link>
 
@@ -167,7 +170,10 @@ export function ConstrutorClient({
               </span>
             </div>
             <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">{titulo}</h1>
-            <p className="mt-1 text-sm text-[#71838b]">{campos.length} campos · URL: <span className="font-mono text-xs text-[#0d9488]">/formulario/{formulario.slug}</span></p>
+            <p className="mt-1 text-sm text-[#71838b]">
+              {campos.length} campos · URL:{' '}
+              <span className="font-mono text-xs" style={{ color: 'var(--cor-primaria, #0d9488)' }}>/formulario/{formulario.slug}</span>
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {status === 'publicado' && (
@@ -175,7 +181,7 @@ export function ConstrutorClient({
                 href={`/formulario/${formulario.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
               >
                 <ExternalLink className="size-4" /> Ver público
               </Link>
@@ -188,7 +194,7 @@ export function ConstrutorClient({
             <button
               onClick={() => handleSalvar(false)}
               disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50"
             >
               {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               Salvar
@@ -197,7 +203,8 @@ export function ConstrutorClient({
               <button
                 onClick={() => handleSalvar(true)}
                 disabled={salvando || campos.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
                 Publicar
@@ -211,18 +218,25 @@ export function ConstrutorClient({
         )}
 
         <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
-          <button
-            onClick={() => setAba('campos')}
-            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${aba === 'campos' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
-          >
-            Campos do formulário
-          </button>
-          <button
-            onClick={() => setAba('configuracoes')}
-            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${aba === 'configuracoes' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
-          >
-            Configurações
-          </button>
+          {[
+            { key: 'campos', label: 'Campos do formulário' },
+            { key: 'configuracoes', label: 'Configurações' },
+          ].map((t) => {
+            const ativo = aba === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setAba(t.key as 'campos' | 'configuracoes')}
+                className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${ativo ? '' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
+                style={ativo ? {
+                  borderColor: 'var(--cor-primaria, #0d9488)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : undefined}
+              >
+                {t.label}
+              </button>
+            )
+          })}
         </div>
 
         {aba === 'campos' && (
@@ -237,7 +251,8 @@ export function ConstrutorClient({
                   </div>
                   <button
                     onClick={() => setAdicionarAberto(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0f766e]"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-90"
+                    style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
                   >
                     <Plus className="size-3.5" /> Adicionar campo
                   </button>
@@ -245,7 +260,15 @@ export function ConstrutorClient({
 
                 {campos.length === 0 ? (
                   <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-                    <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><FileText className="size-6" /></div>
+                    <div
+                      className="grid size-14 place-items-center rounded-full"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      }}
+                    >
+                      <FileText className="size-6" />
+                    </div>
                     <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum campo ainda</h3>
                     <p className="mt-1 max-w-xs text-sm text-[#82939a]">Clique em "Adicionar campo" para começar.</p>
                   </div>
@@ -258,8 +281,11 @@ export function ConstrutorClient({
                       return (
                         <div
                           key={c.id}
-                          className={`flex items-start gap-3 px-4 py-3 transition cursor-pointer ${ativo ? 'bg-[#f0fbf8]' : 'hover:bg-[#fafcfc]'}`}
+                          className={`flex items-start gap-3 px-4 py-3 transition cursor-pointer ${ativo ? '' : 'hover:bg-[#fafcfc]'}`}
                           onClick={() => setSelecionadoIdx(idx)}
+                          style={ativo ? {
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
+                          } : undefined}
                         >
                           <div className="flex flex-col gap-0.5 pt-1">
                             <button
@@ -277,7 +303,10 @@ export function ConstrutorClient({
                               <ChevronDown className="size-3.5" />
                             </button>
                           </div>
-                          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-white border border-[#e5ecee] text-[#0d9488]">
+                          <div
+                            className="grid size-9 shrink-0 place-items-center rounded-lg bg-white border border-[#e5ecee]"
+                            style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                          >
                             <Icone className="size-4" />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -310,7 +339,13 @@ export function ConstrutorClient({
               {campoSelecionado ? (
                 <Panel>
                   <div className="flex items-center gap-3 border-b border-[#e5ecee] px-5 py-4">
-                    <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                    <div
+                      className="grid size-9 place-items-center rounded-lg"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      }}
+                    >
                       <Settings className="size-4" />
                     </div>
                     <div>
@@ -326,7 +361,7 @@ export function ConstrutorClient({
                         type="text"
                         value={campoSelecionado.label}
                         onChange={(e) => atualizarCampo('label', e.target.value)}
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
 
@@ -337,7 +372,7 @@ export function ConstrutorClient({
                         value={campoSelecionado.placeholder || ''}
                         onChange={(e) => atualizarCampo('placeholder', e.target.value)}
                         placeholder="Texto dentro do campo"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
 
@@ -348,7 +383,7 @@ export function ConstrutorClient({
                         value={campoSelecionado.texto_ajuda || ''}
                         onChange={(e) => atualizarCampo('texto_ajuda', e.target.value)}
                         placeholder="Aparece abaixo do campo"
-                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                       />
                     </div>
 
@@ -358,7 +393,8 @@ export function ConstrutorClient({
                           type="checkbox"
                           checked={campoSelecionado.obrigatorio}
                           onChange={(e) => atualizarCampo('obrigatorio', e.target.checked)}
-                          className="size-4 accent-[#0d9488]"
+                          className="size-4"
+                          style={{ accentColor: 'var(--cor-primaria, #0d9488)' }}
                         />
                         Campo obrigatório
                       </label>
@@ -368,7 +404,8 @@ export function ConstrutorClient({
                             type="checkbox"
                             checked={campoSelecionado.unico}
                             onChange={(e) => atualizarCampo('unico', e.target.checked)}
-                            className="size-4 accent-[#0d9488]"
+                            className="size-4"
+                            style={{ accentColor: 'var(--cor-primaria, #0d9488)' }}
                           />
                           Valor único (não aceita duplicatas)
                         </label>
@@ -383,7 +420,7 @@ export function ConstrutorClient({
                             type="number"
                             value={campoSelecionado.validacao_min || ''}
                             onChange={(e) => atualizarCampo('validacao_min', e.target.value ? parseInt(e.target.value, 10) : null)}
-                            className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                            className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                           />
                         </div>
                         <div>
@@ -392,7 +429,7 @@ export function ConstrutorClient({
                             type="number"
                             value={campoSelecionado.validacao_max || ''}
                             onChange={(e) => atualizarCampo('validacao_max', e.target.value ? parseInt(e.target.value, 10) : null)}
-                            className="w-full rounded-lg border border-[#d5e0d3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                            className="w-full rounded-lg border border-[#d5e0d3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                           />
                         </div>
                       </div>
@@ -402,7 +439,13 @@ export function ConstrutorClient({
                       <div className="pt-2">
                         <div className="mb-2 flex items-center justify-between">
                           <label className="text-xs font-semibold text-[#536871]">Opções</label>
-                          <button onClick={adicionarOpcao} className="text-[11px] font-semibold text-[#0d9488] hover:text-[#0f766e]">+ Adicionar</button>
+                          <button
+                            onClick={adicionarOpcao}
+                            className="text-[11px] font-semibold transition hover:brightness-90"
+                            style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                          >
+                            + Adicionar
+                          </button>
                         </div>
                         <div className="space-y-2">
                           {campoSelecionado.opcoes.map((op, i) => (
@@ -411,7 +454,7 @@ export function ConstrutorClient({
                                 type="text"
                                 value={op}
                                 onChange={(e) => editarOpcao(i, e.target.value)}
-                                className="flex-1 rounded-lg border border-[#d5e0e3] bg-white px-2.5 py-1.5 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                                className="flex-1 rounded-lg border border-[#d5e0e3] bg-white px-2.5 py-1.5 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                               />
                               <button onClick={() => removerOpcao(i)} className="rounded p-1 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
                                 <X className="size-3.5" />
@@ -444,27 +487,40 @@ export function ConstrutorClient({
               <div className="space-y-5 p-5">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Tipo</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {TIPOS_FORMULARIO.map((t) => (
-                      <button key={t.key} type="button" onClick={() => setTipo(t.key)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${tipo === t.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
-                        {t.label}
-                      </button>
-                    ))}
+                    {TIPOS_FORMULARIO.map((t) => {
+                      const sel = tipo === t.key
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setTipo(t.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {t.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">URL pública</label>
                   <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-[#fafcfc] px-3 py-2 text-sm">
                     <span className="text-[#82939a]">/formulario/</span>
-                    <span className="font-mono font-semibold text-[#0d9488]">{formulario.slug}</span>
+                    <span className="font-mono font-semibold" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{formulario.slug}</span>
                   </div>
                 </div>
               </div>
@@ -477,6 +533,7 @@ export function ConstrutorClient({
               <div className="space-y-5 p-5">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Cor primária</label>
+                  <p className="mb-2 text-[10px] text-[#82939a]">Cor própria deste formulário (independente da marca da escola)</p>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
@@ -488,17 +545,17 @@ export function ConstrutorClient({
                       type="text"
                       value={corPrimaria}
                       onChange={(e) => setCorPrimaria(e.target.value)}
-                      className="flex-1 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+                      className="flex-1 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 font-mono text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Mensagem de sucesso</label>
-                  <textarea value={mensagemSucesso} onChange={(e) => setMensagemSucesso(e.target.value)} rows={2} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <textarea value={mensagemSucesso} onChange={(e) => setMensagemSucesso(e.target.value)} rows={2} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Redirecionar após envio (opcional)</label>
-                  <input type="url" value={redirecionarUrl} onChange={(e) => setRedirecionarUrl(e.target.value)} placeholder="https://..." className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="url" value={redirecionarUrl} onChange={(e) => setRedirecionarUrl(e.target.value)} placeholder="https://..." className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Status</label>
@@ -507,11 +564,24 @@ export function ConstrutorClient({
                       { key: 'rascunho', label: 'Rascunho' },
                       { key: 'publicado', label: 'Publicado' },
                       { key: 'arquivado', label: 'Arquivado' },
-                    ].map((s) => (
-                      <button key={s.key} type="button" onClick={() => setStatus(s.key)} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${status === s.key ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}>
-                        {s.label}
-                      </button>
-                    ))}
+                    ].map((s) => {
+                      const sel = status === s.key
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => setStatus(s.key)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {s.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -538,9 +608,15 @@ export function ConstrutorClient({
                   <button
                     key={t.key}
                     onClick={() => adicionarCampo(t.key)}
-                    className="flex items-start gap-3 rounded-lg border border-[#e5ecee] bg-white p-4 text-left transition hover:border-[#0d9488] hover:bg-[#f9fdfc]"
+                    className="flex items-start gap-3 rounded-lg border border-[#e5ecee] bg-white p-4 text-left transition hover:border-[var(--cor-primaria,#0d9488)] hover:bg-black/[0.02]"
                   >
-                    <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                    <div
+                      className="grid size-9 shrink-0 place-items-center rounded-lg"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      }}
+                    >
                       <Icone className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
