@@ -100,7 +100,13 @@ export function ExportacaoClient({
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Database className="size-5" />
             </div>
             <div>
@@ -113,7 +119,7 @@ export function ExportacaoClient({
               <User className="size-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold font-semibold uppercase tracking-wider text-[#6b7d86]">Alunos</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Alunos</p>
               <p className="text-2xl font-bold tracking-[-.03em] text-[#12232b]">{resumo.alunos}</p>
             </div>
           </Panel>
@@ -131,7 +137,13 @@ export function ExportacaoClient({
         <Panel className="mt-8">
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-start gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-9 place-items-center rounded-lg"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <FileJson className="size-4" />
               </div>
               <div>
@@ -170,9 +182,15 @@ export function ExportacaoClient({
               ))}
             </div>
 
-            <div className="rounded-lg border border-[#0d9488]/20 bg-[#ccfbf1]/30 p-4">
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 20%, white)',
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 5%, white)',
+              }}
+            >
               <div className="flex items-start gap-3">
-                <Info className="mt-0.5 size-4 shrink-0 text-[#0f766e]" />
+                <Info className="mt-0.5 size-4 shrink-0" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
                 <p className="text-xs leading-6 text-[#536871]">
                   O arquivo contém dados pessoais protegidos pela LGPD. Guarde em local seguro e utilize apenas para os fins previstos em lei.
                 </p>
@@ -192,7 +210,8 @@ export function ExportacaoClient({
               <button
                 onClick={handleExportarTudo}
                 disabled={exportando}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {exportando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                 {exportando ? 'Preparando arquivo...' : 'Baixar todos os dados'}
@@ -252,7 +271,7 @@ export function ExportacaoClient({
                           className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
                             sucessoAluno === a.id
                               ? 'bg-[#d1fae5] text-[#065f46]'
-                              : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]'
+                              : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]'
                           }`}
                         >
                           {exportandoAluno === a.id ? (
