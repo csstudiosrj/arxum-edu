@@ -36,7 +36,6 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
   const [reenviando, setReenviando] = useState<string | null>(null)
   const [sucessoReenvio, setSucessoReenvio] = useState<string | null>(null)
 
-  // Estados para Detalhes e Exclusão
   const [detalheAluno, setDetalheAluno] = useState<any>(null)
   const [carregandoDetalhes, setCarregandoDetalhes] = useState(false)
   const [confirmarExclusao, setConfirmarExclusao] = useState<Aluno | null>(null)
@@ -134,7 +133,13 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Users className="size-5" />
             </div>
             <div>
@@ -181,7 +186,13 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
 
           {alunos.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Inbox className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum aluno cadastrado ainda</h3>
@@ -214,7 +225,13 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                       <tr key={a.id} className="border-b border-[#f0f4f5] transition hover:bg-[#fafcfc]">
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="grid size-9 place-items-center rounded-full bg-[#ccfbf1] text-xs font-bold text-[#0f766e]">
+                            <div
+                              className="grid size-9 place-items-center rounded-full text-xs font-bold"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                                color: 'var(--cor-primaria, #0d9488)',
+                              }}
+                            >
                               {iniciais(a.nome)}
                             </div>
                             <div>
@@ -249,8 +266,11 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                                 className={`rounded-lg p-1.5 transition ${
                                   sucessoReenvio === a.id
                                     ? 'bg-[#d1fae5] text-[#065f46]'
-                                    : 'text-[#0d9488] hover:bg-[#ccfbf1]'
+                                    : 'hover:brightness-90'
                                 } disabled:opacity-60`}
+                                style={sucessoReenvio === a.id ? undefined : {
+                                  color: 'var(--cor-primaria, #0d9488)',
+                                }}
                                 title={sucessoReenvio === a.id ? 'Convite reenviado' : 'Reenviar convite'}
                               >
                                 {reenviando === a.id ? (
@@ -264,7 +284,8 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                             ) : (
                               <button
                                 onClick={() => abrirConvite(a)}
-                                className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                                className="rounded-lg p-1.5 transition hover:brightness-90"
+                                style={{ color: 'var(--cor-primaria, #0d9488)' }}
                                 title="Convidar para o portal"
                               >
                                 <UserPlus className="size-4" />
@@ -318,7 +339,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                 value={emailConvite}
                 onChange={(e) => setEmailConvite(e.target.value)}
                 placeholder="aluno@email.com"
-                className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
               />
               <p className="mt-2 text-xs leading-5 text-[#82939a]">
                 O aluno fará login usando este e-mail. Se já existir conta, apenas vinculamos. Se não existir, criamos agora.
@@ -332,7 +353,14 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
             )}
 
             {sucesso && (
-              <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#0d9488]/30 bg-[#ccfbf1] px-3 py-2 text-xs text-[#0f766e]">
+              <div
+                className="mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <CheckCircle2 className="size-4" /> Aluno vinculado ao portal.
               </div>
             )}
@@ -348,7 +376,8 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               <button
                 onClick={handleConvidar}
                 disabled={enviando || sucesso}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
                 {enviando ? 'Vinculando...' : 'Convidar'}
@@ -365,7 +394,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Ficha do aluno</p>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Ficha do aluno</p>
                 <h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalheAluno.nome}</h2>
               </div>
               <button onClick={() => setDetalheAluno(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]">
@@ -375,7 +404,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
             <div className="flex-1 overflow-y-auto px-6 py-5">
               
               <section className="space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <Users className="size-3.5" /> Dados do aluno
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -387,7 +416,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <UserPlus className="size-3.5" /> Responsável
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -398,7 +427,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <MapPin className="size-3.5" /> Endereço
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -412,7 +441,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <Heart className="size-3.5" /> Anamnese
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -423,7 +452,7 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <FileText className="size-3.5" /> Documentos
                 </h3>
                 <div className="space-y-2">
@@ -431,12 +460,37 @@ export function AlunosClient({ alunos }: { alunos: Aluno[] }) {
                     const doc = detalheAluno.documentos?.[key]
                     const temArquivo = doc && doc.url
                     return (
-                      <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'}`}>
+                      <div
+                        key={key}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${!temArquivo ? 'border-[#e5ecee] bg-[#fafcfc]' : ''}`}
+                        style={temArquivo ? {
+                          borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
+                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
+                        } : undefined}
+                      >
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}><FileText className="size-4" /></div>
+                          <div
+                            className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}
+                            style={temArquivo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                          >
+                            <FileText className="size-4" />
+                          </div>
                           <div className="min-w-0"><p className="truncate text-xs font-semibold text-[#243942]">{label}</p><p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p></div>
                         </div>
-                        {temArquivo && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"><ExternalLink className="mr-1 inline size-3" />Abrir</a>}
+                        {temArquivo && (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition hover:brightness-90"
+                            style={{
+                              borderColor: 'var(--cor-primaria, #0d9488)',
+                              color: 'var(--cor-primaria, #0d9488)',
+                            }}
+                          >
+                            <ExternalLink className="mr-1 inline size-3" />Abrir
+                          </a>
+                        )}
                       </div>
                     )
                   })}

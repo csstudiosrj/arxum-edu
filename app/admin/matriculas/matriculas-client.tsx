@@ -37,12 +37,7 @@ const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> 
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
-  try {
-    const d = new Date(iso)
-    return d.toLocaleDateString('pt-BR')
-  } catch {
-    return '—'
-  }
+  try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return '—' }
 }
 
 function formatDateTime(iso: string | null): string {
@@ -50,9 +45,7 @@ function formatDateTime(iso: string | null): string {
   try {
     const d = new Date(iso)
     return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return '—'
-  }
+  } catch { return '—' }
 }
 
 const acoesPorStatus: Record<string, { label: string; novoStatus: string; variant: 'primary' | 'secondary' | 'danger' }[]> = {
@@ -151,7 +144,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: 'Total de inscrições', value: contadores.total, color: '#0d9488' },
+            { label: 'Total de inscrições', value: contadores.total, color: 'var(--cor-primaria, #0d9488)' },
             { label: 'Aguardando análise', value: contadores.pendentes, color: '#d97706' },
             { label: 'Aprovadas', value: contadores.aprovadas, color: '#0f766e' },
             { label: 'Efetivadas', value: contadores.matriculadas, color: '#065f46' },
@@ -171,17 +164,22 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-1.5">
-                {filtros.map((f) => (
-                  <button
-                    key={f.key}
-                    onClick={() => setFiltro(f.key)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      filtro === f.key ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+                {filtros.map((f) => {
+                  const ativo = filtro === f.key
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setFiltro(f.key)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                      style={ativo ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {f.label}
+                    </button>
+                  )
+                })}
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-72">
                 <Search className="size-4 text-[#9aaab0]" />
@@ -198,7 +196,13 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
 
           {inscricoes.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]">
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
                 <Inbox className="size-6" />
               </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma inscrição ainda</h3>
@@ -301,7 +305,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
               </div>
 
               <section className="space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <User className="size-3.5" /> Dados do aluno
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -314,7 +318,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <User className="size-3.5" /> Responsável
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -327,7 +331,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <MapPin className="size-3.5" /> Endereço
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -342,7 +346,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <FileText className="size-3.5" /> Documentos enviados
                 </h3>
                 <div className="space-y-2">
@@ -352,21 +356,22 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                     return (
                       <div
                         key={key}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${
-                          temArquivo ? 'border-[#0d9488]/30 bg-[#ccfbf1]/40' : 'border-[#e5ecee] bg-[#fafcfc]'
-                        }`}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${!temArquivo ? 'border-[#e5ecee] bg-[#fafcfc]' : ''}`}
+                        style={temArquivo ? {
+                          borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
+                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
+                        } : undefined}
                       >
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${
-                            temArquivo ? 'bg-[#0d9488] text-white' : 'bg-[#e5ecee] text-[#82939a]'
-                          }`}>
+                          <div
+                            className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}
+                            style={temArquivo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                          >
                             <FileText className="size-4" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
-                            <p className="truncate text-xs text-[#82939a]">
-                              {temArquivo ? doc.nome : 'Não enviado'}
-                            </p>
+                            <p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p>
                           </div>
                         </div>
                         {temArquivo && (
@@ -374,10 +379,13 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                             href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-2 shrink-0 rounded-lg border border-[#0d9488] px-2.5 py-1.5 text-[11px] font-semibold text-[#0d9488] transition hover:bg-[#0d9488] hover:text-white"
+                            className="ml-2 shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition hover:brightness-90"
+                            style={{
+                              borderColor: 'var(--cor-primaria, #0d9488)',
+                              color: 'var(--cor-primaria, #0d9488)',
+                            }}
                           >
-                            <ExternalLink className="mr-1 inline size-3" />
-                            Abrir
+                            <ExternalLink className="mr-1 inline size-3" />Abrir
                           </a>
                         )}
                       </div>
@@ -387,7 +395,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
               </section>
 
               <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d9488]">
+                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
                   <Heart className="size-3.5" /> Emergência e anamnese
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
@@ -412,22 +420,29 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                   Ações disponíveis
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {acoesPorStatus[selecionada.status].map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={() => mudarStatus(selecionada.id, a.novoStatus)}
-                      disabled={loading}
-                      className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                        a.variant === 'primary'
-                          ? 'bg-[#0d9488] text-white hover:bg-[#0f766e]'
-                          : a.variant === 'danger'
-                          ? 'bg-[#dc2626] text-white hover:bg-[#b91c1c]'
-                          : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]'
-                      }`}
-                    >
-                      {loading ? 'Processando...' : a.label}
-                    </button>
-                  ))}
+                  {acoesPorStatus[selecionada.status].map((a) => {
+                    const varianteStyle =
+                      a.variant === 'primary'
+                        ? { backgroundColor: 'var(--cor-primaria, #0d9488)' }
+                        : undefined
+                    return (
+                      <button
+                        key={a.label}
+                        onClick={() => mudarStatus(selecionada.id, a.novoStatus)}
+                        disabled={loading}
+                        className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+                          a.variant === 'primary'
+                            ? 'text-white hover:brightness-90'
+                            : a.variant === 'danger'
+                            ? 'bg-[#dc2626] text-white hover:bg-[#b91c1c]'
+                            : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]'
+                        }`}
+                        style={varianteStyle}
+                      >
+                        {loading ? 'Processando...' : a.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </footer>
             )}

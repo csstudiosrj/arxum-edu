@@ -155,7 +155,8 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
           />
           <button
             onClick={() => { limpar(); setNovoAberto(true) }}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" /> Convidar professor
           </button>
@@ -163,7 +164,15 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Panel className="flex items-center gap-4 p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Users className="size-5" /></div>
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <Users className="size-5" />
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Equipe total</p>
               <p className="text-2xl font-bold tracking-[-.03em] text-[#12232b]">{professores.length}</p>
@@ -206,7 +215,15 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
 
           {professores.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><Users className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <Users className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum professor ainda</h3>
               <p className="mt-1 max-w-sm text-sm text-[#82939a]">Convide o primeiro professor para começar.</p>
             </div>
@@ -231,7 +248,13 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                       <tr key={p.id} className="border-b border-[#f0f4f5] transition hover:bg-[#fafcfc]">
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="grid size-9 place-items-center rounded-full bg-[#ccfbf1] text-xs font-bold text-[#0f766e]">
+                            <div
+                              className="grid size-9 place-items-center rounded-full text-xs font-bold"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                                color: 'var(--cor-primaria, #0d9488)',
+                              }}
+                            >
                               {iniciais(p.nome)}
                             </div>
                             <div className="text-sm font-semibold text-[#243942]">{p.nome}</div>
@@ -241,7 +264,16 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                           {p.disciplinas && p.disciplinas.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {p.disciplinas.slice(0, 3).map((d) => (
-                                <span key={d} className="rounded-full bg-[#ccfbf1] px-2 py-0.5 text-[10px] font-bold text-[#0f766e]">{d}</span>
+                                <span
+                                  key={d}
+                                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                  style={{
+                                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                                    color: 'var(--cor-primaria, #0d9488)',
+                                  }}
+                                >
+                                  {d}
+                                </span>
                               ))}
                               {p.disciplinas.length > 3 && (
                                 <span className="text-[10px] text-[#82939a]">+{p.disciplinas.length - 3}</span>
@@ -265,7 +297,8 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                           <div className="flex justify-end gap-1">
                             <button
                               onClick={() => abrirEdicao(p)}
-                              className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]"
+                              className="rounded-lg p-1.5 transition hover:brightness-90"
+                              style={{ color: 'var(--cor-primaria, #0d9488)' }}
                               title="Editar dados"
                             >
                               <Edit className="size-4" />
@@ -276,8 +309,11 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
                               className={`rounded-lg p-1.5 transition ${
                                 sucessoReenvio === p.id
                                   ? 'bg-[#d1fae5] text-[#065f46]'
-                                  : 'text-[#0d9488] hover:bg-[#ccfbf1]'
+                                  : 'hover:brightness-90'
                               } disabled:opacity-60`}
+                              style={sucessoReenvio === p.id ? undefined : {
+                                color: 'var(--cor-primaria, #0d9488)',
+                              }}
                               title={sucessoReenvio === p.id ? 'Convite reenviado' : 'Reenviar convite'}
                             >
                               {reenviando === p.id ? (
@@ -336,37 +372,52 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nome completo</label>
-                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Maria Silva" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Maria Silva" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">E-mail</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!editando} placeholder="professor@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488] disabled:bg-[#f0f4f5] disabled:text-[#82939a]" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!!editando} placeholder="professor@escola.com.br" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Telefone (opcional)</label>
-                  <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(21) 90000-0000" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(21) 90000-0000" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplinas que leciona</label>
                   <div className="flex flex-wrap gap-1.5">
-                    {DISCIPLINAS.map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => toggleDisciplina(d)}
-                        className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
-                          disciplinasSel.includes(d) ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    ))}
+                    {DISCIPLINAS.map((d) => {
+                      const sel = disciplinasSel.includes(d)
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleDisciplina(d)}
+                          className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                            sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'
+                          }`}
+                          style={sel ? {
+                            borderColor: 'var(--cor-primaria, #0d9488)',
+                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                            color: 'var(--cor-primaria, #0d9488)',
+                          } : undefined}
+                        >
+                          {d}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
                 {sucesso && (
-                  <div className="flex items-center gap-2 rounded-lg border border-[#0d9488]/30 bg-[#ccfbf1] px-3 py-2 text-xs text-[#0f766e]">
+                  <div
+                    className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
+                      backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                      color: 'var(--cor-primaria, #0d9488)',
+                    }}
+                  >
                     <Check className="size-4" /> {editando ? 'Dados atualizados!' : 'Convite enviado! O professor receberá o link por e-mail.'}
                   </div>
                 )}
@@ -375,7 +426,12 @@ export function ProfessoresClient({ professores }: { professores: Professor[] })
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => { setNovoAberto(false); setEditando(null) }} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Fechar</button>
-              <button onClick={editando ? handleSalvarEdicao : handleConvidar} disabled={enviando || sucesso} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={editando ? handleSalvarEdicao : handleConvidar}
+                disabled={enviando || sucesso}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {enviando ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
                 {enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Enviar convite'}
               </button>
