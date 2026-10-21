@@ -50,7 +50,13 @@ function SucessoContent() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 lg:px-8">
-      <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
+      <div
+        className="grid size-16 place-items-center rounded-full"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, transparent)',
+          color: 'var(--cor-primaria, #0d9488)',
+        }}
+      >
         <Check className="size-8" />
       </div>
       <h1 className="mt-6 text-center font-syne text-4xl font-bold tracking-[-.04em] text-white">
@@ -67,7 +73,7 @@ function SucessoContent() {
           <button
             onClick={copiar}
             disabled={!protocolo}
-            className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-[#c7d5db] transition hover:border-[#0d9488] hover:text-white disabled:opacity-40"
+            className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-[#c7d5db] transition hover:border-[var(--cor-primaria,#0d9488)] hover:text-white disabled:opacity-40"
           >
             {copiado ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             {copiado ? 'Copiado' : 'Copiar'}
@@ -80,7 +86,13 @@ function SucessoContent() {
 
       <div className="mt-8 w-full rounded-xl border border-white/[.08] bg-[#0e151a] p-6">
         <div className="flex items-start gap-3">
-          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#0d9488]/15 text-[#0d9488]">
+          <div
+            className="grid size-9 shrink-0 place-items-center rounded-lg"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, transparent)',
+              color: 'var(--cor-primaria, #0d9488)',
+            }}
+          >
             <Mail className="size-4" />
           </div>
           <div className="flex-1">
@@ -93,13 +105,23 @@ function SucessoContent() {
               <button
                 onClick={enviarAcesso}
                 disabled={enviando || !email}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
                 {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando...</> : <>Receber link de acesso <ArrowRight className="size-4" /></>}
               </button>
             ) : (
-              <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#0d9488]/30 bg-[#0d9488]/10 px-3 py-2.5">
-                <Check className="mt-0.5 size-4 shrink-0 text-[#0d9488]" />
+              <div
+                className="mt-4 flex items-start gap-2 rounded-lg border px-3 py-2.5"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 10%, transparent)',
+                }}
+              >
+                <Check
+                  className="mt-0.5 size-4 shrink-0"
+                  style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                />
                 <p className="text-xs leading-5 text-[#c7d5db]">
                   Link enviado! Verifique sua caixa de entrada (e a pasta de spam) e clique no link para acessar.
                 </p>

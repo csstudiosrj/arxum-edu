@@ -29,6 +29,12 @@ function gerarId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
+// Estilo padrão de ícone com fundo color-mix da cor primária
+const estiloIconeMarca: React.CSSProperties = {
+  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+  color: 'var(--cor-primaria, #0d9488)',
+}
+
 export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, escolaNome }: Props) {
   const router = useRouter()
   const [aba, setAba] = useState<'home' | 'paginas'>('home')
@@ -113,7 +119,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                 href={`/edu/${slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
               >
                 <ExternalLink className="size-4" />
                 Ver site
@@ -127,7 +133,8 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
             <button
               onClick={handleSalvar}
               disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
             >
               {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               {salvando ? 'Salvando...' : 'Salvar alterações'}
@@ -140,28 +147,31 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
         )}
 
         <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
-          <button
-            onClick={() => setAba('home')}
-            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
-              aba === 'home' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'
-            }`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => setAba('paginas')}
-            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
-              aba === 'paginas' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'
-            }`}
-          >
-            Páginas internas
-          </button>
+          {[
+            { key: 'home', label: 'Home' },
+            { key: 'paginas', label: 'Páginas internas' },
+          ].map((t) => {
+            const ativo = aba === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setAba(t.key as 'home' | 'paginas')}
+                className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${ativo ? '' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
+                style={ativo ? {
+                  borderColor: 'var(--cor-primaria, #0d9488)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : undefined}
+              >
+                {t.label}
+              </button>
+            )
+          })}
         </div>
 
         <Panel className="mt-6">
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+              <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
                 <Type className="size-4" />
               </div>
               <div>
@@ -180,12 +190,17 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                   onClick={() => { setFonte(f.key); setFontePreview(f.key) }}
                   onMouseEnter={() => setFontePreview(f.key)}
                   onMouseLeave={() => setFontePreview(fonte)}
-                  className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition ${
-                    ativo ? 'border-[#0d9488] bg-[#ccfbf1]/30' : 'border-[#dce5e8] bg-white hover:border-[#0d9488]/50'
-                  }`}
+                  className={`group relative overflow-hidden rounded-xl border-2 p-4 text-left transition ${ativo ? '' : 'border-[#dce5e8] bg-white hover:border-[var(--cor-primaria,#0d9488)]/50'}`}
+                  style={ativo ? {
+                    borderColor: 'var(--cor-primaria, #0d9488)',
+                    backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                  } : undefined}
                 >
                   {ativo && (
-                    <div className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-[#0d9488] text-white">
+                    <div
+                      className="absolute right-3 top-3 grid size-5 place-items-center rounded-full text-white"
+                      style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                    >
                       <Check className="size-3" />
                     </div>
                   )}
@@ -218,7 +233,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
           <Panel className="mt-6">
             <div className="border-b border-[#e5ecee] px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
                   <LayoutTemplate className="size-4" />
                 </div>
                 <div>
@@ -254,15 +269,18 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                       </div>
                       <button
                         onClick={() => alternarAtivo(key)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
-                          ativo ? 'border-[#0d9488] bg-[#ccfbf1] text-[#0f766e]' : 'border-[#dce5e8] bg-white text-[#82939a]'
-                        }`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'border-[#dce5e8] bg-white text-[#82939a]'}`}
+                        style={ativo ? {
+                          borderColor: 'var(--cor-primaria, #0d9488)',
+                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                          color: 'var(--cor-primaria, #0d9488)',
+                        } : undefined}
                       >
                         {ativo ? <><Eye className="size-3.5" /> Visível</> : <><EyeOff className="size-3.5" /> Oculto</>}
                       </button>
                       <button
                         onClick={() => setBlocoAberto(aberto ? null : key)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                       >
                         {aberto ? 'Fechar' : 'Editar'}
                       </button>
@@ -289,7 +307,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
             <Panel>
               <div className="border-b border-[#e5ecee] px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
                     <FileText className="size-4" />
                   </div>
                   <div>
@@ -326,7 +344,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                         const item = { id: gerarId(), url: '', legenda: '' }
                         setPaginas({ ...paginas, a_escola: { ...paginas.a_escola, galeria: [...paginas.a_escola.galeria, item] } })
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                     >
                       <Plus className="size-3.5" /> Adicionar foto
                     </button>
@@ -367,7 +385,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                               },
                             })}
                             placeholder="Legenda (opcional)"
-                            className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                            className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                           />
                         </div>
                       ))}
@@ -380,7 +398,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
             <Panel>
               <div className="border-b border-[#e5ecee] px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
                     <Building2 className="size-4" />
                   </div>
                   <div>
@@ -404,7 +422,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                         const item = { id: gerarId(), titulo: 'Novo espaço', descricao: 'Descrição do espaço.', imagem_url: '' }
                         setPaginas({ ...paginas, estrutura: { ...paginas.estrutura, itens: [...paginas.estrutura.itens, item] } })
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                     >
                       <Plus className="size-3.5" /> Adicionar item
                     </button>
@@ -429,7 +447,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                             estrutura: { ...paginas.estrutura, itens: paginas.estrutura.itens.map((i) => i.id === item.id ? { ...i, titulo: e.target.value } : i) },
                           })}
                           placeholder="Nome do espaço"
-                          className="mb-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[#0d9488]"
+                          className="mb-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                         />
                         <textarea
                           value={item.descricao}
@@ -439,7 +457,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                           })}
                           rows={2}
                           placeholder="Descrição"
-                          className="mb-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[#0d9488]"
+                          className="mb-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
                         />
                         <BannerUpload
                           urlAtual={item.imagem_url}
@@ -458,7 +476,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
             <Panel>
               <div className="border-b border-[#e5ecee] px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
+                  <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
                     <MessageSquare className="size-4" />
                   </div>
                   <div>
@@ -501,7 +519,7 @@ function CampoTexto({ label, valor, onChange, placeholder }: { label: string; va
         value={valor}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+        className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
       />
     </div>
   )
@@ -516,7 +534,7 @@ function CampoTextoLongo({ label, valor, onChange, rows = 3, placeholder }: { la
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+        className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
       />
     </div>
   )
@@ -540,7 +558,7 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
     <div className="space-y-5">
       <div className="grid gap-4 lg:grid-cols-2">
         <CampoTexto label="Título principal" valor={bloco.titulo} onChange={(v) => onChange({ titulo: v })} />
-        <CampoTexto label="Destaque do título (cor teal)" valor={bloco.titulo_destaque} onChange={(v) => onChange({ titulo_destaque: v })} />
+        <CampoTexto label="Destaque do título (cor primária)" valor={bloco.titulo_destaque} onChange={(v) => onChange({ titulo_destaque: v })} />
       </div>
       <CampoTextoLongo label="Subtítulo" valor={bloco.subtitulo} onChange={(v) => onChange({ subtitulo: v })} rows={2} />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -560,17 +578,17 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
           max={20}
           value={bloco.intervalo_segundos}
           onChange={(e) => onChange({ intervalo_segundos: parseInt(e.target.value, 10) || 5 })}
-          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
         />
       </div>
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ImageIcon className="size-4 text-[#0d9488]" />
+            <ImageIcon className="size-4" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
             <p className="text-sm font-semibold text-[#243942]">Banners do carrossel ({bloco.banners.length})</p>
           </div>
-          <button onClick={adicionarBanner} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]">
+          <button onClick={adicionarBanner} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
             <Plus className="size-3.5" /> Adicionar banner
           </button>
         </div>
@@ -597,14 +615,14 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
                     value={b.titulo}
                     onChange={(e) => editarBanner(b.id, { titulo: e.target.value })}
                     placeholder="Título sobre a imagem (opcional)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                   <input
                     type="text"
                     value={b.subtitulo}
                     onChange={(e) => editarBanner(b.id, { subtitulo: e.target.value })}
                     placeholder="Subtítulo (opcional)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                 </div>
               </div>
@@ -638,7 +656,7 @@ function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['s
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Segmentos ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]">
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
             <Plus className="size-3.5" /> Adicionar
           </button>
         </div>
@@ -647,8 +665,8 @@ function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['s
             <div key={i.id} className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1 space-y-2">
-                  <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[#0d9488]" />
-                  <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
+                  <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
                   <Trash2 className="size-3.5" />
@@ -683,7 +701,7 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Diferenciais ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]">
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
             <Plus className="size-3.5" /> Adicionar
           </button>
         </div>
@@ -692,8 +710,8 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
             <div key={i.id} className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1 space-y-2">
-                  <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[#0d9488]" />
-                  <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[#0d9488]" />
+                  <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
+                  <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
                   <Trash2 className="size-3.5" />
@@ -738,14 +756,14 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
           max={6}
           value={bloco.quantidade}
           onChange={(e) => onChange({ quantidade: parseInt(e.target.value, 10) || 3 })}
-          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]"
+          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
         />
       </div>
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Notícias ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]">
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
             <Plus className="size-3.5" /> Adicionar notícia
           </button>
         </div>
@@ -769,14 +787,14 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                     value={n.data}
                     onChange={(e) => editarItem(n.id, { data: e.target.value })}
                     placeholder="Data (ex: 12 OUT 2026)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                   <input
                     type="text"
                     value={n.categoria}
                     onChange={(e) => editarItem(n.id, { categoria: e.target.value })}
                     placeholder="Categoria"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                 </div>
 
@@ -785,7 +803,7 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                   value={n.titulo}
                   onChange={(e) => editarItem(n.id, { titulo: e.target.value })}
                   placeholder="Título da notícia"
-                  className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
 
                 <div className="mt-2 flex gap-2">
@@ -794,12 +812,12 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                     value={n.slug}
                     onChange={(e) => editarItem(n.id, { slug: e.target.value })}
                     placeholder="URL amigável (slug)"
-                    className="flex-1 rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                    className="flex-1 rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                   />
                   <button
                     type="button"
                     onClick={() => regerarSlug(n.id, n.titulo)}
-                    className="inline-flex items-center gap-1 rounded border border-[#b8c9ce] bg-white px-2 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]"
+                    className="inline-flex items-center gap-1 rounded border border-[#b8c9ce] bg-white px-2 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
                     title="Gerar slug a partir do título"
                   >
                     <RefreshCw className="size-3" /> Gerar
@@ -811,7 +829,7 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                   onChange={(e) => editarItem(n.id, { resumo: e.target.value })}
                   rows={2}
                   placeholder="Resumo curto (aparece no card)"
-                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
 
                 <textarea
@@ -819,7 +837,7 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
                   onChange={(e) => editarItem(n.id, { corpo: e.target.value })}
                   rows={6}
                   placeholder="Conteúdo completo da notícia"
-                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs leading-5 text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs leading-5 text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
                 />
 
                 <div className="mt-2">
