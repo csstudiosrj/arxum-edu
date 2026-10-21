@@ -126,7 +126,8 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
           />
           <button
             onClick={() => { limpar(); setNovoAberto(true) }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
           >
             <Plus className="size-4" />
             Publicar videoaula
@@ -135,9 +136,17 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Video className="size-5" /></div>
+            <div
+              className="grid size-10 place-items-center rounded-lg"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
+              <Video className="size-5" />
+            </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Videoaulas</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{videoaulas.length}</p>
+            <p className="mt-1 text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{videoaulas.length}</p>
             <p className="mt-1 text-xs text-[#82939a]">{publicadas} publicadas</p>
           </Panel>
           <Panel className="p-5">
@@ -161,10 +170,22 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
           <div className="border-b border-[#e5ecee] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => setFiltroDisciplina('Todas')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtroDisciplina === 'Todas' ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>Todas</button>
-                {disciplinas.slice(0, 6).map((d) => (
-                  <button key={d} onClick={() => setFiltroDisciplina(d)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtroDisciplina === d ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>{d}</button>
-                ))}
+                {['Todas', ...disciplinas.slice(0, 6)].map((d) => {
+                  const ativo = filtroDisciplina === d
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => setFiltroDisciplina(d)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
+                      style={ativo ? {
+                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                        color: 'var(--cor-primaria, #0d9488)',
+                      } : undefined}
+                    >
+                      {d}
+                    </button>
+                  )
+                })}
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
                 <Search className="size-4 text-[#9aaab0]" />
@@ -175,14 +196,22 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
 
           {filtradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><Video className="size-6" /></div>
+              <div
+                className="grid size-14 place-items-center rounded-full"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+              >
+                <Video className="size-6" />
+              </div>
               <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma videoaula</h3>
               <p className="mt-1 max-w-sm text-sm text-[#82939a]">Publique a primeira videoaula para os alunos.</p>
             </div>
           ) : (
             <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filtradas.map((v) => (
-                <div key={v.id} className={`group overflow-hidden rounded-xl border bg-white transition hover:border-[#0d9488] ${!v.publicado ? 'opacity-60 border-[#e5ecee]' : 'border-[#e5ecee]'}`}>
+                <div key={v.id} className={`group overflow-hidden rounded-xl border bg-white transition hover:border-[var(--cor-primaria,#0d9488)] ${!v.publicado ? 'opacity-60 border-[#e5ecee]' : 'border-[#e5ecee]'}`}>
                   <div className="relative flex aspect-video items-center justify-center bg-[#0e151a]">
                     <div className="grid size-12 place-items-center rounded-full bg-white/10 backdrop-blur transition group-hover:scale-110">
                       <Play className="size-5 fill-white text-white" />
@@ -193,7 +222,7 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
                     <span className="absolute bottom-2 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">{formatarDuracao(v.duracao_minutos)}</span>
                   </div>
                   <div className="p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#0d9488]">{v.disciplina}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{v.disciplina}</span>
                     <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-[#243942]">{v.titulo}</h3>
                     <p className="mt-1 text-xs text-[#82939a]">{v.serie || 'Todas as séries'}</p>
                     <div className="mt-3 flex items-center justify-between border-t border-[#edf1f2] pt-3 text-xs text-[#82939a]">
@@ -235,31 +264,31 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Introdução às frações" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Introdução às frações" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} placeholder="Resumo da aula (opcional)" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} placeholder="Resumo da aula (opcional)" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">URL do vídeo (YouTube, Vimeo, MP4)</label>
-                  <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplina</label>
-                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
+                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
                       {disciplinas.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Série / Turma</label>
-                    <input type="text" value={serie} onChange={(e) => setSerie(e.target.value)} placeholder="Ex: 9º Ano A" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                    <input type="text" value={serie} onChange={(e) => setSerie(e.target.value)} placeholder="Ex: 9º Ano A" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Duração (minutos)</label>
-                  <input type="number" value={duracao} onChange={(e) => setDuracao(e.target.value)} placeholder="Ex: 18" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
+                  <input type="number" value={duracao} onChange={(e) => setDuracao(e.target.value)} placeholder="Ex: 18" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
                 {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
               </div>
@@ -267,7 +296,12 @@ export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) 
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
               <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
+              <button
+                onClick={handleSalvar}
+                disabled={salvando}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+              >
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Publicar'}
               </button>
