@@ -38,6 +38,13 @@ export function FormularioPublicoClient({
   const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
 
+  // Expõe --cor-primaria no wrapper para que qualquer componente interno
+  // (BannerUpload, por exemplo) herde a cor própria deste formulário.
+  const estiloWrapper = {
+    backgroundColor: '#f6f8f9',
+    '--cor-primaria': cor,
+  } as React.CSSProperties
+
   function atualizar(id: string, valor: any) {
     setRespostas((atual) => ({ ...atual, [id]: valor }))
   }
@@ -86,9 +93,12 @@ export function FormularioPublicoClient({
 
   if (sucesso) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-6 py-12" style={{ backgroundColor: '#f6f8f9' }}>
+      <div className="flex min-h-screen items-center justify-center px-6 py-12" style={estiloWrapper}>
         <div className="w-full max-w-md rounded-2xl bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
+          <div
+            className="mx-auto grid size-16 place-items-center rounded-full"
+            style={{ backgroundColor: `${cor}20`, color: cor }}
+          >
             <CheckCircle2 className="size-8" />
           </div>
           <h1 className="mt-6 text-2xl font-bold text-[#12232b]">Obrigado!</h1>
@@ -101,7 +111,7 @@ export function FormularioPublicoClient({
   }
 
   return (
-    <div className="min-h-screen py-12" style={{ backgroundColor: '#f6f8f9' }}>
+    <div className="min-h-screen py-12" style={estiloWrapper}>
       <div className="mx-auto max-w-3xl px-6">
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: cor }}>{escolaNome}</p>
@@ -137,7 +147,7 @@ export function FormularioPublicoClient({
             <button
               type="submit"
               disabled={enviando}
-              className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
               style={{ backgroundColor: cor }}
             >
               {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando...</> : 'Enviar resposta'}
@@ -166,7 +176,8 @@ function CampoRenderer({
   uploadUrl?: string
   onUpload: (url: string) => void
 }) {
-  const baseInput = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2.5 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]'
+  // Focus usa --cor-primaria (definida no wrapper com a cor do formulário)
+  const baseInput = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2.5 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]'
 
   return (
     <div>
@@ -224,7 +235,11 @@ function CampoRenderer({
               key={op}
               type="button"
               onClick={() => onChange(op)}
-              className={`rounded-lg border-2 px-6 py-2 text-sm font-semibold transition ${valor === op ? 'text-white' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[#0d9488]'}`}
+              className={`rounded-lg border-2 px-6 py-2 text-sm font-semibold transition ${
+                valor === op
+                  ? 'text-white'
+                  : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'
+              }`}
               style={valor === op ? { backgroundColor: cor, borderColor: cor } : undefined}
             >
               {op}
