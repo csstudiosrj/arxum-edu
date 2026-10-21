@@ -44,7 +44,6 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
     }
 
     if (aula.tipo === 'video') {
-      // Se for YouTube ou Vimeo, transforma em embed. Senão, tenta tocar como vídeo direto.
       let embedUrl = aula.conteudo_url
       if (aula.conteudo_url.includes('youtube.com/watch?v=')) {
         embedUrl = aula.conteudo_url.replace('watch?v=', 'embed/')
@@ -67,9 +66,15 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
     if (aula.tipo === 'pdf') {
       return (
         <div className="flex flex-col items-center justify-center rounded-xl border border-[#dce5e8] bg-[#fafcfc] p-12 text-center">
-          <FileText className="size-12 text-[#0d9488]" />
+          <FileText className="size-12" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
           <p className="mt-4 text-sm font-semibold text-[#243942]">Material em PDF</p>
-          <a href={aula.conteudo_url} target="_blank" rel="noopener noreferrer" className="mt-4 rounded-lg bg-[#0d9488] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">
+          <a
+            href={aula.conteudo_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+          >
             Abrir PDF
           </a>
         </div>
@@ -87,9 +92,15 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
     if (aula.tipo === 'quiz') {
       return (
         <div className="flex flex-col items-center justify-center rounded-xl border border-[#dce5e8] bg-[#fafcfc] p-12 text-center">
-          <HelpCircle className="size-12 text-[#0d9488]" />
+          <HelpCircle className="size-12" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
           <p className="mt-4 text-sm font-semibold text-[#243942]">Atividade Avaliativa</p>
-          <a href={aula.conteudo_url} target="_blank" rel="noopener noreferrer" className="mt-4 rounded-lg bg-[#0d9488] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0f766e]">
+          <a
+            href={aula.conteudo_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+          >
             Responder Quiz
           </a>
         </div>
@@ -101,14 +112,19 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-8 lg:px-8">
-      <Link href="/aluno/aulas" className="inline-flex items-center gap-2 text-sm text-[#82939a] hover:text-[#0d9488]">
+      <Link
+        href="/aluno/aulas"
+        className="inline-flex items-center gap-2 text-sm text-[#82939a] transition hover:brightness-75"
+      >
         <ArrowLeft className="size-4" /> Voltar para todas as aulas
       </Link>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0">
           <div className="mb-4">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">{aula.disciplina} · {aula.modulo_titulo}</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
+              {aula.disciplina} · {aula.modulo_titulo}
+            </p>
             <h1 className="mt-2 text-3xl font-bold tracking-[-.03em] text-[#12232b]">{aula.titulo}</h1>
             {aula.descricao && <p className="mt-2 text-sm leading-6 text-[#71838b]">{aula.descricao}</p>}
           </div>
@@ -121,7 +137,12 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
               <button
                 onClick={handleSalvarAnotacao}
                 disabled={salvando}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#0d9488] transition hover:bg-[#e6faf3] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:brightness-95 disabled:opacity-50"
+                style={{
+                  color: 'var(--cor-primaria, #0d9488)',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
               >
                 {salvando ? <Loader2 className="size-3.5 animate-spin" /> : salvou ? <Check className="size-3.5" /> : <Save className="size-3.5" />}
                 {salvando ? 'Salvando...' : salvou ? 'Salvo!' : 'Salvar anotação'}
@@ -132,7 +153,7 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
               onChange={(e) => setAnotacao(e.target.value)}
               placeholder="Faça suas anotações sobre esta aula aqui..."
               rows={6}
-              className="w-full resize-none rounded-xl border border-[#dce5e8] bg-white p-4 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]"
+              className="w-full resize-none rounded-xl border border-[#dce5e8] bg-white p-4 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
             />
           </div>
         </div>
@@ -144,10 +165,17 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
               onClick={handleMarcarConcluida}
               disabled={concluindo}
               className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition disabled:opacity-50 ${
-                concluida
-                  ? 'border border-[#0d9488] bg-[#e6faf3] text-[#0d9488] hover:bg-[#ccfbf1]'
-                  : 'bg-[#0d9488] text-white hover:bg-[#0f766e]'
+                concluida ? '' : 'text-white hover:brightness-90'
               }`}
+              style={concluida ? {
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: 'var(--cor-primaria, #0d9488)',
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                color: 'var(--cor-primaria, #0d9488)',
+              } : {
+                backgroundColor: 'var(--cor-primaria, #0d9488)',
+              }}
             >
               {concluindo ? <Loader2 className="size-5 animate-spin" /> : concluida ? <CheckCircle2 className="size-5" /> : <CheckCircle2 className="size-5" />}
               {concluindo ? 'Atualizando...' : concluida ? 'Aula concluída' : 'Marcar como concluída'}
@@ -167,15 +195,23 @@ export function AulaClient({ aula }: { aula: AulaDetalhe }) {
                     href={`/aluno/aulas/${a.id}`}
                     className={`flex items-center gap-3 px-5 py-3 transition hover:bg-[#fafcfc] ${ativa ? 'bg-[#fafcfc]' : ''}`}
                   >
-                    <div className={`grid size-7 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                      a.concluida ? 'bg-[#d1fae5] text-[#065f46]' : ativa ? 'bg-[#0d9488] text-white' : 'bg-[#f0f4f5] text-[#82939a]'
-                    }`}>
+                    <div
+                      className={`grid size-7 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                        a.concluida ? 'bg-[#d1fae5] text-[#065f46]' : ativa ? 'text-white' : 'bg-[#f0f4f5] text-[#82939a]'
+                      }`}
+                      style={!a.concluida && ativa ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                    >
                       {a.concluida ? <Check className="size-3.5" /> : a.ordem}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-xs font-semibold ${ativa ? 'text-[#0d9488]' : 'text-[#243942]'}`}>{a.titulo}</p>
+                      <p
+                        className={`truncate text-xs font-semibold ${ativa ? '' : 'text-[#243942]'}`}
+                        style={ativa ? { color: 'var(--cor-primaria, #0d9488)' } : undefined}
+                      >
+                        {a.titulo}
+                      </p>
                     </div>
-                    {ativa && <Video className="size-3.5 text-[#0d9488]" />}
+                    {ativa && <Video className="size-3.5" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
                   </Link>
                 )
               })}
