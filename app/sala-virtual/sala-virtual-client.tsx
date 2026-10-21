@@ -30,13 +30,17 @@ const iconeTipo: Record<string, typeof Video> = {
   quiz: BookOpen,
 }
 
-export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
+export function SalaVirtualClient({ modulos, cor }: { modulos: Modulo[]; cor?: string }) {
   const [moduloAtivo, setModuloAtivo] = useState<Modulo | null>(modulos[0] || null)
   const [aulaAtiva, setAulaAtiva] = useState<Aula | null>(modulos[0]?.aulas[0] || null)
   const [anotacao, setAnotacao] = useState(aulaAtiva?.anotacao || '')
   const [salvando, setSalvando] = useState(false)
   const [salvouAgora, setSalvouAgora] = useState(false)
   const [atualizando, setAtualizando] = useState(false)
+
+  const estiloMarca = cor
+    ? ({ '--cor-primaria': cor } as React.CSSProperties)
+    : undefined
 
   function trocarAula(aula: Aula) {
     setAulaAtiva(aula)
@@ -64,7 +68,6 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
     setAtualizando(true)
     await marcarConcluida(aulaAtiva.id, !aulaAtiva.concluida)
     setAtualizando(false)
-    // Atualiza o estado local
     setAulaAtiva({ ...aulaAtiva, concluida: !aulaAtiva.concluida })
     if (moduloAtivo) {
       setModuloAtivo({
@@ -80,7 +83,7 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
 
   if (modulos.length === 0) {
     return (
-      <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+      <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
         <header className="border-b border-white/[.08] bg-[#070b0f] px-6 py-4 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center gap-4">
             <Link href="/" className="text-[#8aa0ad] hover:text-white"><ArrowLeft className="size-4" /></Link>
@@ -88,7 +91,13 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
           </div>
         </header>
         <main className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 text-center">
-          <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
+          <div
+            className="grid size-16 place-items-center rounded-full"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, transparent)',
+              color: 'var(--cor-primaria, #0d9488)',
+            }}
+          >
             <BookOpen className="size-7" />
           </div>
           <h1 className="mt-5 font-syne text-3xl font-bold text-white">Sala virtual vazia</h1>
@@ -101,7 +110,7 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
       <header className="border-b border-white/[.08] bg-[#070b0f] px-6 py-4 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -122,12 +131,17 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
               <button
                 key={m.id}
                 onClick={() => trocarModulo(m)}
-                className={`w-full rounded-lg border px-3 py-3 text-left transition ${
-                  ativo ? 'border-[#0d9488]/40 bg-[#0d9488]/10' : 'border-white/[.08] bg-[#0e151a] hover:border-white/20'
-                }`}
+                className={`w-full rounded-lg border px-3 py-3 text-left transition ${ativo ? '' : 'border-white/[.08] bg-[#0e151a] hover:border-white/20'}`}
+                style={ativo ? {
+                  borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 40%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 10%, transparent)',
+                } : undefined}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${ativo ? 'bg-[#0d9488] text-white' : 'bg-white/5 text-[#8aa0ad]'}`}>
+                  <div
+                    className={`grid size-9 shrink-0 place-items-center rounded-lg ${ativo ? 'text-white' : 'bg-white/5 text-[#8aa0ad]'}`}
+                    style={ativo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                  >
                     <BookOpen className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -144,12 +158,15 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
         {moduloAtivo && aulaAtiva ? (
           <section>
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">{moduloAtivo.disciplina}</p>
+              <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{moduloAtivo.disciplina}</p>
               <h1 className="mt-2 font-syne text-3xl font-bold tracking-[-.03em] text-white">{moduloAtivo.titulo}</h1>
               {moduloAtivo.descricao && <p className="mt-2 max-w-2xl text-sm leading-6 text-[#8aa0ad]">{moduloAtivo.descricao}</p>}
               <div className="mt-5 flex items-center gap-3">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[.06]">
-                  <div className="h-full rounded-full bg-[#0d9488] transition-all" style={{ width: `${progressoPct}%` }} />
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${progressoPct}%`, backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                  />
                 </div>
                 <span className="shrink-0 text-xs font-semibold text-[#8aa0ad]">{progressoPct}%</span>
               </div>
@@ -182,11 +199,16 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
               <button
                 onClick={handleMarcarConcluida}
                 disabled={atualizando}
-                className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                  aulaAtiva.concluida
-                    ? 'border border-[#0d9488] bg-[#0d9488]/10 text-[#14b8a6]'
-                    : 'bg-[#0d9488] text-white hover:bg-[#0f766e]'
-                }`}
+                className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${aulaAtiva.concluida ? '' : 'text-white hover:brightness-90'}`}
+                style={aulaAtiva.concluida ? {
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: 'var(--cor-primaria, #0d9488)',
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 10%, transparent)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : {
+                  backgroundColor: 'var(--cor-primaria, #0d9488)',
+                }}
               >
                 {atualizando ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
                 {aulaAtiva.concluida ? 'Concluída' : 'Marcar como concluída'}
@@ -196,20 +218,23 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
             <div className="mb-6 rounded-xl border border-white/[.08] bg-[#0e151a] p-5">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#5e7a94]">Minhas anotações</p>
-                {salvouAgora && <span className="text-xs text-[#0d9488]">Salvo!</span>}
+                {salvouAgora && (
+                  <span className="text-xs" style={{ color: 'var(--cor-primaria, #0d9488)' }}>Salvo!</span>
+                )}
               </div>
               <textarea
                 value={anotacao}
                 onChange={(e) => setAnotacao(e.target.value)}
                 placeholder="Faça suas anotações sobre esta aula..."
                 rows={5}
-                className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[#0d9488]"
+                className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2.5 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[var(--cor-primaria,#0d9488)]"
               />
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={handleSalvarAnotacao}
                   disabled={salvando}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e] disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
                 >
                   {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                   {salvando ? 'Salvando...' : 'Salvar anotação'}
@@ -229,9 +254,21 @@ export function SalaVirtualClient({ modulos }: { modulos: Modulo[] }) {
                       onClick={() => trocarAula(a)}
                       className={`flex items-center gap-4 py-3 text-left transition ${ativa ? 'text-white' : 'text-[#c7d5db] hover:text-white'}`}
                     >
-                      <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${
-                        a.concluida ? 'bg-[#0d9488] text-white' : ativa ? 'bg-[#0d9488]/15 text-[#0d9488]' : 'bg-white/5 text-[#82939a]'
-                      }`}>
+                      <div
+                        className={`grid size-8 shrink-0 place-items-center rounded-lg ${
+                          a.concluida ? 'text-white' : ativa ? '' : 'bg-white/5 text-[#82939a]'
+                        }`}
+                        style={
+                          a.concluida
+                            ? { backgroundColor: 'var(--cor-primaria, #0d9488)' }
+                            : ativa
+                              ? {
+                                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, transparent)',
+                                  color: 'var(--cor-primaria, #0d9488)',
+                                }
+                              : undefined
+                        }
+                      >
                         {a.concluida ? <Check className="size-4" /> : <Icone className="size-4" />}
                       </div>
                       <div className="min-w-0 flex-1">
