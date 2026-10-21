@@ -59,7 +59,7 @@ export function NotificacoesClient({ config }: { config: ConfigEvento[] }) {
       <main className="px-5 py-8 lg:px-8">
         <Link
           href="/admin/configuracoes"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6b7d86] hover:text-[#0d9488]"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6b7d86] hover:brightness-75"
         >
           <ArrowLeft className="size-3.5" /> Voltar para configurações
         </Link>
@@ -108,7 +108,12 @@ export function NotificacoesClient({ config }: { config: ConfigEvento[] }) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-[#12232b]">{meta.titulo}</h3>
-                      {salvando && <Loader2 className="size-3.5 animate-spin text-[#0d9488]" />}
+                      {salvando && (
+                        <Loader2
+                          className="size-3.5 animate-spin"
+                          style={{ color: 'var(--cor-primaria, #0d9488)' }}
+                        />
+                      )}
                       {confirmou && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#d1fae5] px-2 py-0.5 text-[10px] font-bold text-[#065f46]">
                           <Check className="size-2.5" /> Salvo
@@ -186,7 +191,7 @@ function CanalToggle({
           ? 'cursor-not-allowed border-[#e5ecee] bg-[#fafcfc] opacity-60'
           : ativo
             ? 'border-transparent bg-[#f0fbf8]'
-            : 'border-[#d5e0e3] bg-white hover:border-[#0d9488]'
+            : 'border-[#d5e0e3] bg-white hover:border-[var(--cor-primaria,#0d9488)]'
       }`}
       style={!desabilitado && ativo ? { borderColor: cor, backgroundColor: `${cor}0d` } : undefined}
     >
