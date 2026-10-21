@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArxumBrand } from '@/components/arxum-brand'
 import type { VideoaulaPublica } from './page'
 
+// ── SEMÂNTICO: gradientes por categoria (decoração de card) ─────────
 const cores: string[] = [
   'from-[#0d9488] to-[#0f766e]',
   'from-[#0e7490] to-[#155e75]',
@@ -35,9 +36,13 @@ function toEmbed(url: string): string {
   return url
 }
 
-export function EduflixClient({ videoaulas }: { videoaulas: VideoaulaPublica[] }) {
+export function EduflixClient({ videoaulas, cor }: { videoaulas: VideoaulaPublica[]; cor?: string }) {
   const [assistindo, setAssistindo] = useState<VideoaulaPublica | null>(null)
   const [busca, setBusca] = useState('')
+
+  const estiloMarca = cor
+    ? ({ '--cor-primaria': cor } as React.CSSProperties)
+    : undefined
 
   const porDisciplina: Record<string, VideoaulaPublica[]> = {}
   videoaulas.forEach((v) => {
@@ -52,7 +57,7 @@ export function EduflixClient({ videoaulas }: { videoaulas: VideoaulaPublica[] }
   const destaque = videoaulas[0]
 
   return (
-    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]">
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
       <header className="sticky top-0 z-10 border-b border-white/[.08] bg-[#070b0f]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
           <Link href="/" className="flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
@@ -76,7 +81,13 @@ export function EduflixClient({ videoaulas }: { videoaulas: VideoaulaPublica[] }
       <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
         {videoaulas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="grid size-16 place-items-center rounded-full bg-[#0d9488]/15 text-[#0d9488]">
+            <div
+              className="grid size-16 place-items-center rounded-full"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, transparent)',
+                color: 'var(--cor-primaria, #0d9488)',
+              }}
+            >
               <Play className="size-7" />
             </div>
             <h2 className="mt-5 font-syne text-2xl font-bold text-white">Nenhuma videoaula disponível</h2>
@@ -157,7 +168,12 @@ export function EduflixClient({ videoaulas }: { videoaulas: VideoaulaPublica[] }
               )}
             </div>
             <div className="mt-4">
-              <span className="text-xs font-bold uppercase tracking-[.18em] text-[#0d9488]">{assistindo.disciplina}</span>
+              <span
+                className="text-xs font-bold uppercase tracking-[.18em]"
+                style={{ color: 'var(--cor-primaria, #0d9488)' }}
+              >
+                {assistindo.disciplina}
+              </span>
               <h3 className="mt-1 font-syne text-xl font-bold text-white">{assistindo.titulo}</h3>
               {assistindo.descricao && <p className="mt-2 text-sm text-[#8aa0ad]">{assistindo.descricao}</p>}
             </div>
@@ -172,7 +188,7 @@ function CardVideo({ video, onAssistir }: { video: VideoaulaPublica; onAssistir:
   return (
     <button
       onClick={onAssistir}
-      className="group overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] text-left transition hover:border-[#0d9488]/50"
+      className="group overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] text-left transition hover:border-[var(--cor-primaria,#0d9488)]/50"
     >
       <div className={`relative flex aspect-video items-center justify-center bg-gradient-to-br ${corAleatoria(video.id)}`}>
         <div className="grid size-12 place-items-center rounded-full bg-white/20 backdrop-blur transition group-hover:scale-110">
@@ -185,7 +201,12 @@ function CardVideo({ video, onAssistir }: { video: VideoaulaPublica; onAssistir:
         )}
       </div>
       <div className="p-4">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[#0d9488]">{video.disciplina}</span>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider"
+          style={{ color: 'var(--cor-primaria, #0d9488)' }}
+        >
+          {video.disciplina}
+        </span>
         <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-white">{video.titulo}</h3>
         <div className="mt-3 flex items-center justify-between text-xs text-[#82939a]">
           <span>{video.serie || 'Todas as séries'}</span>

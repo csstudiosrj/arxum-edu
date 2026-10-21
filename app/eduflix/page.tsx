@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDaRequisicao } from '@/lib/auth/escola-atual'
+import { marcaDaEscola } from '@/lib/auth/marca'
 import { EduflixClient } from './eduflix-client'
 
 export const dynamic = 'force-dynamic'
@@ -38,5 +39,7 @@ export default async function EduflixPage() {
   if (!escola) notFound()
 
   const videoaulas = await getVideoaulas(escola.id)
-  return <EduflixClient videoaulas={videoaulas} />
+  const marca = marcaDaEscola(escola)
+
+  return <EduflixClient videoaulas={videoaulas} cor={marca.usaBranding ? marca.corPrimaria : undefined} />
 }
