@@ -90,19 +90,24 @@ export function AlunoShell({
         </div>
 
         <div className="mt-6 flex flex-1 flex-col gap-1 overflow-y-auto">
-          {menu.map(([label, href, Icon]) => (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                isAtivo(href) ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'
-              }`}
-            >
-              <Icon className="size-[18px]" />
-              {label}
-            </Link>
-          ))}
+          {menu.map(([label, href, Icon]) => {
+            const ativo = isAtivo(href)
+            return (
+              <Link
+                key={label}
+                href={href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`}
+                style={ativo ? {
+                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
+                  color: 'var(--cor-primaria, #0d9488)',
+                } : undefined}
+              >
+                <Icon className="size-[18px]" />
+                {label}
+              </Link>
+            )
+          })}
         </div>
 
         <div className="border-t border-[#e5ecee] pt-4">
@@ -137,7 +142,8 @@ export function AlunoShell({
             <div className="relative">
               <button
                 onClick={() => setMenuAberto(!menuAberto)}
-                className="grid size-9 place-items-center rounded-full bg-[#0d9488] text-xs font-bold text-white hover:ring-2 hover:ring-[#0d9488] hover:ring-offset-2 transition-all"
+                className="grid size-9 place-items-center rounded-full text-xs font-bold text-white transition-all hover:brightness-110"
+                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
                 aria-label="Menu da conta"
               >
                 {iniciais}

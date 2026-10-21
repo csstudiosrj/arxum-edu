@@ -127,7 +127,11 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
           
           {/* BOLINHA DO USUÁRIO CLICÁVEL */}
           <div className="relative">
-            <button onClick={() => setMenuAberto(!menuAberto)} className="grid size-9 place-items-center rounded-full bg-[#173f5f] text-xs font-bold text-white hover:ring-2 hover:ring-[#0d9488] hover:ring-offset-2 transition-all">
+            <button
+              onClick={() => setMenuAberto(!menuAberto)}
+              className="grid size-9 place-items-center rounded-full text-xs font-bold text-white transition-all hover:brightness-110"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
               {iniciais}
             </button>
             {menuAberto && (
@@ -168,13 +172,13 @@ export const Panel = ({ children, className = '' }: { children: React.ReactNode;
 
 export function ActionButton({ children, variant = 'primary' }: { children: React.ReactNode; variant?: 'primary' | 'secondary' | 'ghost' }) {
   if (variant === 'primary') return <button className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-90" style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}>{children}</button>
-  if (variant === 'secondary') return <button className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[#0d9488] hover:text-[#0f766e]">{children}</button>
+  if (variant === 'secondary') return <button className="rounded-lg border border-[#b8c9ce] bg-white px-3.5 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]">{children}</button>
   return <button className="rounded-lg px-3.5 py-2 text-sm font-semibold text-[#60737c] transition hover:bg-[#f1f5f6]">{children}</button>
 }
 
 export const FieldLabel = ({ children }: { children: React.ReactNode }) => <label className="mb-1.5 block text-xs font-semibold text-[#536871]">{children}</label>
 
-const input = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10'
+const input = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]'
 
 export function TextInput({ value, placeholder }: { value?: string; placeholder?: string }) { return <input className={input} defaultValue={value} placeholder={placeholder} /> }
 export function TextArea({ value, placeholder }: { value?: string; placeholder?: string }) { return <textarea className={`${input} min-h-20 resize-none`} defaultValue={value} placeholder={placeholder} /> }
