@@ -2,9 +2,21 @@
 
 import Link from 'next/link'
 
+// Símbolo do ARXUM Edu: livro aberto com o ponto da ideia (Manual de Marca §01)
+export function EduSimbolo({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 7.2C10.2 5.7 7.3 5.2 3.5 5.6v12.6c3.8-.4 6.7.1 8.5 1.6 1.8-1.5 4.7-2 8.5-1.6V5.6c-3.8-.4-6.7.1-8.5 1.6Z" fill="#0d9488" fillOpacity="0.12" stroke="#0d9488" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M12 7.2v12.6" stroke="#0d9488" strokeWidth="1.8" />
+      <circle cx="12" cy="3" r="1.2" fill="#0d9488" />
+    </svg>
+  )
+}
+
 export function ArxumBrand({ light = false }: { light?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-1.5" aria-label="ARXUM Edu, início">
+      <EduSimbolo />
       <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
         ARXUM
       </span>
