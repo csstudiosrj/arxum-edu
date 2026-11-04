@@ -103,7 +103,7 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
           />
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/admin/financeiro/pagarme"
+              href="/admin/financeiro/mercadopago"
               className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]"
             >
               <CreditCard className="size-4" /> Conta de Recebimento
@@ -292,8 +292,8 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
                 className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
               >
-                {processando ? <Loader2 className="size-4 animate-spin" /> : <QrCode className="size-4" />}
-                {processando ? 'Gerando...' : 'Gerar PIX'}
+                {processando ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+                {processando ? 'Criando...' : 'Criar fatura'}
               </button>
             </footer>
           </aside>
@@ -322,13 +322,6 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
               </span>
             </div>
 
-            {detalheFatura.pagarme_qr_code_url && detalheFatura.status !== 'pago' && (
-              <div className="text-center">
-                <p className="text-xs font-semibold text-[#536871] mb-2 uppercase tracking-wider">QR Code PIX</p>
-                <img src={detalheFatura.pagarme_qr_code_url} alt="QR Code" className="mx-auto size-40 border border-[#e5ecee] rounded-lg" />
-                <p className="text-[10px] text-[#82939a] mt-2">O responsável pode pagar escaneando o código acima.</p>
-              </div>
-            )}
           </div>
         </div>
       )}

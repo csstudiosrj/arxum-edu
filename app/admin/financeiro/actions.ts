@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { notificarFaturaGerada } from '@/lib/emails/notificacoes'
 import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
-import { criarOuAtualizarCliente, criarPedido, calcularSplitFatura } from '@/lib/pagarme'
+import { resolverToken } from '@/lib/mercadopago'
 import { revalidatePath } from 'next/cache'
 
 export type Fatura = {
@@ -16,7 +16,6 @@ export type Fatura = {
   vencimento: string
   status: string
   criado_em: string
-  pagarme_qr_code_url: string | null
 }
 
 export type NovaFatura = {
@@ -52,7 +51,7 @@ export async function getFaturas(): Promise<Fatura[]> {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('faturas')
-      .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em, pagarme_qr_code_url')
+      .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em')
       .eq('escola_id', escola.id)
       .order('vencimento', { ascending: false })
 
@@ -69,46 +68,19 @@ export async function criarFatura(data: NovaFatura) {
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
-    const { data: escolaPagarme } = await admin
+    const { data: escolaMp } = await admin
       .from('escolas')
-      .select('pagarme_recipient_id, taxa_fatura_bps')
+      .select('mercadopago_access_token')
       .eq('id', escola.id)
       .single()
 
-    if (!escolaPagarme?.pagarme_recipient_id) {
-      return { success: false, error: 'A escola precisa configurar a Conta de Recebimento (Pagar.me) antes de gerar faturas.' }
+    const accessToken = resolverToken(escolaMp?.mercadopago_access_token)
+    if (!accessToken) {
+      return { success: false, error: 'A escola precisa configurar a Conta de Recebimento (Mercado Pago) antes de gerar faturas.' }
     }
 
-    // Cria/Atualiza cliente
-    const clientePagarme = await criarOuAtualizarCliente({
-      nome: data.aluno_nome + ' (Responsável)',
-      email: data.responsavel_email,
-    })
-
-    if (!clientePagarme.success) {
-      return { success: false, error: 'Erro ao criar cliente no Pagar.me: ' + clientePagarme.error }
-    }
-
-    // Gera o Pedido com Split
-    const taxaArxum = escolaPagarme.taxa_fatura_bps || 200
-    const split = calcularSplitFatura({
-      taxaArxumBps: taxaArxum,
-      recipientEscolaId: escolaPagarme.pagarme_recipient_id,
-    })
-
-    const pedidoPagarme = await criarPedido({
-      code: `fat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      clienteId: clientePagarme.customerId,
-      itens: [{ amount: data.valor_centavos, description: data.descricao, quantity: 1 }],
-      metodo: { tipo: 'pix', expiresInSeconds: 3600 * 24 * 7 },
-      split,
-      metadata: { escola_id: escola.id, responsavel_email: data.responsavel_email }
-    })
-
-    if (!pedidoPagarme.success) {
-      return { success: false, error: 'Erro ao gerar PIX no Pagar.me: ' + pedidoPagarme.error }
-    }
-
+    // O pagamento (PIX, cartão ou boleto) é gerado na hora em que o
+    // responsável escolhe como pagar, direto na tela dele.
     const { error } = await admin.from('faturas').insert({
       escola_id: escola.id,
       aluno_nome: data.aluno_nome,
@@ -116,10 +88,7 @@ export async function criarFatura(data: NovaFatura) {
       descricao: data.descricao,
       valor_centavos: data.valor_centavos,
       vencimento: data.vencimento,
-      pagarme_order_id: pedidoPagarme.orderId,
-      pagarme_qr_code: pedidoPagarme.qrCode,
-      pagarme_qr_code_url: pedidoPagarme.qrCodeUrl,
-      pagarme_status: pedidoPagarme.status,
+      gateway: 'mercadopago',
     })
 
     if (error) return { success: false, error: error.message }
