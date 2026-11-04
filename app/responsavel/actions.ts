@@ -44,8 +44,6 @@ export type FaturaResponsavel = {
   vencimento: string
   status: string
   pago_em: string | null
-  pagarme_qr_code_url: string | null
-  pagarme_qr_code: string | null
 }
 
 export type EventoResponsavel = {
@@ -220,7 +218,7 @@ export async function getMinhasFaturas(): Promise<FaturaResponsavel[]> {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('faturas')
-      .select('id, aluno_nome, descricao, valor_centavos, vencimento, status, pago_em, pagarme_qr_code_url, pagarme_qr_code')
+      .select('id, aluno_nome, descricao, valor_centavos, vencimento, status, pago_em')
       .eq('responsavel_email', email)
       .order('vencimento', { ascending: false })
     if (error) return []

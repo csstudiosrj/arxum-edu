@@ -91,7 +91,7 @@ const cardsEspera: CardEspera[] = [
     tipo: 'espera',
     titulo: 'Financeiro e pagamentos',
     descricao: 'PIX, boleto, cartão e split automático direto no sistema. O checkout dos alunos e a loja virtual passam a gerar cobrança real.',
-    motivo: 'Aguardando aprovação da conta no Pagar.me',
+    motivo: 'Aguardando liberação',
     icon: CreditCard,
     cor: '#065f46',
   },

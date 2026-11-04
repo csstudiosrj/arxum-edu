@@ -23,7 +23,7 @@ const faqs = [
   { q: 'Como funciona a migração dos dados da minha escola?', a: 'Nossa equipe faz a importação da sua base atual (alunos, responsáveis, notas e financeiro) de forma assistida. Você não precisa digitar tudo de novo. O processo leva em média 3 dias úteis.' },
   { q: 'Preciso instalar algo?', a: 'Não. O ARXUM Edu é 100% online (SaaS). Basta ter um navegador e internet. Além disso, ele funciona como um app no celular (PWA), sem precisar baixar nada na loja.' },
   { q: 'Posso personalizar os formulários?', a: 'Sim! O CMS e o construtor de formulários permitem que a própria escola crie campos, fluxos de matrícula, departamentos e regras de aprovação sem precisar de suporte técnico.' },
-  { q: 'Como funciona o repasse financeiro?', a: 'Utilizamos a Pagar.me (Stone) com split automático. O dinheiro das mensalidades cai direto na conta da escola, e a nossa taxa de intermediação é retida na hora da transação.' },
+  { q: 'Como funciona o repasse financeiro?', a: 'O pagamento é feito por PIX, cartão ou boleto dentro do próprio sistema, sem redirecionar para outro site. O dinheiro das mensalidades cai direto na conta da escola, sem intermediação e sem taxa sobre as vendas.' },
   { q: 'Posso testar antes de assinar?', a: 'Sim. Oferecemos 14 dias de teste gratuito com acesso a todas as funcionalidades. Você só é cobrado se decidir continuar após o período de teste.' },
   { q: 'Como funciona o suporte?', a: 'Oferecemos suporte humano via WhatsApp e e-mail em horário comercial. Também temos uma central de ajuda com tutoriais em vídeo e texto para a sua equipe.' },
 ]
