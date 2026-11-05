@@ -52,6 +52,15 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
   const [confirmarMudancaPlano, setConfirmarMudancaPlano] = useState(false)
   const [processando, setProcessando] = useState(false)
 
+  // Formulário de Edição Completo
+  const [formNome, setFormNome] = useState('')
+  const [formCnpj, setFormCnpj] = useState('')
+  const [formEndereco, setFormEndereco] = useState('')
+  const [formCidade, setFormCidade] = useState('')
+  const [formEstado, setFormEstado] = useState('')
+  const [formTelefone, setFormTelefone] = useState('')
+  const [formEmail, setFormEmail] = useState('')
+  
   const [formPlano, setFormPlano] = useState('')
   const [formStatus, setFormStatus] = useState('ativa')
   const [formVencimento, setFormVencimento] = useState('')
@@ -92,6 +101,14 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
 
   function abrirEdicao(escola: EscolaSuper) {
     setEditando(escola)
+    setFormNome(escola.nome || '')
+    setFormCnpj(escola.cnpj || '')
+    setFormEndereco(escola.endereco || '')
+    setFormCidade(escola.cidade || '')
+    setFormEstado(escola.estado || '')
+    setFormTelefone(escola.telefone || '')
+    setFormEmail(escola.email_contato || '')
+    
     setFormPlano(escola.plano)
     setFormStatus(escola.status_assinatura || 'ativa')
     setFormVencimento(escola.data_vencimento || '')
@@ -116,6 +133,13 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
     if (!editando) return
     setProcessando(true)
     const r = await atualizarEscola(editando.id, {
+      nome: formNome,
+      cnpj: formCnpj,
+      endereco: formEndereco,
+      cidade: formCidade,
+      estado: formEstado,
+      telefone: formTelefone,
+      email_contato: formEmail,
       plano: formPlano,
       status_assinatura: formStatus,
       data_vencimento: formVencimento || null,
@@ -364,7 +388,7 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
         </div>
       )}
 
-      {/* DRAWER DE EDIÇÃO */}
+      {/* DRAWER DE EDIÇÃO COMPLETO */}
       {editando && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setEditando(null)} />
@@ -372,7 +396,7 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold text-[#12232b]">{editando.nome}</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Editar assinatura e contato</p>
+                <p className="mt-0.5 text-xs text-[#82939a]">Editar dados, assinatura e contato</p>
               </div>
               <button onClick={() => setEditando(null)} disabled={processando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
             </header>
@@ -381,26 +405,42 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
               
               <div className="mb-6 rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#536871]">
-                  <Building2 className="size-4" /> Dados Cadastrais
+                  <Building2 className="size-4" /> Dados Cadastrais (Editável)
                 </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[#82939a]">Razão Social</span>
-                    <span className="font-semibold text-right text-[#243942]">{editando.razao_social || 'Não informada'}</span>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">Nome da Escola</label>
+                      <input type="text" value={formNome} onChange={e => setFormNome(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">CNPJ</label>
+                      <input type="text" value={formCnpj} onChange={e => setFormCnpj(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[#82939a]">CNPJ</span>
-                    <span className="font-mono text-[#243942]">{editando.cnpj || 'Não informado'}</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">E-mail de Contato</label>
+                      <input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">Telefone</label>
+                      <input type="text" value={formTelefone} onChange={e => setFormTelefone(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[#82939a]">E-mail de Contato</span>
-                    <span className="text-[#243942]">{editando.email_contato || 'Não informado'}</span>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 block mb-1">Endereço (Rua, Número, Bairro)</label>
+                    <input type="text" value={formEndereco} onChange={e => setFormEndereco(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
                   </div>
-                  <div className="flex justify-between gap-4 border-t border-[#e5ecee] pt-2 mt-2">
-                    <span className="text-[#82939a] flex items-center gap-1"><MapPin size={12}/> Endereço</span>
-                    <span className="text-right text-[#243942]">
-                      {[editando.endereco, editando.numero, editando.bairro, editando.cidade, editando.estado].filter(Boolean).join(', ') || 'Não informado'}
-                    </span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">Cidade</label>
+                      <input type="text" value={formCidade} onChange={e => setFormCidade(e.target.value)} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-gray-500 block mb-1">Estado (UF)</label>
+                      <input type="text" value={formEstado} onChange={e => setFormEstado(e.target.value)} maxLength={2} className="w-full border p-2 rounded-lg text-sm outline-none focus:border-[#0d9488]" />
+                    </div>
                   </div>
                 </div>
               </div>
