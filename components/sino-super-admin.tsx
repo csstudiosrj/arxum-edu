@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bell, LifeBuoy, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
 import { getNotificacoesSuperAdmin, marcarNotificacaoLida, type NotificacaoSuper } from '@/app/super-admin/notificacoes-actions'
@@ -23,6 +22,8 @@ export function SinoSuperAdmin() {
       }
     }
     carregar()
+    
+    // Polling a cada 1 minuto
     const interval = setInterval(carregar, 60000)
     return () => { ativo = false; clearInterval(interval) }
   }, [])
@@ -39,10 +40,14 @@ export function SinoSuperAdmin() {
 
   async function handleClick(n: NotificacaoSuper) {
     setAberto(false)
+    
+    // Marca como lida no banco
     if (!n.lida) {
       await marcarNotificacaoLida(n.id)
       setNotificacoes(prev => prev.map(item => item.id === n.id ? { ...item, lida: true } : item))
     }
+    
+    // Redireciona para o link correto
     router.push(n.link_destino)
   }
 
