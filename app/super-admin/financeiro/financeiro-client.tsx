@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight, CalendarClock } from 'lucide-react'
+import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight, CalendarClock, FileText } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { type MetricasFinanceiras, type EscolaFinanceiro } from '../actions'
 import { 
@@ -12,12 +12,18 @@ import {
   getFaturasPorEscola,
   getInfoAssinaturaEscola,
   gerarAssinaturaRecorrente,
-  cancelarAssinaturaRecorrente
+  cancelarAssinaturaRecorrente,
+  getResumoTaxasPendentes,
+  gerarFaturaTaxas,
+  type ResumoTaxaEscola
 } from './actions'
 
 export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFinanceiras, escolas: EscolaFinanceiro[] }) {
   const searchParams = useSearchParams()
   
+  // Navegação de Abas
+  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'taxas'>('dashboard')
+
   const [novaAberta, setNovaAberta] = useState(false)
   const [escolaDetalhe, setEscolaDetalhe] = useState<EscolaFinanceiro | null>(null)
   const [processando, setProcessando] = useState(false)
@@ -46,18 +52,49 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
   const [linkAssinatura, setLinkAssinatura] = useState<string | null>(null)
   const [erroDrawer, setErroDrawer] = useState('')
 
+  // Taxas Pendentes
+  const [resumoTaxas, setResumoTaxas] = useState<ResumoTaxaEscola[]>([])
+  const [carregandoTaxas, setCarregandoTaxas] = useState(false)
+  const [gerandoFaturaId, setGerandoFaturaId] = useState<string | null>(null)
+
   const formatarDinheiro = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-  // Deep Link: Abre a escola se vier via URL
+  // Deep Link
   useEffect(() => {
     const escolaIdParam = searchParams.get('escolaId')
     if (escolaIdParam) {
       const escolaEncontrada = escolas.find(e => e.id === escolaIdParam)
-      if (escolaEncontrada) {
-        setEscolaDetalhe(escolaEncontrada)
-      }
+      if (escolaEncontrada) setEscolaDetalhe(escolaEncontrada)
     }
   }, [searchParams, escolas])
+
+  // Carrega dados das abas
+  useEffect(() => {
+    if (abaAtiva === 'taxas' && resumoTaxas.length === 0) {
+      carregarTaxas()
+    }
+  }, [abaAtiva])
+
+  async function carregarTaxas() {
+    setCarregandoTaxas(true)
+    const dados = await getResumoTaxasPendentes()
+    setResumoTaxas(dados)
+    setCarregandoTaxas(false)
+  }
+
+  async function handleGerarFaturaTaxas(escolaId: string) {
+    if (!confirm('Deseja agrupar todas as taxas pendentes e gerar uma fatura para esta escola?')) return
+    setGerandoFaturaId(escolaId)
+    const r = await gerarFaturaTaxas(escolaId)
+    setGerandoFaturaId(null)
+    if (r.success) {
+      alert('Fatura gerada com sucesso!')
+      carregarTaxas()
+      window.location.reload()
+    } else {
+      alert(r.error)
+    }
+  }
 
   useEffect(() => {
     if (escolaId) {
@@ -181,80 +218,158 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
           </button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Panel className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="grid size-8 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]"><TrendingUp className="size-4" /></div>
-              <p className="text-xs font-semibold uppercase text-[#6b7d86]">MRR (Mensal)</p>
-            </div>
-            <p className="text-2xl font-bold text-[#065f46]">{formatarDinheiro(metricas.mrrCentavos)}</p>
-            <p className="mt-1 text-xs text-[#82939a]">ARR: {formatarDinheiro(metricas.arrCentavos)}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="grid size-8 place-items-center rounded-lg bg-[#dbeafe] text-[#1e40af]"><DollarSign className="size-4" /></div>
-              <p className="text-xs font-semibold uppercase text-[#6b7d86]">Total Recebido</p>
-            </div>
-            <p className="text-2xl font-bold text-[#1e40af]">{formatarDinheiro(metricas.totalRecebido)}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="grid size-8 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]"><WalletCards className="size-4" /></div>
-              <p className="text-xs font-semibold uppercase text-[#6b7d86]">Em Aberto</p>
-            </div>
-            <p className="text-2xl font-bold text-[#92400e]">{formatarDinheiro(metricas.totalEmAberto)}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="grid size-8 place-items-center rounded-lg bg-[#fee2e2] text-[#991b1b]"><AlertCircle className="size-4" /></div>
-              <p className="text-xs font-semibold uppercase text-[#6b7d86]">Vencido</p>
-            </div>
-            <p className="text-2xl font-bold text-[#991b1b]">{formatarDinheiro(metricas.totalVencido)}</p>
-          </Panel>
+        {/* ABAS */}
+        <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
+          <button onClick={() => setAbaAtiva('dashboard')} className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${abaAtiva === 'dashboard' ? 'border-[#0d9488] text-[#0d9488]' : 'border-transparent text-[#6b7d86] hover:text-[#12232b]'}`}>
+            Visão Geral
+          </button>
+          <button onClick={() => setAbaAtiva('taxas')} className={`px-4 py-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${abaAtiva === 'taxas' ? 'border-[#0d9488] text-[#0d9488]' : 'border-transparent text-[#6b7d86] hover:text-[#12232b]'}`}>
+            <FileText className="size-4" /> Taxas e Repasses
+          </button>
         </div>
 
-        <Panel className="mt-8">
-          <div className="border-b border-[#e5ecee] px-5 py-4 flex justify-between items-center">
-             <h2 className="text-base font-bold text-[#12232b]">Saúde Financeira das Escolas</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
-                  <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Escola</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Plano</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">LTV (Gerado)</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Atraso Médio</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Health Score</th>
-                  <th className="px-5 py-3 text-right text-[10px] font-bold uppercase text-[#6b7d86]">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {escolas.map(e => (
-                  <tr key={e.id} className="border-b border-[#f0f4f5]">
-                    <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{e.nome}</td>
-                    <td className="px-5 py-3.5 text-sm capitalize text-[#4d626c]">{e.plano}</td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-[#0d9488]">{formatarDinheiro(e.ltvCentavos)}</td>
-                    <td className="px-5 py-3.5 text-sm text-[#82939a]">{e.media_dias_atraso} dias</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${e.health_score === 'bom' ? 'bg-[#d1fae5] text-[#065f46]' : e.health_score === 'atencao' ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
-                        {e.health_score === 'bom' ? 'Em dia' : e.health_score === 'atencao' ? 'Atenção' : 'Risco'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right flex justify-end gap-2">
-                      <button onClick={() => abrirNovaCobranca(e)} className="text-xs bg-[#0d9488] text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e]">
-                        Cobrar
-                      </button>
-                      <button onClick={() => setEscolaDetalhe(e)} className="text-xs border border-[#b8c9ce] text-[#30454e] px-3 py-1.5 rounded-lg font-semibold hover:border-[#0d9488] flex items-center gap-1">
-                        Extrato <ArrowRight className="size-3" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
+        {/* CONTEÚDO: DASHBOARD */}
+        {abaAtiva === 'dashboard' && (
+          <>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Panel className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="grid size-8 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]"><TrendingUp className="size-4" /></div>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">MRR (Mensal)</p>
+                </div>
+                <p className="text-2xl font-bold text-[#065f46]">{formatarDinheiro(metricas.mrrCentavos)}</p>
+                <p className="mt-1 text-xs text-[#82939a]">ARR: {formatarDinheiro(metricas.arrCentavos)}</p>
+              </Panel>
+              <Panel className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="grid size-8 place-items-center rounded-lg bg-[#dbeafe] text-[#1e40af]"><DollarSign className="size-4" /></div>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Total Recebido</p>
+                </div>
+                <p className="text-2xl font-bold text-[#1e40af]">{formatarDinheiro(metricas.totalRecebido)}</p>
+              </Panel>
+              <Panel className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="grid size-8 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]"><WalletCards className="size-4" /></div>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Em Aberto</p>
+                </div>
+                <p className="text-2xl font-bold text-[#92400e]">{formatarDinheiro(metricas.totalEmAberto)}</p>
+              </Panel>
+              <Panel className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="grid size-8 place-items-center rounded-lg bg-[#fee2e2] text-[#991b1b]"><AlertCircle className="size-4" /></div>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Vencido</p>
+                </div>
+                <p className="text-2xl font-bold text-[#991b1b]">{formatarDinheiro(metricas.totalVencido)}</p>
+              </Panel>
+            </div>
+
+            <Panel className="mt-8">
+              <div className="border-b border-[#e5ecee] px-5 py-4 flex justify-between items-center">
+                 <h2 className="text-base font-bold text-[#12232b]">Saúde Financeira das Escolas</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Escola</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Plano</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">LTV (Gerado)</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Atraso Médio</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Health Score</th>
+                      <th className="px-5 py-3 text-right text-[10px] font-bold uppercase text-[#6b7d86]">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {escolas.map(e => (
+                      <tr key={e.id} className="border-b border-[#f0f4f5]">
+                        <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{e.nome}</td>
+                        <td className="px-5 py-3.5 text-sm capitalize text-[#4d626c]">{e.plano}</td>
+                        <td className="px-5 py-3.5 text-sm font-semibold text-[#0d9488]">{formatarDinheiro(e.ltvCentavos)}</td>
+                        <td className="px-5 py-3.5 text-sm text-[#82939a]">{e.media_dias_atraso} dias</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${e.health_score === 'bom' ? 'bg-[#d1fae5] text-[#065f46]' : e.health_score === 'atencao' ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
+                            {e.health_score === 'bom' ? 'Em dia' : e.health_score === 'atencao' ? 'Atenção' : 'Risco'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right flex justify-end gap-2">
+                          <button onClick={() => abrirNovaCobranca(e)} className="text-xs bg-[#0d9488] text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e]">
+                            Cobrar
+                          </button>
+                          <button onClick={() => setEscolaDetalhe(e)} className="text-xs border border-[#b8c9ce] text-[#30454e] px-3 py-1.5 rounded-lg font-semibold hover:border-[#0d9488] flex items-center gap-1">
+                            Extrato <ArrowRight className="size-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </>
+        )}
+
+        {/* CONTEÚDO: TAXAS E REPASSES */}
+        {abaAtiva === 'taxas' && (
+          <Panel className="mt-6">
+            <div className="border-b border-[#e5ecee] px-5 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-base font-bold text-[#12232b]">Taxas Pendentes de Faturamento</h2>
+                <p className="text-xs text-[#82939a] mt-0.5">Valores acumulados da Loja e Add-ons por escola.</p>
+              </div>
+              <button onClick={carregarTaxas} disabled={carregandoTaxas} className="p-2 border border-[#d5e0e3] rounded-lg text-gray-500 hover:text-[#0d9488] hover:border-[#0d9488]">
+                <RefreshCw className={`size-4 ${carregandoTaxas ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {carregandoTaxas ? (
+              <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-[#0d9488]" /></div>
+            ) : resumoTaxas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488] mb-3"><FileText className="size-6" /></div>
+                <h3 className="text-base font-bold text-[#12232b]">Nenhuma taxa pendente</h3>
+                <p className="mt-1 text-sm text-[#82939a]">As taxas de loja e add-ons aparecerão aqui quando forem geradas.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Escola</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Taxas (Loja/Mensalidade)</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Add-ons</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Total a Faturar</th>
+                      <th className="px-5 py-3 text-right text-[10px] font-bold uppercase text-[#6b7d86]">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumoTaxas.map(r => (
+                      <tr key={r.escola_id} className="border-b border-[#f0f4f5] hover:bg-[#fafcfc]">
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm font-semibold text-[#243942]">{r.escola_nome}</p>
+                          <p className="text-[10px] text-[#82939a]">{r.quantidade_alunos} alunos ativos</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-[#4d626c]">{formatarDinheiro(r.total_taxas_pendentes_centavos)}</td>
+                        <td className="px-5 py-3.5 text-sm text-[#4d626c]">{formatarDinheiro(r.total_addons_centavos)}</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-[#0d9488]">{formatarDinheiro(r.valor_fatura_centavos)}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button 
+                            onClick={() => handleGerarFaturaTaxas(r.escola_id)} 
+                            disabled={gerandoFaturaId === r.escola_id}
+                            className="text-xs bg-[#0d9488] text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e] disabled:opacity-50 flex items-center gap-1 ml-auto"
+                          >
+                            {gerandoFaturaId === r.escola_id ? <Loader2 className="size-3 animate-spin" /> : <FileText className="size-3" />}
+                            Gerar Fatura
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+        )}
+
       </main>
 
       {/* MODAL NOVA COBRANÇA */}
@@ -402,7 +517,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                 <div><p className="text-xs text-gray-500 uppercase font-bold">Média Atraso</p><p className="text-xl font-bold text-yellow-600">{escolaDetalhe.media_dias_atraso} dias</p></div>
               </div>
 
-              {/* CARD DE ASSINATURA RECORRENTE */}
               <div className="bg-white border border-[#e5ecee] rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
