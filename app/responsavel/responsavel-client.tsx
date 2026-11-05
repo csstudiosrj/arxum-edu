@@ -1001,4 +1001,128 @@ export function ResponsavelClient({
         <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
           <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
             <div className="flex-1">
-              {(() => { const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro; return <span className="rounded-full px
+              {(() => { const info = tipoAutorizacao[autorizacaoAberta.tipo] || tipoAutorizacao.outro; return <span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ backgroundColor: `${info.cor}15`, color: info.cor }}>{info.label}</span> })()}
+              <h2 className="mt-3 text-xl font-bold text-[#12232b]">{autorizacaoAberta.titulo}</h2>
+              {autorizacaoAberta.prazo_resposta && <p className="mt-1 text-xs text-[#dc2626]">Responder até {formatarData(autorizacaoAberta.prazo_resposta)}</p>}
+            </div>
+            <button onClick={() => setAutorizacaoAberta(null)} disabled={enviandoResposta} className="ml-3 rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
+          </header>
+          <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+            <p className="whitespace-pre-wrap text-sm leading-7 text-[#243942]">{autorizacaoAberta.descricao}</p>
+
+            {filhos.length > 1 && (
+              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#536871]">
+                  <UserCheck className="size-3.5" /> Aluno desta autorização
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {filhos.map((f) => {
+                    const selecionado = alunoResposta === f.nome
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setAlunoResposta(f.nome)}
+                        className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${selecionado ? '' : 'border-[#d5e0e3] bg-white hover:border-[var(--cor-primaria,#0d9488)]'}`}
+                        style={selecionado ? {
+                          borderColor: 'var(--cor-primaria, #0d9488)',
+                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 12%, white)',
+                        } : undefined}
+                      >
+                        <div
+                          className={`grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white ${selecionado ? '' : 'bg-[#173b4a]'}`}
+                          style={selecionado ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
+                        >
+                          {iniciaisDe(f.nome)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-[#243942]">{f.nome}</p>
+                          <p className="truncate text-[10px] text-[#82939a]">{f.serie || '—'}</p>
+                        </div>
+                        {selecionado && <CheckCircle2 className="size-4 shrink-0" style={{ color: 'var(--cor-primaria, #0d9488)' }} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {filhos.length === 1 && (
+              <div className="mt-5 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
+                <p className="text-xs text-[#82939a]">Esta resposta será registrada para <strong className="text-[#243942]">{filhos[0].nome}</strong>.</p>
+              </div>
+            )}
+
+            <div className="mt-5">
+              <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Observação (opcional)</label>
+              <textarea
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Ex: Meu filho não poderá participar..."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
+              />
+            </div>
+          </div>
+          <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
+            <button onClick={() => handleResponder('recusado')} disabled={enviandoResposta} className="inline-flex items-center gap-2 rounded-lg border border-[#dc2626] bg-white px-4 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] disabled:opacity-50">{enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}Recusar</button>
+            <button
+              onClick={() => handleResponder('autorizado')}
+              disabled={enviandoResposta}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
+              {enviandoResposta ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}Autorizar
+            </button>
+          </footer>
+        </div>
+      </div>
+    )}
+
+    {modalExclusaoAberto && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => !enviandoExclusao && setModalExclusaoAberto(false)} />
+        <div className="relative z-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+          <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]">
+            <Trash2 className="size-5" />
+          </div>
+          <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Solicitar exclusão dos seus dados</h3>
+          <p className="mt-2 text-center text-xs leading-6 text-[#82939a]">
+            Nossa equipe vai analisar sua solicitação. Alguns dados podem ser mantidos por obrigação
+            legal (registros acadêmicos e fiscais), conforme a LGPD.
+          </p>
+
+          <div className="mt-5">
+            <label className="mb-1.5 block text-xs font-semibold text-[#536871]">
+              Motivo (opcional)
+            </label>
+            <textarea
+              value={motivoExclusao}
+              onChange={(e) => setMotivoExclusao(e.target.value)}
+              rows={3}
+              placeholder="Se quiser, conte pra gente o motivo desta solicitação."
+              className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
+            />
+          </div>
+
+          <div className="mt-6 flex gap-2">
+            <button
+              onClick={() => setModalExclusaoAberto(false)}
+              disabled={enviandoExclusao}
+              className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSolicitarExclusao}
+              disabled={enviandoExclusao}
+              className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50"
+            >
+              {enviandoExclusao ? 'Enviando...' : 'Confirmar solicitação'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+}
