@@ -82,7 +82,7 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
         cardToken = tokenRes.id
       } catch (e: any) {
         setProcessando(false)
-        return setErro('Erro nos dados do cartão: ' + e[0]?.message || e.message)
+        return setErro('Erro nos dados do cartão: ' + (e[0]?.message || e.message))
       }
     }
 
