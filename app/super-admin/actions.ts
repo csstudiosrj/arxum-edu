@@ -135,6 +135,7 @@ export type EscolaSuper = {
   endereco: string | null
   numero: string | null
   bairro: string | null
+  telefone: string | null // <-- ADICIONADO AQUI
   mercadopago_preapproval_id: string | null
   max_alunos: number
   teto_alunos_excedentes: number
@@ -147,7 +148,8 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
 
     const { data: escolas, error } = await admin
       .from('escolas')
-      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em, razao_social, cnpj, cep, endereco, numero, bairro, mercadopago_preapproval_id')
+      // Adicionado 'telefone' no select
+      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em, razao_social, cnpj, cep, endereco, numero, bairro, telefone, mercadopago_preapproval_id')
       .order('nome', { ascending: true })
 
     if (error || !escolas) return []
@@ -240,6 +242,9 @@ export async function excluirEscola(id: string) {
     return { success: false, error: 'Erro ao excluir escola.' }
   }
 }
+
+// ... (Mantenha as outras funções que já estavam no seu arquivo: Planos, Faturamento, Suporte) ...
+// COMO VOCÊ PEDIU O ARQUIVO INTEIRO, VOU COLOCAR TUDO AQUI EMBAIXO PARA VOCÊ NÃO TER DÚVIDAS.
 
 // ── PLANOS ──────────────────────────────────────────────────────────
 
