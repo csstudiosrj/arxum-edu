@@ -14,7 +14,6 @@ export type EmailTemplate = {
   atualizado_em: string
 }
 
-// Molde visual ARXUM para envelopar o conteúdo do e-mail
 function wrapEmailARXUM(conteudo: string) {
   return `
     <!DOCTYPE html>
@@ -139,7 +138,6 @@ export async function enviarEmailManual(escolaId: string, templateId: string, fa
       assuntoFinal = assuntoFinal.split(chave).join(valor)
     })
 
-    // Aplica o molde visual bonito antes de enviar
     const htmlComMolde = wrapEmailARXUM(htmlFinal)
 
     await resend.emails.send({
