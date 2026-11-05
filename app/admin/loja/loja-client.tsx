@@ -2,457 +2,309 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Package, ShoppingCart, TrendingUp, DollarSign, Trash2, X, Loader2, Check, Eye, Edit, EyeOff } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { criarProduto, atualizarProduto, alternarAtivoProduto, excluirProduto, atualizarStatusPedido, type Produto, type Pedido } from './actions'
+import Link from 'next/link'
+import { ArrowLeft, ShoppingCart, Plus, Minus, Trash2, X, Loader2, CheckCircle2, Package } from 'lucide-react'
+import { criarPedido, type ProdutoLoja, type ItemCarrinho } from './actions'
 
-const categorias = ['Todas', 'Uniformes', 'Materiais', 'Eventos', 'Papelaria', 'Outros']
-
-const categoriaKey: Record<string, string> = {
-  'Uniformes': 'uniformes',
-  'Materiais': 'materiais',
-  'Eventos': 'eventos',
-  'Papelaria': 'papelaria',
-  'Outros': 'outros',
-}
-
-const statusStyles: Record<string, string> = {
-  pendente: 'bg-[#fff7df] text-[#a16207]',
-  pago: 'bg-[#d1fae5] text-[#065f46]',
-  entregue: 'bg-[#dbeafe] text-[#1e40af]',
-  cancelado: 'bg-[#e5ecee] text-[#5e7a94]',
-}
-
-const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
-  pago: 'Pago',
-  entregue: 'Entregue',
-  cancelado: 'Cancelado',
+const categoriaLabel: Record<string, string> = {
+  uniformes: 'Uniformes',
+  materiais: 'Materiais',
+  eventos: 'Eventos',
+  papelaria: 'Papelaria',
+  outros: 'Outros',
 }
 
 function formatarMoeda(centavos: number): string {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function formatarData(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('pt-BR')
-  } catch {
-    return '—'
-  }
-}
-
-export function LojaAdminClient({ produtos, pedidos }: { produtos: Produto[]; pedidos: Pedido[] }) {
+export function LojaClient({
+  produtos,
+  estaLogado,
+  escolaNome,
+  slug,
+  cor,
+  logoUrl,
+}: {
+  produtos: ProdutoLoja[]
+  estaLogado: boolean
+  escolaNome: string
+  slug: string
+  cor: string
+  logoUrl: string | null
+}) {
   const router = useRouter()
-  const [aba, setAba] = useState<'produtos' | 'pedidos'>('produtos')
-  const [categoria, setCategoria] = useState('Todas')
-  const [busca, setBusca] = useState('')
-  const [novoAberto, setNovoAberto] = useState(false)
-  const [editando, setEditando] = useState<Produto | null>(null)
-  const [detalhePedido, setDetalhePedido] = useState<Pedido | null>(null)
-  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
-  const [processando, setProcessando] = useState<string | null>(null)
-
-  const [nome, setNome] = useState('')
-  const [descricao, setDescricao] = useState('')
-  const [novaCategoria, setNovaCategoria] = useState('uniformes')
-  const [preco, setPreco] = useState('')
-  const [estoque, setEstoque] = useState('')
-  const [salvando, setSalvando] = useState(false)
+  const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
+  const [carrinhoAberto, setCarrinhoAberto] = useState(false)
+  const [observacao, setObservacao] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
 
-  const produtosFiltrados = produtos.filter((p) => {
-    const matchCat = categoria === 'Todas' || p.categoria === categoriaKey[categoria]
-    const matchBusca = busca === '' || p.nome.toLowerCase().includes(busca.toLowerCase())
-    return matchCat && matchBusca
+  const porCategoria: Record<string, ProdutoLoja[]> = {}
+  produtos.forEach((p) => {
+    if (!porCategoria[p.categoria]) porCategoria[p.categoria] = []
+    porCategoria[p.categoria].push(p)
   })
 
-  const vendasMes = pedidos.filter((p) => p.status === 'pago' || p.status === 'entregue').reduce((s, p) => s + p.total_centavos, 0)
-  const pedidosPendentes = pedidos.filter((p) => p.status === 'pendente').length
-  const ticketMedio = pedidos.length > 0 ? Math.round(pedidos.reduce((s, p) => s + p.total_centavos, 0) / pedidos.length) : 0
+  const totalItens = carrinho.reduce((s, i) => s + i.quantidade, 0)
+  const totalCentavos = carrinho.reduce((s, i) => s + i.quantidade * i.preco_unitario_centavos, 0)
+  const base = `/edu/${slug}`
 
-  function limpar() {
-    setNome('')
-    setDescricao('')
-    setNovaCategoria('uniformes')
-    setPreco('')
-    setEstoque('')
-    setErro('')
-    setEditando(null)
+  function adicionar(produto: ProdutoLoja) {
+    setCarrinho((prev) => {
+      const existente = prev.find((i) => i.produto_id === produto.id)
+      if (existente) {
+        return prev.map((i) => i.produto_id === produto.id ? { ...i, quantidade: i.quantidade + 1 } : i)
+      }
+      return [...prev, {
+        produto_id: produto.id,
+        produto_nome: produto.nome,
+        quantidade: 1,
+        preco_unitario_centavos: produto.preco_centavos,
+      }]
+    })
   }
 
-  function abrirEdicao(p: Produto) {
-    setNome(p.nome)
-    setDescricao(p.descricao || '')
-    setNovaCategoria(p.categoria)
-    setPreco((p.preco_centavos / 100).toFixed(2))
-    setEstoque(String(p.estoque))
-    setEditando(p)
-    setNovoAberto(true)
-    setErro('')
+  function diminuir(produtoId: string) {
+    setCarrinho((prev) => prev
+      .map((i) => i.produto_id === produtoId ? { ...i, quantidade: i.quantidade - 1 } : i)
+      .filter((i) => i.quantidade > 0)
+    )
   }
 
-  async function handleSalvar() {
-    if (!nome.trim()) return setErro('Informe o nome.')
-    if (!preco.trim()) return setErro('Informe o preço.')
-
-    const precoCentavos = Math.round(parseFloat(preco.replace(',', '.')) * 100)
-    if (isNaN(precoCentavos) || precoCentavos <= 0) return setErro('Preço inválido.')
-
-    const estoqueNum = estoque.trim() ? parseInt(estoque, 10) : 0
-    if (isNaN(estoqueNum) || estoqueNum < 0) return setErro('Estoque inválido.')
-
-    setSalvando(true)
-    setErro('')
-
-    if (editando) {
-      const result = await atualizarProduto(editando.id, { nome, descricao, categoria: novaCategoria, preco_centavos: precoCentavos, estoque: estoqueNum })
-      setSalvando(false)
-      if (!result.success) return setErro(result.error || 'Erro.')
-    } else {
-      const result = await criarProduto({ nome, descricao, categoria: novaCategoria, preco_centavos: precoCentavos, estoque: estoqueNum })
-      setSalvando(false)
-      if (!result.success) return setErro(result.error || 'Erro.')
-    }
-
-    limpar()
-    setNovoAberto(false)
-    router.refresh()
+  function remover(produtoId: string) {
+    setCarrinho((prev) => prev.filter((i) => i.produto_id !== produtoId))
   }
 
-  async function handleExcluir() {
-    if (!confirmarExclusao) return
-    setProcessando(confirmarExclusao)
-    const r = await excluirProduto(confirmarExclusao)
-    setProcessando(null)
-    if (!r.success) {
-      alert(r.error || 'Erro ao excluir.')
+  async function finalizar() {
+    if (!estaLogado) {
+      router.push('/login')
       return
     }
-    setConfirmarExclusao(null)
-    router.refresh()
+    if (carrinho.length === 0) return
+
+    setEnviando(true)
+    setErro('')
+    const result = await criarPedido(carrinho, observacao)
+    setEnviando(false)
+
+    if (!result.success) {
+      setErro(result.error || 'Erro ao finalizar.')
+      return
+    }
+
+    setCarrinho([])
+    setObservacao('')
+    setSucesso(true)
+    setCarrinhoAberto(false)
+    setTimeout(() => {
+      setSucesso(false)
+      router.push('/responsavel')
+    }, 3000)
   }
 
-  async function handleToggleAtivo(p: Produto) {
-    setProcessando(p.id)
-    await alternarAtivoProduto(p.id, !p.ativo)
-    setProcessando(null)
-    router.refresh()
-  }
-
-  async function handleStatusPedido(id: string, status: string) {
-    setProcessando(id)
-    await atualizarStatusPedido(id, status)
-    setProcessando(null)
-    setDetalhePedido(null)
-    router.refresh()
-  }
+  const estiloMarca = { '--cor-primaria': cor } as React.CSSProperties
 
   return (
-    <AdminShell mode="school" active="Loja">
-      <main className="px-5 py-8 lg:px-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading
-            eyebrow="Loja virtual"
-            title="Loja"
-            description="Gerencie produtos, estoque e pedidos da escola."
-          />
-          {aba === 'produtos' && (
-            <button 
-              onClick={() => { limpar(); setNovoAberto(true) }} 
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
-            >
-              <Plus className="size-4" />
-              Novo produto
-            </button>
+    <div className="min-h-screen bg-[#070b0f] text-[#e7f1f5]" style={estiloMarca}>
+      <header className="sticky top-0 z-10 border-b border-white/[.08] bg-[#070b0f]/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
+          <Link href={base} className="flex items-center gap-2 text-sm text-[#8aa0ad] hover:text-white">
+            <ArrowLeft className="size-4" />
+            <span className="hidden sm:inline">Voltar</span>
+          </Link>
+          {logoUrl ? (
+            <Link href={base} className="flex items-center">
+              <img src={logoUrl} alt={escolaNome} className="h-9 w-auto max-w-[180px] object-contain" />
+            </Link>
+          ) : (
+            <Link href={base} className="text-lg font-bold" style={{ color: cor }}>{escolaNome}</Link>
           )}
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
-              <DollarSign className="size-5" />
-            </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Vendas confirmadas</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#0d9488]">{formatarMoeda(vendasMes)}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]">
-              <ShoppingCart className="size-5" />
-            </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Pedidos pendentes</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#92400e]">{pedidosPendentes}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#dbeafe] text-[#3b82f6]">
-              <Package className="size-5" />
-            </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Produtos ativos</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#3b82f6]">{produtos.filter((p) => p.ativo).length}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#ede9fe] text-[#5b21b6]">
-              <TrendingUp className="size-5" />
-            </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Ticket médio</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#5b21b6]">{formatarMoeda(ticketMedio)}</p>
-          </Panel>
-        </div>
-
-        <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
-          <button onClick={() => setAba('produtos')} className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${aba === 'produtos' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}>
-            Produtos ({produtos.length})
-          </button>
-          <button onClick={() => setAba('pedidos')} className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${aba === 'pedidos' ? 'border-[#0d9488] text-[#0f766e]' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}>
-            Pedidos ({pedidos.length})
-          </button>
-        </div>
-
-        {aba === 'produtos' && (
-          <Panel className="mt-6">
-            <div className="border-b border-[#e5ecee] px-5 py-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap gap-1.5">
-                  {categorias.map((c) => (
-                    <button key={c} onClick={() => setCategoria(c)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${categoria === c ? 'bg-[#ccfbf1] text-[#0f766e]' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
-                  <Search className="size-4 text-[#9aaab0]" />
-                  <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar produto" className="w-full bg-transparent text-sm outline-none placeholder:text-[#a0afb4]" />
-                </div>
-              </div>
-            </div>
-            {produtos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-                <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><Package className="size-6" /></div>
-                <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum produto ainda</h3>
-                <p className="mt-1 max-w-sm text-sm text-[#82939a]">Cadastre o primeiro produto da loja.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Produto</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Categoria</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Preço</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Estoque</th>
-                      <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {produtosFiltrados.length === 0 ? (
-                      <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-[#82939a]">Nenhum produto encontrado.</td></tr>
-                    ) : (
-                      produtosFiltrados.map((p) => (
-                        <tr key={p.id} className={`border-b border-[#f0f4f5] transition hover:bg-[#fafcfc] ${!p.ativo ? 'opacity-60' : ''}`}>
-                          <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">
-                            <div className="flex items-center gap-2">
-                              {p.nome}
-                              {!p.ativo && <span className="rounded bg-[#e5ecee] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#5e7a94]">Inativo</span>}
-                            </div>
-                            {p.descricao && <div className="mt-0.5 truncate text-xs font-normal text-[#82939a]">{p.descricao}</div>}
-                          </td>
-                          <td className="px-5 py-3.5 text-sm text-[#4d626c] capitalize">{p.categoria}</td>
-                          <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{formatarMoeda(p.preco_centavos)}</td>
-                          <td className="px-5 py-3.5 text-sm">
-                            <span className={p.estoque === 0 ? 'font-semibold text-[#dc2626]' : p.estoque < 15 ? 'font-semibold text-[#d97706]' : 'text-[#4d626c]'}>
-                              {p.estoque} un.
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <div className="flex justify-end gap-1">
-                              <button onClick={() => abrirEdicao(p)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
-                                <Edit className="size-4" />
-                              </button>
-                              <button onClick={() => handleToggleAtivo(p)} disabled={processando === p.id} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee] disabled:opacity-50" title={p.ativo ? 'Desativar' : 'Ativar'}>
-                                {p.ativo ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                              </button>
-                              <button onClick={() => setConfirmarExclusao(p.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
-                                <Trash2 className="size-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+          <button
+            onClick={() => setCarrinhoAberto(true)}
+            className="relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+            style={{ backgroundColor: cor }}
+          >
+            <ShoppingCart className="size-4" />
+            <span className="hidden sm:inline">Carrinho</span>
+            {totalItens > 0 && (
+              <span className="grid size-5 place-items-center rounded-full bg-white text-[10px] font-bold" style={{ color: cor }}>{totalItens}</span>
             )}
-          </Panel>
-        )}
+          </button>
+        </div>
+      </header>
 
-        {aba === 'pedidos' && (
-          <Panel className="mt-6">
-            <div className="border-b border-[#e5ecee] px-5 py-4">
-              <h2 className="text-base font-bold text-[#12232b]">Pedidos recebidos</h2>
+      <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+        <div className="mb-10">
+          <p className="text-xs font-bold uppercase tracking-[.18em]" style={{ color: cor }}>{escolaNome}</p>
+          <h1 className="mt-3 text-4xl font-bold tracking-[-.04em] text-white">Loja da escola</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#8aa0ad]">
+            Uniformes, materiais e eventos. Finalize a compra e a escola entrará em contato para combinar a entrega.
+          </p>
+        </div>
+
+        {produtos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
+              <Package className="size-7" />
             </div>
-            {pedidos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-                <div className="grid size-14 place-items-center rounded-full bg-[#ccfbf1] text-[#0d9488]"><ShoppingCart className="size-6" /></div>
-                <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhum pedido ainda</h3>
-                <p className="mt-1 max-w-sm text-sm text-[#82939a]">Os pedidos dos responsáveis aparecerão aqui.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#f0f4f5]">
-                {pedidos.map((p) => (
-                  <div key={p.id} className="flex flex-wrap items-center gap-4 px-5 py-4 transition hover:bg-[#fafcfc]">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-[#243942]">{p.responsavel_nome}</h3>
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyles[p.status]}`}>{statusLabels[p.status]}</span>
+            <h2 className="mt-5 text-2xl font-bold text-white">Nenhum produto disponível</h2>
+            <p className="mt-2 max-w-md text-sm text-[#8aa0ad]">Assim que a escola cadastrar produtos, eles aparecerão aqui.</p>
+          </div>
+        ) : (
+          Object.entries(porCategoria).map(([cat, lista]) => (
+            <section key={cat} className="mb-12">
+              <h2 className="mb-5 text-2xl font-bold text-white">{categoriaLabel[cat] || cat}</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {lista.map((p) => {
+                  const noCarrinho = carrinho.find((i) => i.produto_id === p.id)
+                  return (
+                    <div key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-white/[.08] bg-[#0e151a] transition hover:border-white/20">
+                      <div className="flex aspect-video items-center justify-center" style={{ background: `linear-gradient(135deg, ${cor}25, ${cor}10)` }}>
+                        <Package className="size-10" style={{ color: cor }} />
                       </div>
-                      <p className="mt-0.5 truncate text-xs text-[#82939a]">{p.responsavel_email} · {formatarData(p.criado_em)} · {p.itens.length} {p.itens.length === 1 ? 'item' : 'itens'}</p>
+                      <div className="flex flex-1 flex-col p-4">
+                        <h3 className="line-clamp-2 text-sm font-semibold text-white">{p.nome}</h3>
+                        {p.descricao && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#82939a]">{p.descricao}</p>}
+                        <div className="mt-auto pt-3">
+                          <p className="text-lg font-bold text-white">{formatarMoeda(p.preco_centavos)}</p>
+                          <p className="mt-0.5 text-xs text-[#82939a]">{p.estoque > 0 ? `${p.estoque} em estoque` : 'Sem estoque'}</p>
+                        </div>
+                        {noCarrinho ? (
+                          <div className="mt-3 flex items-center justify-between rounded-lg border p-1" style={{ borderColor: cor, backgroundColor: `${cor}10` }}>
+                            <button onClick={() => diminuir(p.id)} className="grid size-7 place-items-center rounded-md hover:bg-white/5" style={{ color: cor }}>
+                              <Minus className="size-3.5" />
+                            </button>
+                            <span className="text-sm font-semibold text-white">{noCarrinho.quantidade}</span>
+                            <button onClick={() => adicionar(p)} disabled={noCarrinho.quantidade >= p.estoque} className="grid size-7 place-items-center rounded-md hover:bg-white/5 disabled:opacity-40" style={{ color: cor }}>
+                              <Plus className="size-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => adicionar(p)}
+                            disabled={p.estoque === 0}
+                            className="mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-40"
+                            style={{ backgroundColor: cor }}
+                          >
+                            {p.estoque === 0 ? 'Esgotado' : 'Adicionar ao carrinho'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <strong className="text-sm font-semibold text-[#243942]">{formatarMoeda(p.total_centavos)}</strong>
-                    <button onClick={() => setDetalhePedido(p)} className="rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[#0d9488] hover:text-[#0f766e]">
-                      <Eye className="mr-1 inline size-3" />Ver
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-            )}
-          </Panel>
+            </section>
+          ))
         )}
       </main>
 
-      {/* MODAL CRIAR/EDITAR PRODUTO */}
-      {novoAberto && (
+      {carrinhoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
-          <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
-            <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => !enviando && setCarrinhoAberto(false)} />
+          <aside className="relative z-10 flex h-full w-full max-w-md flex-col bg-[#0e151a]">
+            <header className="flex items-center justify-between border-b border-white/[.08] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar produto' : 'Novo produto'}</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá na loja virtual</p>
+                <h2 className="text-lg font-bold text-white">Carrinho</h2>
+                <p className="mt-0.5 text-xs text-[#82939a]">{totalItens} {totalItens === 1 ? 'item' : 'itens'}</p>
               </div>
-              <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
-            </header>
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Nome</label>
-                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Uniforme completo" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Detalhes do produto" rows={3} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Categoria</label>
-                  <select value={novaCategoria} onChange={(e) => setNovaCategoria(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[#0d9488]">
-                    <option value="uniformes">Uniformes</option>
-                    <option value="materiais">Materiais</option>
-                    <option value="eventos">Eventos</option>
-                    <option value="papelaria">Papelaria</option>
-                    <option value="outros">Outros</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Preço (R$)</label>
-                    <input type="text" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="0,00" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Estoque</label>
-                    <input type="number" value={estoque} onChange={(e) => setEstoque(e.target.value)} placeholder="0" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
-                  </div>
-                </div>
-                {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
-              </div>
-            </div>
-            <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-              <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Criar produto'}
+              <button onClick={() => setCarrinhoAberto(false)} disabled={enviando} className="rounded-lg p-2 text-[#82939a] hover:bg-white/5 hover:text-white disabled:opacity-50">
+                <X className="size-5" />
               </button>
-            </footer>
+            </header>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {carrinho.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <ShoppingCart className="text-[#5e7a94]" size={32} />
+                  <p className="mt-3 text-sm text-[#82939a]">Seu carrinho está vazio.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {carrinho.map((i: ItemCarrinho) => (
+                    <div key={i.produto_id} className="flex items-start gap-3 rounded-lg border border-white/[.08] bg-[#0b1115] p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-white">{i.produto_nome}</p>
+                        <p className="mt-0.5 text-xs text-[#82939a]">{formatarMoeda(i.preco_unitario_centavos)} cada</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button onClick={() => diminuir(i.produto_id)} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-white/30 hover:text-white">
+                            <Minus className="size-3" />
+                          </button>
+                          <span className="text-sm font-semibold text-white">{i.quantidade}</span>
+                          <button onClick={() => {
+                            const p = produtos.find((pr) => pr.id === i.produto_id)
+                            if (p && i.quantidade < p.estoque) adicionar(p)
+                          }} className="grid size-6 place-items-center rounded border border-white/10 text-[#8aa0ad] hover:border-white/30 hover:text-white">
+                            <Plus className="size-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-white">{formatarMoeda(i.quantidade * i.preco_unitario_centavos)}</p>
+                        <button onClick={() => remover(i.produto_id)} className="mt-1 rounded p-1 text-[#5e7a94] hover:text-[#dc2626]">
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="mt-5">
+                    <label className="mb-1.5 block text-xs font-semibold text-[#8aa0ad]">Observação (opcional)</label>
+                    <textarea
+                      value={observacao}
+                      onChange={(e) => setObservacao(e.target.value)}
+                      placeholder="Ex: Tamanho M para o uniforme"
+                      rows={3}
+                      className="w-full resize-none rounded-lg border border-white/10 bg-[#0b1115] px-3 py-2 text-sm text-white outline-none placeholder:text-[#5e7a94] focus:border-[var(--cor-primaria)]"
+                    />
+                  </div>
+
+                  {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{erro}</p>}
+                </div>
+              )}
+            </div>
+
+            {carrinho.length > 0 && (
+              <footer className="border-t border-white/[.08] bg-[#0b1115] px-6 py-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="text-sm text-[#8aa0ad]">Total</span>
+                  <span className="text-xl font-bold text-white">{formatarMoeda(totalCentavos)}</span>
+                </div>
+                {!estaLogado && (
+                  <p className="mb-3 rounded-lg border border-[#d97706]/30 bg-[#d97706]/10 px-3 py-2 text-xs text-[#fbbf24]">
+                    Faça login para finalizar a compra.
+                  </p>
+                )}
+                <button
+                  onClick={finalizar}
+                  disabled={enviando}
+                  className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
+                  style={{ backgroundColor: cor }}
+                >
+                  {enviando ? <><Loader2 className="mr-2 inline size-4 animate-spin" />Enviando...</> : estaLogado ? 'Finalizar compra' : 'Entrar e finalizar'}
+                </button>
+              </footer>
+            )}
           </aside>
         </div>
       )}
 
-      {/* MODAL DETALHES DO PEDIDO */}
-      {detalhePedido && (
+      {sucesso && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setDetalhePedido(null)} />
-          <div className="relative z-10 w-full max-w-lg rounded-xl bg-white shadow-2xl">
-            <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#82939a]">Pedido</p>
-                <h2 className="mt-1 text-lg font-bold text-[#12232b]">{detalhePedido.responsavel_nome}</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">{detalhePedido.responsavel_email} · {formatarData(detalhePedido.criado_em)}</p>
-              </div>
-              <button onClick={() => setDetalhePedido(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
-            </header>
-            <div className="px-6 py-5">
-              <div className="mb-4">
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusStyles[detalhePedido.status]}`}>{statusLabels[detalhePedido.status]}</span>
-              </div>
-              <div className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
-                {detalhePedido.itens.map((i, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-semibold text-[#243942]">{i.produto_nome}</p>
-                      <p className="text-xs text-[#82939a]">{i.quantidade} × {formatarMoeda(i.preco_unitario_centavos)}</p>
-                    </div>
-                    <span className="font-semibold text-[#243942]">{formatarMoeda(i.quantidade * i.preco_unitario_centavos)}</span>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between border-t border-[#e5ecee] pt-3">
-                  <span className="text-sm font-bold text-[#12232b]">Total</span>
-                  <span className="text-lg font-bold text-[#0d9488]">{formatarMoeda(detalhePedido.total_centavos)}</span>
-                </div>
-              </div>
-              {detalhePedido.observacao && (
-                <div className="mt-4 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
-                  <p className="text-xs text-[#82939a]">Observação do responsável</p>
-                  <p className="mt-1 text-sm text-[#243942]">{detalhePedido.observacao}</p>
-                </div>
-              )}
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-[#0e151a] p-8 text-center">
+            <div className="mx-auto grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
+              <CheckCircle2 className="size-8" />
             </div>
-            <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-              {detalhePedido.status === 'pendente' && (
-                <>
-                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'cancelado')} disabled={processando === detalhePedido.id} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-                  <button onClick={() => handleStatusPedido(detalhePedido.id, 'pago')} disabled={processando === detalhePedido.id} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                    {processando === detalhePedido.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                    Marcar como pago
-                  </button>
-                </>
-              )}
-              {detalhePedido.status === 'pago' && (
-                <button onClick={() => handleStatusPedido(detalhePedido.id, 'entregue')} disabled={processando === detalhePedido.id} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
-                  {processando === detalhePedido.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                  Marcar como entregue
-                </button>
-              )}
-            </footer>
+            <h2 className="mt-5 text-2xl font-bold text-white">Pedido enviado!</h2>
+            <p className="mt-3 text-sm leading-6 text-[#8aa0ad]">
+              Sua compra foi registrada. A escola entrará em contato para combinar pagamento e entrega.
+            </p>
           </div>
         </div>
       )}
-
-      {/* MODAL EXCLUIR PRODUTO */}
-      {confirmarExclusao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setConfirmarExclusao(null)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
-            <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir produto?</h3>
-            <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
-            <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} disabled={!!processando} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleExcluir} disabled={!!processando} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
-                {processando ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </AdminShell>
+    </div>
   )
 }
