@@ -50,7 +50,9 @@ export async function gerarCobrancaCheckout(
       valor_centavos: valorFinalCentavos,
       vencimento: vencimento.toISOString().split('T')[0],
       periodo_referencia: referencia,
-      status: 'em_aberto'
+      status: 'em_aberto',
+      aviso_d3_enviado: false,
+      aviso_d1_enviado: false
     }).select('id').single()
 
     if (errFatura || !fatura) return { success: false, error: 'Erro ao criar fatura no banco.' }
