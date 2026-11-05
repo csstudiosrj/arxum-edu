@@ -11,51 +11,17 @@ export type EmailTemplate = {
   assunto: string
   corpo_html: string
   ativo: boolean
+  categoria: string
   atualizado_em: string
-}
-
-function wrapEmailARXUM(conteudo: string) {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f6f8f9; }
-        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5ecee; }
-        .header { background-color: #0d9488; padding: 24px; text-align: center; }
-        .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: -0.5px; }
-        .content { padding: 32px; color: #12232b; font-size: 15px; line-height: 1.6; }
-        .content h2 { color: #0d9488; margin-top: 0; font-size: 20px; }
-        .content a { color: #0d9488; font-weight: 600; text-decoration: none; }
-        .footer { background-color: #fafcfc; padding: 20px; text-align: center; color: #82939a; font-size: 12px; border-top: 1px solid #e5ecee; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>ARXUM Edu</h1>
-        </div>
-        <div class="content">
-          ${conteudo}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} ARXUM Edu. Todos os direitos reservados.<br>
-          Este é um e-mail automático, por favor não responda.
-        </div>
-      </div>
-    </body>
-    </html>
-  `
 }
 
 export async function getTemplates(): Promise<EmailTemplate[]> {
   const admin = createAdminClient()
-  const { data } = await admin.from('email_templates').select('*').order('nome')
+  const { data } = await admin.from('email_templates').select('*').order('categoria').order('nome')
   return data || []
 }
 
-export async function criarTemplate(data: { slug: string, nome: string, assunto: string, corpo_html: string }) {
+export async function criarTemplate(data: { slug: string, nome: string, assunto: string, corpo_html: string, categoria: string }) {
   try {
     const admin = createAdminClient()
     const { error } = await admin.from('email_templates').insert({
@@ -63,6 +29,7 @@ export async function criarTemplate(data: { slug: string, nome: string, assunto:
       nome: data.nome,
       assunto: data.assunto,
       corpo_html: data.corpo_html,
+      categoria: data.categoria,
       ativo: true
     })
 
@@ -138,13 +105,11 @@ export async function enviarEmailManual(escolaId: string, templateId: string, fa
       assuntoFinal = assuntoFinal.split(chave).join(valor)
     })
 
-    const htmlComMolde = wrapEmailARXUM(htmlFinal)
-
     await resend.emails.send({
       from: 'ARXUM Edu <financeiro@arxum.com.br>',
       to: escola.email_contato,
       subject: assuntoFinal,
-      html: htmlComMolde
+      html: htmlFinal
     })
 
     return { success: true }
