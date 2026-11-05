@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
 import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
+import { CheckoutFatura } from '@/components/checkout-fatura'
 
 type MenuItem = readonly [LucideIcon, string, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -197,6 +198,9 @@ export function ResponsavelClient({
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
   
+  // Checkout
+  const [faturaCheckout, setFaturaCheckout] = useState<FaturaResponsavel | null>(null)
+
   // LGPD
   const [baixandoDados, setBaixandoDados] = useState(false)
   const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false)
@@ -701,9 +705,13 @@ export function ResponsavelClient({
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
                       
                       {(f.status === 'em_aberto' || f.status === 'vencido') && (
-                        <div className="ml-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] px-3 py-1.5 text-[11px] font-semibold text-[#82939a]">
-                          Pagamento na secretaria
-                        </div>
+                        <button
+                          onClick={() => setFaturaCheckout(f)}
+                          className="ml-2 rounded-lg px-4 py-2 text-xs font-bold text-white transition hover:brightness-90"
+                          style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                        >
+                          Pagar
+                        </button>
                       )}
                     </div>
                   )
@@ -1123,6 +1131,18 @@ export function ResponsavelClient({
           </div>
         </div>
       </div>
+    )}
+
+    {/* CHECKOUT DE FATURA (PIX/BOLETO/CARTÃO) */}
+    {faturaCheckout && (
+      <CheckoutFatura
+        fatura={{ id: faturaCheckout.id, descricao: faturaCheckout.descricao, valor_centavos: faturaCheckout.valor_centavos }}
+        onClose={() => setFaturaCheckout(null)}
+        onPago={() => {
+          setFaturaCheckout(null)
+          router.refresh()
+        }}
+      />
     )}
   </div>
 }
