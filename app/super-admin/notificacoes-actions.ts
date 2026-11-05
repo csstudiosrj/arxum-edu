@@ -39,10 +39,18 @@ export async function marcarNotificacaoLida(id: string) {
   }
 }
 
-// Função para criar notificações de outros lugares do sistema (ex: Webhook ou Suporte)
+// Função genérica para criar notificações de qualquer parte do sistema
 export async function criarNotificacaoSuper(tipo: string, titulo: string, descricao: string, link: string) {
-  const admin = createAdminClient()
-  await admin.from('notificacoes_super_admin').insert({
-    tipo, titulo, descricao, link_destino: link
-  })
+  try {
+    const admin = createAdminClient()
+    await admin.from('notificacoes_super_admin').insert({
+      tipo, 
+      titulo, 
+      descricao, 
+      link_destino: link
+    })
+    return { success: true }
+  } catch (e) {
+    return { success: false }
+  }
 }
