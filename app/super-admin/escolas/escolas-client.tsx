@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Search, Building2, Users, DollarSign, Inbox, Eye, Edit, Trash2,
-  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText, MapPin, AlertCircle, CalendarClock, ArrowRight
+  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText, MapPin, AlertCircle, CalendarClock, ArrowRight, Send
 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarEscola, excluirEscola, type EscolaSuper, type Plano } from '../actions'
+import { enviarEmailManual, getFaturasDaEscola, type EmailTemplate } from '../comunicacao/actions'
 
 const statusStyles: Record<string, string> = {
   ativa: 'bg-[#d1fae5] text-[#065f46]',
@@ -38,7 +39,7 @@ function formatarData(iso: string | null): string {
   try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return '—' }
 }
 
-export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; planos: Plano[] }) {
+export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaSuper[]; planos: Plano[]; templates: EmailTemplate[] }) {
   const router = useRouter()
   const [busca, setBusca] = useState('')
   const [filtroPlano, setFiltroPlano] = useState('todos')
@@ -55,6 +56,15 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
   const [formContato, setFormContato] = useState('')
   const [formWhatsapp, setFormWhatsapp] = useState('')
   const [formObservacoes, setFormObservacoes] = useState('')
+
+  // Estados para envio de e-mail manual a partir da escola
+  const [escolaEmailManual, setEscolaEmailManual] = useState<EscolaSuper | null>(null)
+  const [templateId, setTemplateId] = useState('')
+  const [faturaId, setFaturaId] = useState('')
+  const [faturas, setFaturas] = useState<any[]>([])
+  const [carregandoFaturas, setCarregandoFaturas] = useState(false)
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [sucessoEmail, setSucessoEmail] = useState('')
 
   const filtradas = escolas.filter((e) => {
     const matchPlano = filtroPlano === 'todos' || e.plano === filtroPlano
@@ -115,6 +125,33 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
     if (!r.success) { alert(r.error || 'Erro.'); return }
     setConfirmarExclusao(null)
     router.refresh()
+  }
+
+  async function abrirEnvioEmail(escola: EscolaSuper) {
+    setEscolaEmailManual(escola)
+    setTemplateId('')
+    setFaturaId('')
+    setSucessoEmail('')
+    
+    // Carrega faturas da escola
+    setCarregandoFaturas(true)
+    const data = await getFaturasDaEscola(escola.id)
+    setFaturas(data)
+    setCarregandoFaturas(false)
+  }
+
+  async function handleEnviarEmail() {
+    if (!escolaEmailManual || !templateId) return
+    setEnviandoEmail(true)
+    const r = await enviarEmailManual(escolaEmailManual.id, templateId, faturaId || undefined)
+    setEnviandoEmail(false)
+    
+    if (r.success) {
+      setSucessoEmail('E-mail enviado com sucesso!')
+      setTimeout(() => { setEscolaEmailManual(null); setSucessoEmail('') }, 2000)
+    } else {
+      alert(r.error)
+    }
   }
 
   return (
@@ -246,7 +283,10 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex justify-end gap-1">
-                            <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                            <button onClick={() => abrirEnvioEmail(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Enviar E-mail">
+                              <Mail className="size-4" />
+                            </button>
+                            <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar Escola">
                               <Edit className="size-4" />
                             </button>
                             <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
@@ -264,6 +304,54 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
         </Panel>
       </main>
 
+      {/* MODAL DE ENVIO DE E-MAIL MANUAL A PARTIR DA ESCOLA */}
+      {escolaEmailManual && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full relative shadow-2xl">
+            <button onClick={() => setEscolaEmailManual(null)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"><X className="size-4" /></button>
+            <div className="mb-6">
+              <h3 className="font-bold text-lg text-[#12232b]">Enviar E-mail</h3>
+              <p className="text-xs text-gray-500 mt-1">Para: <strong>{escolaEmailManual.nome}</strong> ({escolaEmailManual.email_contato || 'Sem e-mail'})</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold mb-1 block">Modelo de E-mail</label>
+                <select value={templateId} onChange={e => setTemplateId(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]">
+                  <option value="">Selecione o modelo...</option>
+                  {templates.filter(t => t.ativo).map(t => <option key={t.id} value={t.id}>{t.nome} ({t.categoria})</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold mb-1 block">Vincular a uma Fatura (Opcional)</label>
+                {carregandoFaturas ? (
+                  <div className="flex justify-center py-2"><Loader2 className="size-4 animate-spin text-gray-400" /></div>
+                ) : faturas.length === 0 ? (
+                  <p className="text-xs text-gray-500">Nenhuma fatura recente encontrada.</p>
+                ) : (
+                  <select value={faturaId} onChange={e => setFaturaId(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]">
+                    <option value="">Não vincular fatura</option>
+                    {faturas.map(f => <option key={f.id} value={f.id}>{f.descricao} - R$ {(f.valor_centavos/100).toFixed(2)} ({f.status})</option>)}
+                  </select>
+                )}
+              </div>
+
+              {sucessoEmail && (
+                <div className="bg-green-50 text-green-700 text-xs p-3 rounded-lg flex items-center gap-2">
+                  <Check className="size-4" /> {sucessoEmail}
+                </div>
+              )}
+
+              <button onClick={handleEnviarEmail} disabled={!templateId || enviandoEmail || !!sucessoEmail} className="w-full bg-[#0d9488] text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-[#0f766e] mt-4 disabled:opacity-50">
+                {enviandoEmail ? <Loader2 className="animate-spin size-4" /> : <Send className="size-4" />}
+                {enviandoEmail ? 'Enviando...' : 'Disparar E-mail'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DRAWER DE EDIÇÃO */}
       {editando && (
         <div className="fixed inset-0 z-50 flex justify-end">
@@ -279,7 +367,6 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
               
-              {/* DADOS CADASTRAIS (SOMENTE LEITURA) */}
               <div className="mb-6 rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#536871]">
                   <Building2 className="size-4" /> Dados Cadastrais
@@ -302,7 +389,6 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                 </div>
               </div>
 
-              {/* NOVO: LIMITES DE ALUNOS E AUTOMAÇÃO */}
               <div className="mb-6 grid grid-cols-2 gap-4">
                 <div className="rounded-xl border border-[#e5ecee] bg-white p-4">
                   <h3 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#536871]">
@@ -369,18 +455,6 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                   <textarea value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} rows={3} placeholder="Notas sobre essa escola (visível só para ARXUM)" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
                 </div>
               </div>
-
-              {/* LINK PARA COMUNICAÇÃO */}
-              <div className="mt-6 rounded-lg bg-[#f0fdfa] border border-[#ccfbf1] p-4 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-[#0f766e]">Comunicação e E-mails</h4>
-                  <p className="text-[10px] text-[#0f766e]/80 mt-1">Configure os avisos automáticos de cobrança.</p>
-                </div>
-                <Link href="/super-admin/comunicacao" className="bg-[#0d9488] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#0f766e]">
-                  Acessar
-                </Link>
-              </div>
-
             </div>
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
