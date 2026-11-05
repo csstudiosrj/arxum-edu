@@ -67,7 +67,10 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   async function handleEnviar() {
     if (!enviandoManual || !escolaId) return
     setEnviando(true)
-    const r = await enviarEmailManual(escolaId, editandoManual?.id || enviandoManual.id, faturaId || undefined)
+    
+    // CORREÇÃO AQUI: Removido o 'editandoManual?.id ||'
+    const r = await enviarEmailManual(escolaId, enviandoManual.id, faturaId || undefined)
+    
     setEnviando(false)
     
     if (r.success) {
