@@ -31,7 +31,7 @@ const schoolItems = [
 const superItems = [
   ['Visão geral', '/super-admin', LayoutDashboard], ['Escolas', '/super-admin/escolas', Building2],
   ['Planos', '/super-admin/planos', WalletCards], ['Add-ons', '/super-admin/addons', Palette],
-  ['Faturamento', '/super-admin/faturamento', CircleDollarSign], ['Suporte', '/super-admin/suporte', Headphones],
+  ['Financeiro', '/super-admin/financeiro', CircleDollarSign], ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
 ] as const
 
@@ -125,7 +125,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         <div className="ml-auto flex items-center gap-4">
           {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <div className="p-2"><Bell className="size-[19px] text-[#71838b]" /></div>}
           
-          {/* BOLINHA DO USUÁRIO CLICÁVEL */}
           <div className="relative">
             <button
               onClick={() => setMenuAberto(!menuAberto)}
