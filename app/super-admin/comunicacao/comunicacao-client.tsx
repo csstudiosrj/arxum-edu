@@ -1,20 +1,68 @@
 'use client'
 
-import { useState } from 'react'
-import { Mail, Loader2, Edit, Send, Check, X, Code, Eye, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Mail, Loader2, Edit, Send, Check, X, Plus, Trash2, Bold, Italic, Underline, Link as LinkIcon, List } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { atualizarTemplate, enviarEmailManual, getFaturasDaEscola, type EmailTemplate } from './actions'
+import { atualizarTemplate, enviarEmailManual, getFaturasDaEscola, criarTemplate, excluirTemplate, type EmailTemplate } from './actions'
+
+// Componente de Editor Visual (WYSIWYG) em React puro
+function RichTextEditor({ value, onChange }: { value: string, onChange: (val: string) => void }) {
+  const editorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value
+    }
+  }, [value])
+
+  const handleInput = () => {
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  const execCommand = (command: string, val: string | undefined = undefined) => {
+    document.execCommand(command, false, val)
+    if (editorRef.current) {
+      editorRef.current.focus()
+      onChange(editorRef.current.innerHTML)
+    }
+  }
+
+  return (
+    <div className="border border-[#d5e0e3] rounded-lg overflow-hidden flex flex-col bg-white focus-within:border-[#0d9488] focus-within:ring-1 focus-within:ring-[#0d9488]">
+      <div className="bg-gray-50 border-b border-[#d5e0e3] p-1.5 flex gap-1 flex-wrap">
+        <button type="button" onClick={() => execCommand('bold')} className="p-1.5 hover:bg-gray-200 rounded px-2.5" title="Negrito"><Bold className="size-4 text-gray-700" /></button>
+        <button type="button" onClick={() => execCommand('italic')} className="p-1.5 hover:bg-gray-200 rounded px-2.5" title="Itálico"><Italic className="size-4 text-gray-700" /></button>
+        <button type="button" onClick={() => execCommand('underline')} className="p-1.5 hover:bg-gray-200 rounded px-2.5" title="Sublinhado"><Underline className="size-4 text-gray-700" /></button>
+        <div className="w-px h-6 bg-gray-300 mx-1 self-center" />
+        <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-1.5 hover:bg-gray-200 rounded px-2.5" title="Lista"><List className="size-4 text-gray-700" /></button>
+        <button type="button" onClick={() => { const url = prompt('URL do link:'); if (url) execCommand('createLink', url) }} className="p-1.5 hover:bg-gray-200 rounded px-2.5" title="Link"><LinkIcon className="size-4 text-gray-700" /></button>
+      </div>
+      <div 
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        className="p-4 min-h-[300px] outline-none prose prose-sm max-w-none text-[#243942]"
+        style={{ lineHeight: '1.6' }}
+      />
+    </div>
+  )
+}
 
 export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemplate[], escolas: any[] }) {
   const [editando, setEditando] = useState<EmailTemplate | null>(null)
+  const [criando, setCriando] = useState(false)
   const [enviandoManual, setEnviandoManual] = useState<EmailTemplate | null>(null)
   
   // Form states
   const [formAssunto, setFormAssunto] = useState('')
   const [formHtml, setFormHtml] = useState('')
   const [formAtivo, setFormAtivo] = useState(true)
-  const [previewMode, setPreviewMode] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  
+  // Novo form
+  const [novoNome, setNovoNome] = useState('')
+  const [novoSlug, setNovoSlug] = useState('')
+  const [novoAssunto, setNovoAssunto] = useState('')
 
   // Manual states
   const [escolaId, setEscolaId] = useState('')
@@ -29,7 +77,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
     setFormAssunto(tpl.assunto)
     setFormHtml(tpl.corpo_html)
     setFormAtivo(tpl.ativo)
-    setPreviewMode(false)
+    setCriando(false)
   }
 
   async function handleSalvar() {
@@ -43,6 +91,26 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
     } else {
       alert(r.error)
     }
+  }
+
+  async function handleCriar() {
+    if (!novoNome || !novoSlug || !novoAssunto) return alert('Preencha todos os campos.')
+    setSalvando(true)
+    const r = await criarTemplate({ nome: novoNome, slug: novoSlug.toLowerCase().replace(/\s+/g, '_'), assunto: novoAssunto, corpo_html: '<p>Olá, {{nome_escola}}.</p><p>Seu texto aqui...</p>' })
+    setSalvando(false)
+    if (r.success) {
+      setCriando(false)
+      window.location.reload()
+    } else {
+      alert(r.error)
+    }
+  }
+
+  async function handleExcluir(id: string) {
+    if (!confirm('Tem certeza que deseja excluir este template? Ele parará de ser enviado.')) return
+    const r = await excluirTemplate(id)
+    if (r.success) window.location.reload()
+    else alert(r.error)
   }
 
   async function abrirEnvioManual(tpl: EmailTemplate) {
@@ -67,10 +135,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   async function handleEnviar() {
     if (!enviandoManual || !escolaId) return
     setEnviando(true)
-    
-    // CORREÇÃO AQUI: Removido o 'editandoManual?.id ||'
     const r = await enviarEmailManual(escolaId, enviandoManual.id, faturaId || undefined)
-    
     setEnviando(false)
     
     if (r.success) {
@@ -84,11 +149,16 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   return (
     <AdminShell mode="super" active="Comunicação">
       <main className="px-5 py-8 lg:px-8">
-        <SectionHeading 
-          eyebrow="ARXUM Admin" 
-          title="Central de Comunicação" 
-          description="Gerencie os e-mails automáticos da régua de cobrança." 
-        />
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeading 
+            eyebrow="ARXUM Admin" 
+            title="Central de Comunicação" 
+            description="Gerencie os e-mails automáticos e templates de mensagens." 
+          />
+          <button onClick={() => setCriando(true)} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
+            <Plus className="size-4" /> Novo Template
+          </button>
+        </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {templates.map(tpl => (
@@ -98,9 +168,12 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
                   <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]">
                     <Mail className="size-5" />
                   </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${tpl.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {tpl.ativo ? 'Ativo' : 'Suspenso'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${tpl.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {tpl.ativo ? 'Ativo' : 'Suspenso'}
+                    </span>
+                    <button onClick={() => handleExcluir(tpl.id)} className="text-gray-400 hover:text-red-500 transition"><Trash2 className="size-4" /></button>
+                  </div>
                 </div>
                 <h3 className="font-bold text-[#12232b]">{tpl.nome}</h3>
                 <p className="text-xs text-[#82939a] mt-1 line-clamp-1">{tpl.assunto}</p>
@@ -119,17 +192,52 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
         </div>
       </main>
 
-      {/* DRAWER EDITAR TEMPLATE */}
+      {/* DRAWER CRIAR NOVO TEMPLATE */}
+      {criando && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+          <aside className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl relative">
+            <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
+              <h2 className="text-lg font-bold text-[#12232b]">Criar Novo Template</h2>
+              <button onClick={() => setCriando(false)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">Nome do Template</label>
+                <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Ex: Recuperação de Senha" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Identificador (slug)</label>
+                <input type="text" value={novoSlug} onChange={e => setNovoSlug(e.target.value)} placeholder="Ex: recuperacao_senha" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Assunto do E-mail</label>
+                <input type="text" value={novoAssunto} onChange={e => setNovoAssunto(e.target.value)} placeholder="Ex: Recupere sua senha - {{nome_escola}}" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              </div>
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mt-4">
+                <p className="text-xs text-blue-800">Após criar, você poderá usar o editor visual para escrever o conteúdo do e-mail.</p>
+              </div>
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-[#e5ecee] px-6 py-4">
+              <button onClick={() => setCriando(false)} className="px-4 py-2 text-sm font-semibold text-[#30454e]">Cancelar</button>
+              <button onClick={handleCriar} disabled={salvando} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? 'Criando...' : 'Criar Template'}
+              </button>
+            </footer>
+          </aside>
+        </div>
+      )}
+
+      {/* DRAWER EDITAR TEMPLATE (EDITOR VISUAL) */}
       {editando && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-          <aside className="bg-white w-full max-w-2xl h-full flex flex-col shadow-2xl relative">
+          <aside className="bg-white w-full max-w-3xl h-full flex flex-col shadow-2xl relative">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold text-[#12232b]">{editando.nome}</h2>
-                <p className="text-xs text-[#82939a]">Editar conteúdo do e-mail</p>
+                <p className="text-xs text-[#82939a]">Editor Visual de E-mail</p>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-[#30454e] mr-4 cursor-pointer">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#30454e] cursor-pointer">
                   <input type="checkbox" checked={formAtivo} onChange={e => setFormAtivo(e.target.checked)} className="rounded text-[#0d9488]" />
                   Envio Automático Ativo
                 </label>
@@ -137,41 +245,30 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-[#fafcfc]">
               <div>
-                <label className="block text-xs font-bold mb-1">Assunto</label>
-                <input type="text" value={formAssunto} onChange={e => setFormAssunto(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Assunto</label>
+                <input type="text" value={formAssunto} onChange={e => setFormAssunto(e.target.value)} className="w-full border border-[#d5e0e3] p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm" />
               </div>
 
               <div className="flex-1 flex flex-col">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold">Código HTML do E-mail</label>
-                  <div className="flex bg-gray-100 p-1 rounded-lg">
-                    <button onClick={() => setPreviewMode(false)} className={`px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1 ${!previewMode ? 'bg-white shadow-sm' : 'text-gray-500'}`}><Code className="size-3" /> Código</button>
-                    <button onClick={() => setPreviewMode(true)} className={`px-3 py-1 text-xs font-semibold rounded-md flex items-center gap-1 ${previewMode ? 'bg-white shadow-sm' : 'text-gray-500'}`}><Eye className="size-3" /> Preview</button>
-                  </div>
-                </div>
-                
-                {previewMode ? (
-                  <div className="border border-[#e5ecee] rounded-lg bg-[#fafcfc] p-4 h-80 overflow-y-auto" dangerouslySetInnerHTML={{ __html: formHtml }} />
-                ) : (
-                  <textarea value={formHtml} onChange={e => setFormHtml(e.target.value)} className="w-full flex-1 border p-3 rounded-lg font-mono text-xs outline-none focus:border-[#0d9488] min-h-[320px]" />
-                )}
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Conteúdo do E-mail (Texto)</label>
+                <RichTextEditor value={formHtml} onChange={setFormHtml} />
               </div>
 
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
-                <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1"><AlertCircle className="size-3" /> Variáveis Disponíveis</h4>
-                <div className="flex flex-wrap gap-2 text-[10px] font-mono text-blue-600">
-                  <span className="bg-white px-2 py-1 rounded border border-blue-200">{'{{nome_escola}}'}</span>
-                  <span className="bg-white px-2 py-1 rounded border border-blue-200">{'{{valor}}'}</span>
-                  <span className="bg-white px-2 py-1 rounded border border-blue-200">{'{{vencimento}}'}</span>
-                  <span className="bg-white px-2 py-1 rounded border border-blue-200">{'{{referencia}}'}</span>
-                  <span className="bg-white px-2 py-1 rounded border border-blue-200">{'{{link_pagamento}}'}</span>
+              <div className="bg-white border border-[#d5e0e3] rounded-lg p-4">
+                <h4 className="text-xs font-bold text-[#12232b] mb-2">Variáveis Disponíveis (copie e cole no texto)</h4>
+                <div className="flex flex-wrap gap-2 text-[10px] font-mono text-[#0d9488]">
+                  <span className="bg-[#f0fdfa] px-2 py-1 rounded border border-[#ccfbf1]">{'{{nome_escola}}'}</span>
+                  <span className="bg-[#f0fdfa] px-2 py-1 rounded border border-[#ccfbf1]">{'{{valor}}'}</span>
+                  <span className="bg-[#f0fdfa] px-2 py-1 rounded border border-[#ccfbf1]">{'{{vencimento}}'}</span>
+                  <span className="bg-[#f0fdfa] px-2 py-1 rounded border border-[#ccfbf1]">{'{{referencia}}'}</span>
+                  <span className="bg-[#f0fdfa] px-2 py-1 rounded border border-[#ccfbf1]">{'{{link_pagamento}}'}</span>
                 </div>
               </div>
             </div>
 
-            <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
+            <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-white px-6 py-4">
               <button onClick={() => setEditando(null)} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e]">Cancelar</button>
               <button onClick={handleSalvar} disabled={salvando} className="inline-flex items-center gap-2 rounded-lg bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50">
                 {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Salvar Template
@@ -213,7 +310,6 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
                       {faturas.map(f => <option key={f.id} value={f.id}>{f.descricao} - R$ {(f.valor_centavos/100).toFixed(2)} ({f.status})</option>)}
                     </select>
                   )}
-                  <p className="text-[10px] text-gray-400 mt-1">Se vincular, as variáveis de valor e link de pagamento serão preenchidas.</p>
                 </div>
               )}
 
