@@ -26,10 +26,10 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) return { success: false, error: 'Faça login para finalizar a compra.' }
     if (itens.length === 0) return { success: false, error: 'Carrinho vazio.' }
-
+    
     const escola = await getEscolaDaRequisicao()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
-
+    
     const admin = createAdminClient()
     const { data: perfil } = await admin.from('perfis').select('nome').eq('email', user.email).maybeSingle()
     const nomeResponsavel = perfil?.nome || user.email.split('@')[0]
@@ -58,7 +58,7 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
       }))
     )
 
-    // 3. Se a escola tiver Mercado Pago conectado, gera o link de pagamento
+    // 3. Se a escola tiver Mercado Pago conectado, gera o link
     let linkPagamento = null
     if (escola.mercadopago_access_token) {
       const baseUrl = 'https://www.arxum.com.br'
@@ -77,6 +77,7 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
         body: JSON.stringify(body)
       })
       const data = await res.json()
+      
       if (res.ok && data.init_point) {
         linkPagamento = data.init_point
         await admin.from('pedidos').update({ checkout_url: data.init_point }).eq('id', pedido.id)
@@ -86,26 +87,31 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
     revalidatePath('/admin/loja')
     revalidatePath('/responsavel')
     return { success: true, pedidoId: pedido.id, linkPagamento }
-  } catch (e) { return { success: false, error: 'Erro ao finalizar compra.' } }
+  } catch (e) {
+    return { success: false, error: 'Erro ao finalizar compra.' }
+  }
 }
 
 export async function getMeusPedidos(): Promise<PedidoResponsavel[]> {
-  // (Mantém a função original sem alterações)
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) return []
+
     const escola = await getEscolaDaRequisicao()
     if (!escola) return []
+
     const admin = createAdminClient()
     const { data: pedidos } = await admin.from('pedidos').select('id, total_centavos, status, observacao, criado_em').eq('responsavel_email', user.email).eq('escola_id', escola.id).order('criado_em', { ascending: false })
     if (!pedidos) return []
+
     const idsPedidos = pedidos.map((p) => p.id)
     let itens: any[] = []
     if (idsPedidos.length > 0) {
       const { data } = await admin.from('pedido_itens').select('pedido_id, produto_nome, quantidade, preco_unitario_centavos').in('pedido_id', idsPedidos)
       itens = (data || [])
     }
+
     return pedidos.map((p) => ({
       id: p.id, total_centavos: p.total_centavos, status: p.status, observacao: p.observacao, criado_em: p.criado_em,
       itens: itens.filter((i) => i.pedido_id === p.id).map((i) => ({ produto_nome: i.produto_nome, quantidade: i.quantidade, preco_unitario_centavos: i.preco_unitario_centavos }))
