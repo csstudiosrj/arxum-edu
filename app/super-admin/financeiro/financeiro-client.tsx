@@ -1,10 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight } from 'lucide-react'
+import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight, CalendarClock } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { type MetricasFinanceiras, type EscolaFinanceiro } from '../actions'
-import { gerarCobrancaCheckout, sincronizarPagamentoManual, getDadosCobrancaEscola, getFaturasPorEscola } from './actions'
+import { 
+  gerarCobrancaCheckout, 
+  sincronizarPagamentoManual, 
+  getDadosCobrancaEscola, 
+  getFaturasPorEscola,
+  getInfoAssinaturaEscola,
+  gerarAssinaturaRecorrente,
+  cancelarAssinaturaRecorrente
+} from './actions'
 
 export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFinanceiras, escolas: EscolaFinanceiro[] }) {
   const [novaAberta, setNovaAberta] = useState(false)
@@ -24,9 +32,13 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
   const [referencia, setReferencia] = useState(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
   const [carregandoValor, setCarregandoValor] = useState(false)
 
-  // Extrato
+  // Extrato e Assinatura
   const [faturas, setFaturas] = useState<any[]>([])
   const [carregandoExtrato, setCarregandoExtrato] = useState(false)
+  const [assinaturaInfo, setAssinaturaInfo] = useState<{mercadopago_preapproval_id: string | null, status_assinatura: string} | null>(null)
+  const [processandoAssinatura, setProcessandoAssinatura] = useState(false)
+  const [linkAssinatura, setLinkAssinatura] = useState<string | null>(null)
+  const [erroDrawer, setErroDrawer] = useState('')
 
   const formatarDinheiro = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -49,8 +61,13 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
   useEffect(() => {
     if (escolaDetalhe) {
       setCarregandoExtrato(true)
-      getFaturasPorEscola(escolaDetalhe.id).then(data => {
-        setFaturas(data)
+      setErroDrawer('')
+      Promise.all([
+        getFaturasPorEscola(escolaDetalhe.id),
+        getInfoAssinaturaEscola(escolaDetalhe.id)
+      ]).then(([faturasData, assinaturaData]) => {
+        setFaturas(faturasData)
+        setAssinaturaInfo(assinaturaData)
         setCarregandoExtrato(false)
       })
     }
@@ -92,6 +109,39 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
     window.location.reload()
   }
 
+  async function handleGerarAssinatura() {
+    if (!escolaDetalhe) return
+    setProcessandoAssinatura(true)
+    setErroDrawer('')
+    const r = await gerarAssinaturaRecorrente(escolaDetalhe.id)
+    setProcessandoAssinatura(false)
+    
+    if (r.success && r.link) {
+      setLinkAssinatura(r.link)
+      const info = await getInfoAssinaturaEscola(escolaDetalhe.id)
+      setAssinaturaInfo(info)
+    } else {
+      setErroDrawer(r.error || 'Erro ao gerar assinatura.')
+    }
+  }
+
+  async function handleCancelarAssinatura() {
+    if (!escolaDetalhe || !assinaturaInfo?.mercadopago_preapproval_id) return
+    if (!confirm('Tem certeza que deseja cancelar a assinatura recorrente desta escola?')) return
+    
+    setProcessandoAssinatura(true)
+    setErroDrawer('')
+    const r = await cancelarAssinaturaRecorrente(escolaDetalhe.id, assinaturaInfo.mercadopago_preapproval_id)
+    setProcessandoAssinatura(false)
+    
+    if (r.success) {
+      const info = await getInfoAssinaturaEscola(escolaDetalhe.id)
+      setAssinaturaInfo(info)
+    } else {
+      setErroDrawer(r.error || 'Erro ao cancelar assinatura.')
+    }
+  }
+
   const valorBaseCentavos = valorBase
   const descontoCentavos = Math.round(parseFloat(desconto.replace(',', '.')) * 100) || 0
   const addonCentavos = Math.round(parseFloat(addon.replace(',', '.')) * 100) || 0
@@ -103,7 +153,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading eyebrow="ARXUM Admin" title="Inteligência Financeira" description="Gestão de LTV, inadimplência e saúde das escolas." />
           <button onClick={() => abrirNovaCobranca()} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
-            <Plus className="size-4" /> Nova cobrança (Emergência)
+            <Plus className="size-4" /> Nova cobrança avulsa
           </button>
         </div>
 
@@ -183,7 +233,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
         </Panel>
       </main>
 
-      {/* MODAL NOVA COBRANÇA */}
+      {/* MODAL NOVA COBRANÇA (Emergência) */}
       {novaAberta && !linkGerado && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
           <aside className="bg-white w-full max-w-md h-full p-6 relative shadow-2xl overflow-y-auto">
@@ -276,6 +326,24 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
         </div>
       )}
 
+      {/* MODAL LINK DE ASSINATURA */}
+      {linkAssinatura && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full relative text-center">
+            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#f0fdfa] text-[#0d9488] mb-4">
+              <CalendarClock className="size-6" />
+            </div>
+            <h3 className="font-bold text-lg mb-2">Link de Assinatura Gerado!</h3>
+            <p className="text-sm text-gray-500 mb-4">Envie este link para a escola autorizar a cobrança automática via Cartão ou PIX.</p>
+            <div className="flex gap-2">
+              <input readOnly value={linkAssinatura} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded text-gray-500" />
+              <button onClick={() => navigator.clipboard.writeText(linkAssinatura)} className="bg-[#0d9488] text-white px-3 py-2 rounded hover:bg-[#0f766e] font-bold text-sm">Copiar</button>
+            </div>
+            <button onClick={() => setLinkAssinatura(null)} className="mt-6 w-full border py-2 rounded font-bold text-gray-700 hover:bg-gray-50">Fechar</button>
+          </div>
+        </div>
+      )}
+
       {/* DRAWER EXTRATO DA ESCOLA */}
       {escolaDetalhe && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
@@ -286,11 +354,34 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
               <p className="text-sm text-gray-500">Extrato e inteligência financeira</p>
             </div>
             
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pr-2">
               <div className="bg-gray-50 p-4 rounded-lg mb-6 flex gap-6">
                 <div><p className="text-xs text-gray-500 uppercase font-bold">Total Pago (LTV)</p><p className="text-xl font-bold text-green-600">{formatarDinheiro(escolaDetalhe.ltvCentavos)}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase font-bold">Faturas em Atraso</p><p className="text-xl font-bold text-red-600">{escolaDetalhe.faturas_vencidas}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase font-bold">Média Atraso</p><p className="text-xl font-bold text-yellow-600">{escolaDetalhe.media_dias_atraso} dias</p></div>
+              </div>
+
+              {/* CARD DE ASSINATURA RECORRENTE */}
+              <div className="bg-white border border-[#e5ecee] rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-[#12232b] flex items-center gap-2"><CalendarClock className="size-4 text-[#0d9488]" /> Assinatura Recorrente</h3>
+                    <p className="text-xs text-gray-500 mt-1">Cobrança automática mensal via Mercado Pago.</p>
+                  </div>
+                  {assinaturaInfo?.mercadopago_preapproval_id ? (
+                    <div className="text-right">
+                      <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full mb-2">ATIVA</span>
+                      <button onClick={handleCancelarAssinatura} disabled={processandoAssinatura} className="block text-xs text-red-600 font-semibold hover:underline ml-auto">
+                        {processandoAssinatura ? 'Cancelando...' : 'Cancelar Assinatura'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={handleGerarAssinatura} disabled={processandoAssinatura} className="bg-[#0d9488] text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e] flex items-center gap-2">
+                      {processandoAssinatura ? <Loader2 className="size-3 animate-spin" /> : <LinkIcon className="size-3" />} Ativar Assinatura
+                    </button>
+                  )}
+                </div>
+                {erroDrawer && <p className="text-red-500 text-xs mt-2">{erroDrawer}</p>}
               </div>
               
               <h3 className="font-bold mb-3 text-[#12232b]">Histórico de Faturas</h3>
