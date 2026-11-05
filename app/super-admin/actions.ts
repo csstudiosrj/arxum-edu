@@ -129,7 +129,6 @@ export type EscolaSuper = {
   alunos: number
   usuarios: number
   mrrCentavos: number
-  // Novos campos para exibir no drawer de edição
   razao_social: string | null
   cnpj: string | null
   cep: string | null
@@ -375,6 +374,9 @@ export type Faturamento = {
   pago_em: string | null
   observacoes: string | null
   criado_em: string
+  gateway?: string | null
+  gateway_payment_id?: string | null
+  pix_copia_cola?: string | null
 }
 
 export async function getFaturamento(): Promise<Faturamento[]> {
@@ -427,7 +429,7 @@ export async function criarFaturamento(data: {
 
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
-    const { error } = await admin.from('faturamento_escolas').insert({
+    const { data: inserted, error } = await admin.from('faturamento_escolas').insert({
       escola_id: data.escola_id,
       escola_nome: escola.nome,
       descricao: data.descricao,
@@ -436,12 +438,12 @@ export async function criarFaturamento(data: {
       plano: escola.plano,
       periodo_referencia: data.periodo_referencia || null,
       observacoes: data.observacoes || null,
-    })
+    }).select('id').single()
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/super-admin/faturamento')
-    return { success: true }
+    revalidatePath('/super-admin/financeiro')
+    return { success: true, id: inserted.id }
   } catch (e) {
     return { success: false, error: 'Erro ao criar faturamento.' }
   }
@@ -460,7 +462,7 @@ export async function atualizarStatusFaturamento(id: string, novoStatus: string)
     const { error } = await admin.from('faturamento_escolas').update(payload).eq('id', id)
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/super-admin/faturamento')
+    revalidatePath('/super-admin/financeiro')
     revalidatePath('/super-admin')
     return { success: true }
   } catch (e) {
@@ -474,7 +476,7 @@ export async function excluirFaturamento(id: string) {
     const { error } = await admin.from('faturamento_escolas').delete().eq('id', id)
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/super-admin/faturamento')
+    revalidatePath('/super-admin/financeiro')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao excluir.' }
