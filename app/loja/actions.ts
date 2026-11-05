@@ -27,9 +27,12 @@ export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
     if (!user?.email) return { success: false, error: 'Faça login para finalizar a compra.' }
     if (itens.length === 0) return { success: false, error: 'Carrinho vazio.' }
     
-    const escola = await getEscolaDaRequisicao()
-    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+    const escolaBase = await getEscolaDaRequisicao()
+    if (!escolaBase) return { success: false, error: 'Escola não encontrada.' }
     
+    // Correção do TypeScript: Cast para any para aceitar a coluna nova
+    const escola = escolaBase as any
+
     const admin = createAdminClient()
     const { data: perfil } = await admin.from('perfis').select('nome').eq('email', user.email).maybeSingle()
     const nomeResponsavel = perfil?.nome || user.email.split('@')[0]
