@@ -17,6 +17,8 @@ export type Comunicado = {
   ativo: boolean
   criado_em: string
   total_leituras: number
+  segmento_serie: string | null
+  segmento_turno: string | null
 }
 
 export type NovoComunicado = {
@@ -24,6 +26,8 @@ export type NovoComunicado = {
   mensagem: string
   setor: string
   prioridade: string
+  segmento_serie: string | null
+  segmento_turno: string | null
 }
 
 export async function getComunicados(): Promise<Comunicado[]> {
@@ -66,9 +70,32 @@ export async function getComunicados(): Promise<Comunicado[]> {
       ativo: c.ativo,
       criado_em: c.criado_em,
       total_leituras: contagemPorCom[c.id] || 0,
+      segmento_serie: c.segmento_serie || null,
+      segmento_turno: c.segmento_turno || null,
     })) as Comunicado[]
   } catch (e) {
     return []
+  }
+}
+
+export async function getFiltrosComunicacao() {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { series: [], turnos: [] }
+
+    const admin = createAdminClient()
+    const { data: alunos } = await admin
+      .from('alunos')
+      .select('serie, turno')
+      .eq('escola_id', escola.id)
+      .eq('status', 'ativo')
+
+    const series = Array.from(new Set((alunos || []).map(a => a.serie).filter(Boolean))) as string[]
+    const turnos = Array.from(new Set((alunos || []).map(a => a.turno).filter(Boolean))) as string[]
+
+    return { series: series.sort(), turnos: turnos.sort() }
+  } catch (e) {
+    return { series: [], turnos: [] }
   }
 }
 
@@ -98,45 +125,47 @@ export async function criarComunicado(data: NovoComunicado) {
       setor: data.setor,
       prioridade: data.prioridade,
       autor_nome: autor,
+      segmento_serie: data.segmento_serie,
+      segmento_turno: data.segmento_turno,
     })
 
     if (error) return { success: false, error: error.message }
 
-    // Envia e-mail para todos os responsáveis com aluno ativo na escola
-    // — respeitando a configuração de notificações da escola.
-    try {
-      const { data: alunos } = await admin
-        .from('alunos')
-        .select('responsavel_email')
-        .eq('escola_id', escola.id)
-        .eq('status', 'ativo')
+    // Filtra os alunos baseado na segmentação antes de buscar os emails
+    let query = admin
+      .from('alunos')
+      .select('responsavel_email')
+      .eq('escola_id', escola.id)
+      .eq('status', 'ativo')
 
-      const emailsUnicos = Array.from(
-        new Set((alunos || []).map((a) => a.responsavel_email).filter(Boolean))
+    if (data.segmento_serie) query = query.eq('serie', data.segmento_serie)
+    if (data.segmento_turno) query = query.eq('turno', data.segmento_turno)
+
+    const { data: alunosAlvo } = await query
+
+    const emailsUnicos = Array.from(
+      new Set((alunosAlvo || []).map((a) => a.responsavel_email).filter(Boolean))
+    )
+
+    // Dispara os e-mails em background para não travar a requisição
+    Promise.all(
+      emailsUnicos.map((email) =>
+        enviarSeAtivo({
+          escolaId: escola.id,
+          evento: 'comunicado',
+          enviar: () =>
+            notificarComunicado({
+              para: email,
+              escolaNome: escola.nome,
+              escolaSlug: escola.slug,
+              titulo: data.titulo,
+              mensagem: data.mensagem,
+              setor: data.setor,
+              autor,
+            }),
+        }).catch((e) => console.error('[email comunicado]', email, e))
       )
-
-      // Fire and forget — não bloqueia a resposta.
-      Promise.all(
-        emailsUnicos.map((email) =>
-          enviarSeAtivo({
-            escolaId: escola.id,
-            evento: 'comunicado',
-            enviar: () =>
-              notificarComunicado({
-                para: email,
-                escolaNome: escola.nome,
-                escolaSlug: escola.slug,
-                titulo: data.titulo,
-                mensagem: data.mensagem,
-                setor: data.setor,
-                autor,
-              }),
-          }).catch((e) => console.error('[email comunicado]', email, e))
-        )
-      ).catch(() => {})
-    } catch (e) {
-      console.error('Erro ao disparar e-mails de comunicado:', e)
-    }
+    ).catch(() => {})
 
     revalidatePath('/admin/comunicacao')
     revalidatePath('/responsavel')
