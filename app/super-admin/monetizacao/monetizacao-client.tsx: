@@ -16,10 +16,6 @@ export function MonetizacaoClient({ configInicial }: { configInicial: Configurac
 
   // Converter BPS para porcentagem legível
   const toPercent = (bps: number) => (bps / 100).toFixed(2).replace('.', ',') + '%'
-  const fromPercent = (val: string) => {
-    const num = parseFloat(val.replace(',', '.').replace('%', ''))
-    return isNaN(num) ? 0 : Math.round(num * 100)
-  }
 
   async function handleSalvar() {
     setSalvando(true)
