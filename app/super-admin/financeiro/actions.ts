@@ -6,13 +6,32 @@ import { revalidatePath } from 'next/cache'
 export async function getDadosCobrancaEscola(escolaId: string) {
   try {
     const admin = createAdminClient()
+    
+    // 1. Busca o plano da escola
     const { data: escola } = await admin.from('escolas').select('plano').eq('id', escolaId).single()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const { data: plano } = await admin.from('planos').select('preco_centavos').eq('slug', escola.plano).single()
     if (!plano) return { success: false, error: 'Plano da escola não encontrado.' }
 
-    return { success: true, valorBaseCentavos: plano.preco_centavos }
+    // 2. Busca os add-ons ativos que a escola possui
+    const { data: addonsEscola } = await admin
+      .from('escolas_addons')
+      .select('addon_slug, addons(nome, preco_centavos)')
+      .eq('escola_id', escolaId)
+      .eq('ativo', true)
+
+    // Formata a lista de add-ons para enviar ao frontend
+    const addons = (addonsEscola || []).map((a: any) => {
+      const addonData = Array.isArray(a.addons) ? a.addons[0] : a.addons
+      return {
+        slug: a.addon_slug,
+        nome: addonData?.nome || a.addon_slug,
+        preco_centavos: addonData?.preco_centavos || 0
+      }
+    })
+
+    return { success: true, valorBaseCentavos: plano.preco_centavos, addons }
   } catch (e) {
     return { success: false, error: 'Erro ao buscar dados da escola.' }
   }
@@ -21,21 +40,32 @@ export async function getDadosCobrancaEscola(escolaId: string) {
 export async function gerarCobrancaCheckout(
   escolaId: string, 
   descontoCentavos: number, 
-  addonCentavos: number, 
+  addonsSelecionados: string[], // Recebe os slugs dos add-ons marcados
   descricao: string, 
   referencia: string
 ) {
   try {
     const admin = createAdminClient()
+    
+    // 1. Busca escola e plano
     const { data: escola } = await admin.from('escolas').select('nome, plano').eq('id', escolaId).single()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const { data: plano } = await admin.from('planos').select('preco_centavos').eq('slug', escola.plano).single()
     if (!plano) return { success: false, error: 'Plano não encontrado.' }
 
-    const valorFinalCentavos = plano.preco_centavos - descontoCentavos + addonCentavos
+    // 2. Recalcula o valor dos add-ons no servidor por segurança
+    let addonsCentavos = 0
+    if (addonsSelecionados.length > 0) {
+      const { data: addonsDb } = await admin.from('addons').select('preco_centavos').in('slug', addonsSelecionados)
+      addonsCentavos = (addonsDb || []).reduce((acc, curr) => acc + curr.preco_centavos, 0)
+    }
+
+    // 3. Calcula o valor final
+    const valorFinalCentavos = plano.preco_centavos + addonsCentavos - descontoCentavos
     if (valorFinalCentavos <= 0) return { success: false, error: 'O valor final deve ser maior que zero.' }
 
+    // 4. Cria a fatura no banco
     const vencimento = new Date()
     vencimento.setDate(vencimento.getDate() + 7)
 
@@ -53,6 +83,7 @@ export async function gerarCobrancaCheckout(
 
     if (errFatura || !fatura) return { success: false, error: 'Erro ao criar fatura no banco.' }
 
+    // 5. Gera o Link no Mercado Pago
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN
     if (!token) return { success: false, error: 'Token MP não configurado.' }
     const baseUrl = 'https://www.arxum.com.br'
@@ -82,6 +113,7 @@ export async function gerarCobrancaCheckout(
     
     if (!res.ok) return { success: false, error: data.message || 'Erro no Mercado Pago.' }
 
+    // 6. Salva o link no banco
     await admin.from('faturamento_escolas').update({
       gateway: 'mercadopago',
       gateway_payment_id: data.id,
