@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
@@ -34,6 +35,22 @@ export type Pedido = {
   itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number }>
 }
 
+export type ItemCarrinho = {
+  produto_id: string
+  produto_nome: string
+  quantidade: number
+  preco_unitario_centavos: number
+}
+
+export type PedidoResponsavel = {
+  id: string
+  total_centavos: number
+  status: string
+  observacao: string | null
+  criado_em: string
+  itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number }>
+}
+
 export async function getProdutos(): Promise<Produto[]> {
   try {
     const escola = await getEscolaDoUsuario()
@@ -45,6 +62,26 @@ export async function getProdutos(): Promise<Produto[]> {
       .select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em')
       .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
+
+    if (error) return []
+    return (data || []) as Produto[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function getProdutosLoja(): Promise<Produto[]> {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('produtos')
+      .select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em')
+      .eq('escola_id', escola.id)
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
 
     if (error) return []
     return (data || []) as Produto[]
@@ -96,6 +133,62 @@ export async function getPedidos(): Promise<Pedido[]> {
     })) as Pedido[]
   } catch (e) {
     return []
+  }
+}
+
+export async function criarPedido(itens: ItemCarrinho[], observacao: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, error: 'Faça login para finalizar a compra.' }
+
+    if (itens.length === 0) return { success: false, error: 'Carrinho vazio.' }
+
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+
+    const { data: perfil } = await admin
+      .from('perfis')
+      .select('nome')
+      .eq('email', user.email)
+      .maybeSingle()
+
+    const nomeResponsavel = perfil?.nome || user.email.split('@')[0]
+    const totalCentavos = itens.reduce((s, i) => s + i.quantidade * i.preco_unitario_centavos, 0)
+
+    const { data: pedido, error: erroPedido } = await admin
+      .from('pedidos')
+      .insert({
+        escola_id: escola.id,
+        responsavel_email: user.email,
+        responsavel_nome: nomeResponsavel,
+        total_centavos: totalCentavos,
+        observacao: observacao || null,
+      })
+      .select('id')
+      .single()
+
+    if (erroPedido || !pedido) return { success: false, error: 'Erro ao criar pedido.' }
+
+    const { error: erroItens } = await admin.from('pedido_itens').insert(
+      itens.map((i) => ({
+        pedido_id: pedido.id,
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidade,
+        preco_unitario_centavos: i.preco_unitario_centavos,
+      }))
+    )
+
+    if (erroItens) return { success: false, error: 'Erro ao salvar itens do pedido.' }
+
+    revalidatePath('/admin/loja')
+    revalidatePath('/responsavel')
+    return { success: true, pedidoId: pedido.id }
+  } catch (e) {
+    return { success: false, error: 'Erro ao finalizar compra.' }
   }
 }
 
