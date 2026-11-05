@@ -1,67 +1,48 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidatePath } from 'next/cache'
 
 export type NotificacaoSuper = {
   id: string
-  tipo: 'suporte' | 'financeiro'
+  tipo: string
   titulo: string
   descricao: string
-  link: string
-  data: string
+  link_destino: string
+  lida: boolean
+  criado_em: string
 }
 
 export async function getNotificacoesSuperAdmin(): Promise<NotificacaoSuper[]> {
   try {
     const admin = createAdminClient()
-    const notificacoes: NotificacaoSuper[] = []
-
-    // 1. Tickets Abertos / Em andamento (Suporte)
-    const { data: tickets } = await admin
-      .from('tickets_suporte')
-      .select('id, escola_nome, assunto, criado_em')
-      .in('status', ['aberto', 'em_andamento'])
+    const { data } = await admin
+      .from('notificacoes_super_admin')
+      .select('*')
       .order('criado_em', { ascending: false })
-      .limit(5)
+      .limit(15)
 
-    if (tickets) {
-      tickets.forEach(t => {
-        notificacoes.push({
-          id: `ticket-${t.id}`,
-          tipo: 'suporte',
-          titulo: 'Chamado de Suporte',
-          descricao: `${t.escola_nome}: ${t.assunto}`,
-          link: '/super-admin/suporte',
-          data: t.criado_em
-        })
-      })
-    }
-
-    // 2. Faturas Vencidas (Financeiro)
-    const { data: faturas } = await admin
-      .from('faturamento_escolas')
-      .select('id, escola_nome, valor_centavos, vencimento')
-      .eq('status', 'vencido')
-      .order('vencimento', { ascending: false })
-      .limit(5)
-
-    if (faturas) {
-      faturas.forEach(f => {
-        notificacoes.push({
-          id: `fatura-${f.id}`,
-          tipo: 'financeiro',
-          titulo: 'Fatura Vencida',
-          descricao: `${f.escola_nome} - R$ ${(f.valor_centavos / 100).toFixed(2).replace('.', ',')}`,
-          link: '/super-admin/financeiro',
-          data: f.vencimento + 'T12:00:00' // fallback para ordenação
-        })
-      })
-    }
-
-    // Ordena todas as notificações pela data (mais recentes primeiro)
-    return notificacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+    return data || []
   } catch (e) {
-    console.error('Erro ao buscar notificações super admin:', e)
     return []
   }
+}
+
+export async function marcarNotificacaoLida(id: string) {
+  try {
+    const admin = createAdminClient()
+    await admin.from('notificacoes_super_admin').update({ lida: true }).eq('id', id)
+    revalidatePath('/super-admin')
+    return { success: true }
+  } catch (e) {
+    return { success: false }
+  }
+}
+
+// Função para criar notificações de outros lugares do sistema (ex: Webhook ou Suporte)
+export async function criarNotificacaoSuper(tipo: string, titulo: string, descricao: string, link: string) {
+  const admin = createAdminClient()
+  await admin.from('notificacoes_super_admin').insert({
+    tipo, titulo, descricao, link_destino: link
+  })
 }
