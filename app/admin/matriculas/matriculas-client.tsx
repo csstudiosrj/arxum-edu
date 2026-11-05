@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Eye, Clock, User, MapPin, Heart, X as XIcon, Inbox, FileText, Download, ExternalLink, ImageIcon, ImageOff } from 'lucide-react'
+import { Search, Eye, Clock, User, MapPin, Heart, X as XIcon, Inbox, FileText, ExternalLink, ImageIcon, ImageOff, Calendar } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarStatusInscricao, type Inscricao, type DocumentosMatricula } from './actions'
 
@@ -25,7 +25,6 @@ const filtros = [
   { key: 'aprovado', label: 'Aprovado' },
   { key: 'matriculado', label: 'Matriculado' },
   { key: 'nao_aprovado', label: 'Não aprovado' },
-  { key: 'cancelado', label: 'Cancelado' },
 ]
 
 const nomesDocumentos: Array<{ key: keyof DocumentosMatricula; label: string }> = [
@@ -102,6 +101,10 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
   const [selecionada, setSelecionada] = useState<Inscricao | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Estados para agendamento de entrevista
+  const [modalEntrevistaAberto, setModalEntrevistaAberto] = useState(false)
+  const [dataEntrevista, setDataEntrevista] = useState('')
+
   const filtradas = inscricoes.filter((i) => {
     const matchFiltro = filtro === 'todas' || i.status === filtro
     const termo = busca.toLowerCase()
@@ -120,17 +123,23 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
     matriculadas: inscricoes.filter((i) => i.status === 'matriculado').length,
   }
 
-  async function mudarStatus(id: string, novoStatus: string) {
+  async function handleMudarStatus(id: string, novoStatus: string, dataAgendada?: string) {
     setLoading(true)
-    const result = await atualizarStatusInscricao(id, novoStatus)
+    const result = await atualizarStatusInscricao(id, novoStatus, dataAgendada)
     setLoading(false)
 
     if (result.success) {
       setSelecionada(null)
+      setModalEntrevistaAberto(false)
       router.refresh()
     } else {
       alert(result.error || 'Erro ao atualizar.')
     }
+  }
+
+  function abrirAgendamento(id: string) {
+    setDataEntrevista('')
+    setModalEntrevistaAberto(true)
   }
 
   return (
@@ -218,7 +227,6 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Protocolo</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Aluno</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Série</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Responsável</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Status</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Imagem</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Data</th>
@@ -228,7 +236,7 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                 <tbody>
                   {filtradas.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center text-sm text-[#82939a]">
+                      <td colSpan={7} className="px-5 py-12 text-center text-sm text-[#82939a]">
                         Nenhuma inscrição encontrada com esses filtros.
                       </td>
                     </tr>
@@ -240,10 +248,6 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                           <td className="px-5 py-3.5 font-mono text-xs text-[#536871]">{m.protocolo}</td>
                           <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{m.aluno_nome}</td>
                           <td className="px-5 py-3.5 text-sm text-[#4d626c]">{m.aluno_serie || '—'}</td>
-                          <td className="px-5 py-3.5 text-sm text-[#4d626c]">
-                            <div>{m.responsavel_nome}</div>
-                            <div className="text-xs text-[#82939a]">{m.responsavel_telefone || m.responsavel_email}</div>
-                          </td>
                           <td className="px-5 py-3.5">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.style}`}>
                               {st.label}
@@ -275,33 +279,61 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
         </Panel>
       </main>
 
-      {selecionada && (
+      {/* MODAL AGENDAR ENTREVISTA */}
+      {modalEntrevistaAberto && selecionada && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-sm w-full relative shadow-2xl">
+            <div className="mb-4 text-center">
+              <div className="mx-auto grid size-12 place-items-center rounded-full bg-blue-100 text-blue-600 mb-3"><Calendar className="size-6" /></div>
+              <h3 className="font-bold text-lg text-[#12232b]">Agendar Entrevista</h3>
+              <p className="text-xs text-gray-500 mt-1">Defina a data e hora para a família de <strong>{selecionada.aluno_nome}</strong>.</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">Data e Hora</label>
+                <input type="datetime-local" value={dataEntrevista} onChange={e => setDataEntrevista(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setModalEntrevistaAberto(false)} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-semibold text-sm">Cancelar</button>
+                <button 
+                  onClick={() => handleMudarStatus(selecionada.id, 'entrevista', dataEntrevista)} 
+                  disabled={!dataEntrevista || loading} 
+                  className="flex-1 bg-[#0d9488] text-white py-2 rounded-lg font-semibold text-sm disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selecionada && !modalEntrevistaAberto && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => !loading && setSelecionada(null)}
-          />
+          <div className="absolute inset-0 bg-black/40" onClick={() => !loading && setSelecionada(null)} />
           <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
                 <p className="font-mono text-xs text-[#82939a]">{selecionada.protocolo}</p>
                 <h2 className="mt-1 text-lg font-bold text-[#12232b]">{selecionada.aluno_nome}</h2>
               </div>
-              <button
-                onClick={() => setSelecionada(null)}
-                disabled={loading}
-                className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"
-              >
+              <button onClick={() => setSelecionada(null)} disabled={loading} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
                 <XIcon className="size-5" />
               </button>
             </header>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="mb-6 flex items-center gap-2">
+              <div className="mb-6 flex items-center gap-2 flex-wrap">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusMap[selecionada.status]?.style}`}>
                   {statusMap[selecionada.status]?.label}
                 </span>
                 <BadgeImagem autorizou={selecionada.autorizou_imagem} />
+                {selecionada.data_entrevista && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 px-2.5 py-1 text-[11px] font-semibold border border-blue-200">
+                    <Calendar className="size-3" /> Entrevista: {formatDateTime(selecionada.data_entrevista)}
+                  </span>
+                )}
               </div>
 
               <section className="space-y-3">
@@ -313,7 +345,6 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                   <div><dt className="text-xs text-[#82939a]">Data de nascimento</dt><dd className="text-[#243942]">{formatDate(selecionada.aluno_data_nascimento)}</dd></div>
                   <div><dt className="text-xs text-[#82939a]">Série pretendida</dt><dd className="text-[#243942]">{selecionada.aluno_serie || '—'}</dd></div>
                   <div><dt className="text-xs text-[#82939a]">Turno</dt><dd className="text-[#243942]">{selecionada.aluno_turno || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Escola de origem</dt><dd className="text-[#243942]">{selecionada.aluno_escola_origem || '—'}</dd></div>
                 </dl>
               </section>
 
@@ -323,8 +354,6 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                 </h3>
                 <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
                   <div><dt className="text-xs text-[#82939a]">Nome</dt><dd className="text-[#243942]">{selecionada.responsavel_nome}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Parentesco</dt><dd className="text-[#243942]">{selecionada.responsavel_parentesco || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">CPF</dt><dd className="text-[#243942]">{selecionada.responsavel_cpf || '—'}</dd></div>
                   <div><dt className="text-xs text-[#82939a]">E-mail</dt><dd className="text-[#243942]">{selecionada.responsavel_email}</dd></div>
                   <div><dt className="text-xs text-[#82939a]">Telefone</dt><dd className="text-[#243942]">{selecionada.responsavel_telefone || '—'}</dd></div>
                 </dl>
@@ -332,59 +361,22 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
 
               <section className="mt-6 space-y-3">
                 <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
-                  <MapPin className="size-3.5" /> Endereço
-                </h3>
-                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
-                  <div><dt className="text-xs text-[#82939a]">CEP</dt><dd className="text-[#243942]">{selecionada.endereco_cep || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Endereço</dt><dd className="text-[#243942]">
-                    {[selecionada.endereco_rua, selecionada.endereco_numero, selecionada.endereco_complemento].filter(Boolean).join(', ') || '—'}
-                  </dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Bairro / Cidade</dt><dd className="text-[#243942]">
-                    {[selecionada.endereco_bairro, selecionada.endereco_cidade, selecionada.endereco_estado].filter(Boolean).join(' · ') || '—'}
-                  </dd></div>
-                </dl>
-              </section>
-
-              <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
-                  <FileText className="size-3.5" /> Documentos enviados
+                  <FileText className="size-3.5" /> Documentos
                 </h3>
                 <div className="space-y-2">
                   {nomesDocumentos.map(({ key, label }) => {
                     const doc = selecionada.documentos?.[key]
                     const temArquivo = doc && doc.url
                     return (
-                      <div
-                        key={key}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${!temArquivo ? 'border-[#e5ecee] bg-[#fafcfc]' : ''}`}
-                        style={temArquivo ? {
-                          borderColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 30%, white)',
-                          backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)',
-                        } : undefined}
-                      >
+                      <div key={key} className={`flex items-center justify-between rounded-lg border p-3 ${!temArquivo ? 'border-[#e5ecee] bg-[#fafcfc]' : ''}`} style={temArquivo ? { borderColor: 'var(--cor-primaria, #0d9488)', backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 8%, white)' } : undefined}>
                         <div className="flex min-w-0 items-center gap-3">
-                          <div
-                            className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'text-white' : 'bg-[#e5ecee] text-[#82939a]'}`}
-                            style={temArquivo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}
-                          >
+                          <div className={`grid size-8 shrink-0 place-items-center rounded-lg ${temArquivo ? 'text-white' : 'bg-[#e5ecee] text-[#82939a]'}`} style={temArquivo ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined}>
                             <FileText className="size-4" />
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-[#243942]">{label}</p>
-                            <p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p>
-                          </div>
+                          <div className="min-w-0"><p className="truncate text-xs font-semibold text-[#243942]">{label}</p><p className="truncate text-xs text-[#82939a]">{temArquivo ? doc.nome : 'Não enviado'}</p></div>
                         </div>
                         {temArquivo && (
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition hover:brightness-90"
-                            style={{
-                              borderColor: 'var(--cor-primaria, #0d9488)',
-                              color: 'var(--cor-primaria, #0d9488)',
-                            }}
-                          >
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition hover:brightness-90" style={{ borderColor: 'var(--cor-primaria, #0d9488)', color: 'var(--cor-primaria, #0d9488)' }}>
                             <ExternalLink className="mr-1 inline size-3" />Abrir
                           </a>
                         )}
@@ -394,48 +386,27 @@ export function MatriculasClient({ inscricoes }: { inscricoes: Inscricao[] }) {
                 </div>
               </section>
 
-              <section className="mt-6 space-y-3">
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>
-                  <Heart className="size-3.5" /> Emergência e anamnese
-                </h3>
-                <dl className="space-y-2 rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 text-sm">
-                  <div><dt className="text-xs text-[#82939a]">Contato de emergência</dt><dd className="text-[#243942]">
-                    {selecionada.emergencia_nome ? `${selecionada.emergencia_nome} — ${selecionada.emergencia_telefone || ''} (${selecionada.emergencia_parentesco || ''})` : '—'}
-                  </dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Alergias</dt><dd className="text-[#243942]">{selecionada.anamnese_alergias || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Condições médicas</dt><dd className="text-[#243942]">{selecionada.anamnese_condicoes || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Medicamentos</dt><dd className="text-[#243942]">{selecionada.anamnese_medicamentos || '—'}</dd></div>
-                  <div><dt className="text-xs text-[#82939a]">Plano de saúde</dt><dd className="text-[#243942]">{selecionada.anamnese_plano_saude || '—'}</dd></div>
-                </dl>
-              </section>
-
-              <p className="mt-6 flex items-center gap-2 text-xs text-[#82939a]">
-                <Clock className="size-3.5" /> Inscrição enviada em {formatDateTime(selecionada.criado_em)}
-              </p>
             </div>
 
             {acoesPorStatus[selecionada.status]?.length > 0 && (
               <footer className="border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">
-                  Ações disponíveis
-                </p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Ações disponíveis</p>
                 <div className="flex flex-wrap gap-2">
                   {acoesPorStatus[selecionada.status].map((a) => {
-                    const varianteStyle =
-                      a.variant === 'primary'
-                        ? { backgroundColor: 'var(--cor-primaria, #0d9488)' }
-                        : undefined
+                    const varianteStyle = a.variant === 'primary' ? { backgroundColor: 'var(--cor-primaria, #0d9488)' } : undefined
                     return (
                       <button
                         key={a.label}
-                        onClick={() => mudarStatus(selecionada.id, a.novoStatus)}
+                        onClick={() => {
+                          if (a.novoStatus === 'entrevista') {
+                            abrirAgendamento(selecionada.id)
+                          } else {
+                            handleMudarStatus(selecionada.id, a.novoStatus)
+                          }
+                        }}
                         disabled={loading}
                         className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                          a.variant === 'primary'
-                            ? 'text-white hover:brightness-90'
-                            : a.variant === 'danger'
-                            ? 'bg-[#dc2626] text-white hover:bg-[#b91c1c]'
-                            : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]'
+                          a.variant === 'primary' ? 'text-white hover:brightness-90' : a.variant === 'danger' ? 'bg-[#dc2626] text-white hover:bg-[#b91c1c]' : 'border border-[#b8c9ce] bg-white text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]'
                         }`}
                         style={varianteStyle}
                       >
