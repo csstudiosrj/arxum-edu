@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Server, ShieldCheck, Mail, UploadCloud } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,10 +31,10 @@ export default async function SistemaPage() {
   const [mp, supa] = await Promise.all([checkMercadoPago(), checkSupabase()])
   
   const services = [
-    { name: 'Mercado Pago', ...mp },
-    { name: 'Supabase (Banco)', ...supa },
-    { name: 'Resend (E-mails)', ...checkEnv('RESEND_API_KEY') },
-    { name: 'Uploadthing', ...checkEnv('UPLOADTHING_SECRET') },
+    { name: 'Mercado Pago', icon: ShieldCheck, ...mp },
+    { name: 'Supabase (Banco)', icon: Server, ...supa },
+    { name: 'Resend (E-mails)', icon: Mail, ...checkEnv('RESEND_API_KEY') },
+    { name: 'Uploadthing (Arquivos)', icon: UploadCloud, ...checkEnv('UPLOADTHING_SECRET') },
   ]
 
   return (
@@ -43,24 +43,39 @@ export default async function SistemaPage() {
         <SectionHeading eyebrow="ARXUM Admin" title="Status do Sistema" description="Monitoramento de integrações e serviços." />
         
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map(s => (
-            <Panel key={s.name} className="p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-[#12232b]">{s.name}</p>
-                {s.status === 'ok' ? <CheckCircle2 className="text-green-500 size-5" /> : <XCircle className="text-red-500 size-5" />}
-              </div>
-              <p className="mt-2 text-xs text-gray-500">{s.message}</p>
-            </Panel>
-          ))}
+          {services.map(s => {
+            const Icon = s.icon
+            return (
+              <Panel key={s.name} className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icon className="size-4 text-[#6b7d86]" />
+                    <p className="text-sm font-bold text-[#12232b]">{s.name}</p>
+                  </div>
+                  {s.status === 'ok' ? <CheckCircle2 className="text-[#0d9488] size-5" /> : <XCircle className="text-[#dc2626] size-5" />}
+                </div>
+                <p className={`mt-2 text-xs font-medium ${s.status === 'ok' ? 'text-[#0d9488]' : 'text-[#dc2626]'}`}>{s.message}</p>
+              </Panel>
+            )
+          })}
         </div>
 
         <div className="mt-8">
-          <h3 className="text-lg font-bold mb-4">Variáveis de Ambiente</h3>
+          <h3 className="text-lg font-bold text-[#12232b] mb-4">Variáveis de Ambiente</h3>
           <Panel className="p-5">
-            <ul className="space-y-2 text-sm font-mono text-gray-600">
-              <li className="flex justify-between border-b pb-2"><span>MERCADOPAGO_ACCESS_TOKEN</span> {process.env.MERCADOPAGO_ACCESS_TOKEN ? '✅ OK' : '❌ Ausente'}</li>
-              <li className="flex justify-between border-b pb-2"><span>MERCADOPAGO_PUBLIC_KEY</span> {process.env.MERCADOPAGO_PUBLIC_KEY ? '✅ OK' : '❌ Ausente'}</li>
-              <li className="flex justify-between border-b pb-2"><span>NEXT_PUBLIC_SITE_URL</span> {process.env.NEXT_PUBLIC_SITE_URL || 'https://arxum.com.br'}</li>
+            <ul className="space-y-3 text-sm font-mono text-[#536871]">
+              <li className="flex justify-between border-b border-[#e5ecee] pb-3">
+                <span>MERCADOPAGO_ACCESS_TOKEN</span> 
+                {process.env.MERCADOPAGO_ACCESS_TOKEN ? <CheckCircle2 className="size-4 text-[#0d9488]" /> : <XCircle className="size-4 text-[#dc2626]" />}
+              </li>
+              <li className="flex justify-between border-b border-[#e5ecee] pb-3">
+                <span>MERCADOPAGO_PUBLIC_KEY</span> 
+                {process.env.MERCADOPAGO_PUBLIC_KEY ? <CheckCircle2 className="size-4 text-[#0d9488]" /> : <XCircle className="size-4 text-[#dc2626]" />}
+              </li>
+              <li className="flex justify-between border-b border-[#e5ecee] pb-3">
+                <span>NEXT_PUBLIC_SITE_URL</span>
+                <span className="text-[#12232b]">{process.env.NEXT_PUBLIC_SITE_URL || 'https://arxum.com.br'}</span>
+              </li>
             </ul>
           </Panel>
         </div>
