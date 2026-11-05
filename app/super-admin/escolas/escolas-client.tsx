@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Search, Building2, Users, DollarSign, Inbox, Eye, Edit, Trash2,
@@ -41,6 +41,8 @@ function formatarData(iso: string | null): string {
 
 export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaSuper[]; planos: Plano[]; templates: EmailTemplate[] }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [busca, setBusca] = useState('')
   const [filtroPlano, setFiltroPlano] = useState('todos')
   const [filtroStatus, setFiltroStatus] = useState('todos')
@@ -65,6 +67,17 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
   const [carregandoFaturas, setCarregandoFaturas] = useState(false)
   const [enviandoEmail, setEnviandoEmail] = useState(false)
   const [sucessoEmail, setSucessoEmail] = useState('')
+
+  // Efeito para Deep Link (Abrir escola via URL)
+  useEffect(() => {
+    const escolaIdParam = searchParams.get('escolaId')
+    if (escolaIdParam) {
+      const escolaEncontrada = escolas.find(e => e.id === escolaIdParam)
+      if (escolaEncontrada) {
+        abrirEdicao(escolaEncontrada)
+      }
+    }
+  }, [searchParams, escolas])
 
   const filtradas = escolas.filter((e) => {
     const matchPlano = filtroPlano === 'todos' || e.plano === filtroPlano
@@ -133,7 +146,6 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
     setFaturaId('')
     setSucessoEmail('')
     
-    // Carrega faturas da escola
     setCarregandoFaturas(true)
     const data = await getFaturasDaEscola(escola.id)
     setFaturas(data)
@@ -242,7 +254,7 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
                             <div className="grid size-9 place-items-center rounded-lg bg-[#f0f4f5] text-[#536871]"><Building2 className="size-4" /></div>
                             <div>
                               <div className="text-sm font-semibold text-[#243942]">{e.nome}</div>
-                              <div className="text-xs text-[#82939a]">{e.slug}</div>
+                              <div className="text-xs text-[#82939a]">{e.email_contato || e.slug}</div>
                             </div>
                           </div>
                         </td>
@@ -379,6 +391,10 @@ export function EscolasClient({ escolas, planos, templates }: { escolas: EscolaS
                   <div className="flex justify-between gap-4">
                     <span className="text-[#82939a]">CNPJ</span>
                     <span className="font-mono text-[#243942]">{editando.cnpj || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[#82939a]">E-mail de Contato</span>
+                    <span className="text-[#243942]">{editando.email_contato || 'Não informado'}</span>
                   </div>
                   <div className="flex justify-between gap-4 border-t border-[#e5ecee] pt-2 mt-2">
                     <span className="text-[#82939a] flex items-center gap-1"><MapPin size={12}/> Endereço</span>
