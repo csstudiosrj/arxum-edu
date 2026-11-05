@@ -43,6 +43,7 @@ export type Inscricao = {
   anamnese_plano_saude: string | null
   documentos: DocumentosMatricula | null
   status: string
+  data_entrevista: string | null
   criado_em: string
   autorizou_imagem: boolean | null
 }
@@ -92,25 +93,26 @@ export async function getInscricoes(): Promise<Inscricao[]> {
   }
 }
 
-export async function atualizarStatusInscricao(id: string, novoStatus: string) {
+export async function atualizarStatusInscricao(id: string, novoStatus: string, dataEntrevista?: string) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const supabase = createAdminClient()
 
-    const { data: inscricao, error } = await supabase
+    // 1. Buscar os dados da inscrição primeiro
+    const { data: inscricaoAtual, error: fetchError } = await supabase
       .from('inscricoes')
-      .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
+      .select('*')
       .eq('id', id)
       .eq('escola_id', escola.id)
-      .select('*')
       .single()
 
-    if (error || !inscricao) {
-      return { success: false, error: error?.message || 'Inscrição não encontrada.' }
+    if (fetchError || !inscricaoAtual) {
+      return { success: false, error: 'Inscrição não encontrada.' }
     }
 
+    // 2. Se for efetivar matrícula, validar limites e criar aluno ANTES de mudar o status
     if (novoStatus === 'matriculado') {
       const { data: existente } = await supabase
         .from('alunos')
@@ -119,7 +121,7 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
         .maybeSingle()
 
       if (!existente) {
-        // ── TRAVA DE SEGURANÇA: LIMITE DE ALUNOS ──
+        // TRAVA DE SEGURANÇA: LIMITE DE ALUNOS
         const { data: escolaData } = await supabase.from('escolas').select('plano').eq('id', escola.id).single()
         const { data: plano } = await supabase.from('planos').select('max_alunos, teto_alunos_excedentes').eq('slug', escolaData?.plano || 'semente').single()
         
@@ -140,53 +142,72 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
           }
         }
 
-        // ── CRIA O ALUNO ──
+        // CRIA O ALUNO
         const { error: erroAluno } = await supabase.from('alunos').insert({
           escola_id: escola.id,
-          inscricao_id: inscricao.id,
-          nome: inscricao.aluno_nome,
-          data_nascimento: inscricao.aluno_data_nascimento,
-          serie: inscricao.aluno_serie,
-          turno: inscricao.aluno_turno,
-          escola_origem: inscricao.aluno_escola_origem,
-          responsavel_nome: inscricao.responsavel_nome,
-          responsavel_email: inscricao.responsavel_email,
-          responsavel_telefone: inscricao.responsavel_telefone,
-          responsavel_cpf: inscricao.responsavel_cpf,
-          responsavel_parentesco: inscricao.responsavel_parentesco,
-          endereco_cep: inscricao.endereco_cep,
-          endereco_rua: inscricao.endereco_rua,
-          endereco_numero: inscricao.endereco_numero,
-          endereco_complemento: inscricao.endereco_complemento,
-          endereco_bairro: inscricao.endereco_bairro,
-          endereco_cidade: inscricao.endereco_cidade,
-          endereco_estado: inscricao.endereco_estado,
-          emergencia_nome: inscricao.emergencia_nome,
-          emergencia_telefone: inscricao.emergencia_telefone,
-          emergencia_parentesco: inscricao.emergencia_parentesco,
-          anamnese_alergias: inscricao.anamnese_alergias,
-          anamnese_condicoes: inscricao.anamnese_condicoes,
-          anamnese_medicamentos: inscricao.anamnese_medicamentos,
-          anamnese_plano_saude: inscricao.anamnese_plano_saude,
-          documentos: inscricao.documentos || {},
+          inscricao_id: inscricaoAtual.id,
+          nome: inscricaoAtual.aluno_nome,
+          data_nascimento: inscricaoAtual.aluno_data_nascimento,
+          serie: inscricaoAtual.aluno_serie,
+          turno: inscricaoAtual.aluno_turno,
+          escola_origem: inscricaoAtual.aluno_escola_origem,
+          responsavel_nome: inscricaoAtual.responsavel_nome,
+          responsavel_email: inscricaoAtual.responsavel_email,
+          responsavel_telefone: inscricaoAtual.responsavel_telefone,
+          responsavel_cpf: inscricaoAtual.responsavel_cpf,
+          responsavel_parentesco: inscricaoAtual.responsavel_parentesco,
+          endereco_cep: inscricaoAtual.endereco_cep,
+          endereco_rua: inscricaoAtual.endereco_rua,
+          endereco_numero: inscricaoAtual.endereco_numero,
+          endereco_complemento: inscricaoAtual.endereco_complemento,
+          endereco_bairro: inscricaoAtual.endereco_bairro,
+          endereco_cidade: inscricaoAtual.endereco_cidade,
+          endereco_estado: inscricaoAtual.endereco_estado,
+          emergencia_nome: inscricaoAtual.emergencia_nome,
+          emergencia_telefone: inscricaoAtual.emergencia_telefone,
+          emergencia_parentesco: inscricaoAtual.emergencia_parentesco,
+          anamnese_alergias: inscricaoAtual.anamnese_alergias,
+          anamnese_condicoes: inscricaoAtual.anamnese_condicoes,
+          anamnese_medicamentos: inscricaoAtual.anamnese_medicamentos,
+          anamnese_plano_saude: inscricaoAtual.anamnese_plano_saude,
+          documentos: inscricaoAtual.documentos || {},
         })
 
         if (erroAluno) {
           console.error('Erro ao criar aluno:', erroAluno)
-          return { success: false, error: 'Matrícula efetivada, mas houve erro ao criar o aluno.' }
+          return { success: false, error: 'Erro ao criar o aluno no banco de dados.' }
         }
       }
     }
 
+    // 3. Só agora atualiza o status da inscrição
+    const payload: any = { status: novoStatus, atualizado_em: new Date().toISOString() }
+    if (novoStatus === 'entrevista' && dataEntrevista) {
+      payload.data_entrevista = dataEntrevista
+    }
+
+    const { data: inscricaoAtualizada, error } = await supabase
+      .from('inscricoes')
+      .update(payload)
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+      .select('*')
+      .single()
+
+    if (error || !inscricaoAtualizada) {
+      return { success: false, error: error?.message || 'Erro ao atualizar status.' }
+    }
+
+    // 4. Dispara e-mail
     try {
       await enviarSeAtivo({
         escolaId: escola.id,
         evento: 'matricula_status',
         enviar: () =>
           enviarEmailStatusMatricula({
-            para: inscricao.responsavel_email,
-            alunoNome: inscricao.aluno_nome,
-            protocolo: inscricao.protocolo,
+            para: inscricaoAtualizada.responsavel_email,
+            alunoNome: inscricaoAtualizada.aluno_nome,
+            protocolo: inscricaoAtualizada.protocolo,
             novoStatus,
             escolaNome: escola.nome,
           }),
