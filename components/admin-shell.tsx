@@ -6,6 +6,7 @@ import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDow
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
+import { SinoSuperAdmin } from '@/components/sino-super-admin'
 import { createClient } from '@/lib/supabase/client'
 import { getMarcaEscolaAtual } from '@/lib/auth/escola-atual'
 
@@ -128,7 +129,9 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
         <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
         <div className="ml-auto flex items-center gap-4">
-          {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <div className="p-2"><Bell className="size-[19px] text-[#71838b]" /></div>}
+          
+          {/* AQUI ESTÁ A TROCA DO SINO ESTÁTICO PELO COMPONENTE REAL */}
+          {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <SinoSuperAdmin />}
           
           <div className="relative">
             <button
