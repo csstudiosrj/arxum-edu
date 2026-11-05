@@ -1,0 +1,158 @@
+'use client'
+
+import { useState } from 'react'
+import { Save, Loader2, Check, TrendingUp, DollarSign, Percent, CreditCard, ShoppingBag } from 'lucide-react'
+import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
+import { salvarConfiguracoesMonetizacao, type ConfiguracoesMonetizacao } from './actions'
+
+export function MonetizacaoClient({ configInicial }: { configInicial: ConfiguracoesMonetizacao | null }) {
+  const [mensalidadePadrao, setMensalidadePadrao] = useState(configInicial?.taxa_mensalidade_padrao_bps || 100)
+  const [mensalidadeMp, setMensalidadeMp] = useState(configInicial?.taxa_mensalidade_mp_bps || 50)
+  const [lojaPadrao, setLojaPadrao] = useState(configInicial?.taxa_loja_padrao_bps || 300)
+  const [lojaMp, setLojaMp] = useState(configInicial?.taxa_loja_mp_bps || 150)
+  
+  const [salvando, setSalvando] = useState(false)
+  const [sucesso, setSucesso] = useState(false)
+
+  // Converter BPS para porcentagem legível
+  const toPercent = (bps: number) => (bps / 100).toFixed(2).replace('.', ',') + '%'
+  const fromPercent = (val: string) => {
+    const num = parseFloat(val.replace(',', '.').replace('%', ''))
+    return isNaN(num) ? 0 : Math.round(num * 100)
+  }
+
+  async function handleSalvar() {
+    setSalvando(true)
+    setSucesso(false)
+    const r = await salvarConfiguracoesMonetizacao({
+      taxa_mensalidade_padrao_bps: mensalidadePadrao,
+      taxa_mensalidade_mp_bps: mensalidadeMp,
+      taxa_loja_padrao_bps: lojaPadrao,
+      taxa_loja_mp_bps: lojaMp
+    })
+    setSalvando(false)
+    
+    if (r.success) {
+      setSucesso(true)
+      setTimeout(() => setSucesso(false), 3000)
+    } else {
+      alert(r.error)
+    }
+  }
+
+  return (
+    <AdminShell mode="super" active="Monetização">
+      <main className="px-5 py-8 lg:px-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeading 
+            eyebrow="ARXUM Admin" 
+            title="Monetização" 
+            description="Defina as taxas de intermediação para mensalidades e loja." 
+          />
+          <button onClick={handleSalvar} disabled={salvando} className="bg-[#0d9488] text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e] disabled:opacity-50">
+            {salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {salvando ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+
+        {sucesso && (
+          <div className="mt-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2 text-sm font-semibold">
+            <Check className="size-4" /> Configurações salvas com sucesso!
+          </div>
+        )}
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          {/* CARD MENSALIDADES */}
+          <Panel className="p-6">
+            <div className="flex items-center gap-3 mb-6 border-b border-[#e5ecee] pb-4">
+              <div className="grid size-10 place-items-center rounded-lg bg-[#f0fdfa] text-[#0d9488]">
+                <TrendingUp className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-[#12232b]">Mensalidades</h2>
+                <p className="text-xs text-[#82939a]">Taxa cobrada sobre o valor das faturas de planos.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="flex justify-between text-sm font-semibold text-[#30454e] mb-1">
+                  <span>Taxa Padrão (Gateway Próprio)</span>
+                  <span className="text-[#0d9488]">{toPercent(mensalidadePadrao)}</span>
+                </label>
+                <input 
+                  type="range" min="0" max="1000" step="10" 
+                  value={mensalidadePadrao} 
+                  onChange={e => setMensalidadePadrao(Number(e.target.value))}
+                  className="w-full accent-[#0d9488]"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">100 bps = 1%. Esta taxa é cobrada se a escola usar Asaas, Pagar.me, etc.</p>
+              </div>
+
+              <div>
+                <label className="flex justify-between text-sm font-semibold text-[#30454e] mb-1">
+                  <span className="text-green-600">Taxa com Desconto (Mercado Pago)</span>
+                  <span className="text-green-600">{toPercent(mensalidadeMp)}</span>
+                </label>
+                <input 
+                  type="range" min="0" max="1000" step="10" 
+                  value={mensalidadeMp} 
+                  onChange={e => setMensalidadeMp(Number(e.target.value))}
+                  className="w-full accent-green-600"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Aplicada apenas se a escola conectar a conta do Mercado Pago via OAuth (Split).</p>
+              </div>
+            </div>
+          </Panel>
+
+          {/* CARD LOJA */}
+          <Panel className="p-6">
+            <div className="flex items-center gap-3 mb-6 border-b border-[#e5ecee] pb-4">
+              <div className="grid size-10 place-items-center rounded-lg bg-[#fef3c7] text-[#d97706]">
+                <ShoppingBag className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-[#12232b]">Loja Virtual</h2>
+                <p className="text-xs text-[#82939a]">Taxa cobrada sobre as vendas de produtos.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="flex justify-between text-sm font-semibold text-[#30454e] mb-1">
+                  <span>Taxa Padrão (Gateway Próprio)</span>
+                  <span className="text-[#d97706]">{toPercent(lojaPadrao)}</span>
+                </label>
+                <input 
+                  type="range" min="0" max="1000" step="10" 
+                  value={lojaPadrao} 
+                  onChange={e => setLojaPadrao(Number(e.target.value))}
+                  className="w-full accent-[#d97706]"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Aplicada sobre o valor bruto de cada venda na loja.</p>
+              </div>
+
+              <div>
+                <label className="flex justify-between text-sm font-semibold text-[#30454e] mb-1">
+                  <span className="text-green-600">Taxa com Desconto (Mercado Pago)</span>
+                  <span className="text-green-600">{toPercent(lojaMp)}</span>
+                </label>
+                <input 
+                  type="range" min="0" max="1000" step="10" 
+                  value={lojaMp} 
+                  onChange={e => setLojaMp(Number(e.target.value))}
+                  className="w-full accent-green-600"
+                />
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        <div className="mt-8 bg-blue-50 border border-blue-100 p-5 rounded-xl text-sm text-blue-800">
+          <h3 className="font-bold mb-1 flex items-center gap-2"><CreditCard className="size-4" /> Como isso afeta o sistema?</h3>
+          <p>Essas taxas são lidas no momento em que uma venda ou mensalidade é paga. O valor calculado é registrado no extrato de taxas da escola. Se a escola usar o Mercado Pago com Split, a taxa é retida automaticamente. Caso contrário, ela será incluída na fatura de cobrança do ciclo da escola.</p>
+        </div>
+      </main>
+    </AdminShell>
+  )
+}
