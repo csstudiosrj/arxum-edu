@@ -29,9 +29,13 @@ const schoolItems = [
 ] as const
 
 const superItems = [
-  ['Visão geral', '/super-admin', LayoutDashboard], ['Escolas', '/super-admin/escolas', Building2],
-  ['Planos', '/super-admin/planos', WalletCards], ['Add-ons', '/super-admin/addons', Palette],
-  ['Financeiro', '/super-admin/financeiro', CircleDollarSign], ['Suporte', '/super-admin/suporte', Headphones],
+  ['Visão geral', '/super-admin', LayoutDashboard], 
+  ['Escolas', '/super-admin/escolas', Building2],
+  ['Planos', '/super-admin/planos', WalletCards], 
+  ['Add-ons', '/super-admin/addons', Palette],
+  ['Financeiro', '/super-admin/financeiro', CircleDollarSign], 
+  ['Sistema', '/super-admin/sistema', Settings],
+  ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
 ] as const
 
