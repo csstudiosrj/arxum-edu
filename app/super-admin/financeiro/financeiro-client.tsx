@@ -12,7 +12,6 @@ declare global {
 }
 
 export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[], escolas: any[] }) {
-  const [busca, setBusca] = useState('')
   const [novaAberta, setNovaAberta] = useState(false)
   const [processando, setProcessando] = useState(false)
   const [erro, setErro] = useState('')
@@ -55,10 +54,11 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
     window.location.reload()
   }
 
-  async function handleGerarPagamento(fatura: Faturamento) {
+  function abrirCobranca(fatura: Faturamento) {
     setFaturaPagando(fatura)
     setResultado(null)
     setErro('')
+    setMetodo('pix') // Reseta para PIX ao abrir
   }
 
   async function processarPagamento() {
@@ -68,7 +68,10 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
     
     let cardToken = undefined
     if (metodo === 'credit_card') {
-      if (!mpInstance) return setErro('SDK do Mercado Pago não carregado.')
+      if (!mpInstance) {
+        setProcessando(false)
+        return setErro('SDK do Mercado Pago não carregado. Verifique sua internet.')
+      }
       try {
         const tokenRes = await mpInstance.createCardToken({
           cardNumber: cardNumber.replace(/\D/g, ''),
@@ -107,7 +110,7 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
       <main className="px-5 py-8 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading eyebrow="ARXUM Admin" title="Financeiro SaaS" description="Cobranças e recebimentos das escolas." />
-          <button onClick={() => { setNovaAberta(true); setErro('') }} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2">
+          <button onClick={() => { setNovaAberta(true); setErro('') }} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
             <Plus className="size-4" /> Nova cobrança
           </button>
         </div>
@@ -140,7 +143,7 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       {f.status !== 'pago' && (
-                        <button onClick={() => handleGerarPagamento(f)} className="text-xs bg-[#0d9488] text-white px-4 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e]">
+                        <button onClick={() => abrirCobranca(f)} className="text-xs bg-[#0d9488] text-white px-4 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e]">
                           Cobrar
                         </button>
                       )}
@@ -157,17 +160,17 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
       {novaAberta && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
           <aside className="bg-white w-full max-w-md h-full p-6 relative shadow-2xl">
-            <button onClick={() => setNovaAberta(false)} className="absolute right-4 top-4 text-gray-500"><X /></button>
+            <button onClick={() => setNovaAberta(false)} className="absolute right-4 top-4 text-gray-500 hover:text-gray-800"><X /></button>
             <h2 className="text-xl font-bold mb-6">Nova cobrança</h2>
             <div className="space-y-4">
-              <select value={escolaId} onChange={e => setEscolaId(e.target.value)} className="w-full border p-2 rounded">
+              <select value={escolaId} onChange={e => setEscolaId(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]">
                 <option value="">Selecione a escola</option>
                 {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
               </select>
-              <input type="text" placeholder="Valor (Ex: 399,00)" value={valor} onChange={e => setValor(e.target.value)} className="w-full border p-2 rounded" />
-              <input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full border p-2 rounded" />
+              <input type="text" placeholder="Valor (Ex: 399,00)" value={valor} onChange={e => setValor(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              <input type="date" value={vencimento} onChange={e => setVencimento(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
               {erro && <p className="text-red-500 text-sm">{erro}</p>}
-              <button onClick={handleCriarFatura} disabled={processando} className="w-full bg-[#0d9488] text-white py-2 rounded font-bold flex justify-center">
+              <button onClick={handleCriarFatura} disabled={processando} className="w-full bg-[#0d9488] text-white py-2 rounded font-bold flex justify-center hover:bg-[#0f766e]">
                 {processando ? <Loader2 className="animate-spin" /> : 'Salvar Fatura'}
               </button>
             </div>
@@ -178,57 +181,60 @@ export function FinanceiroClient({ faturas, escolas }: { faturas: Faturamento[],
       {/* Modal de Pagamento */}
       {faturaPagando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white p-6 rounded-xl max-w-lg w-full relative">
-            <button onClick={() => { setFaturaPagando(null); setResultado(null); }} className="absolute right-4 top-4 text-gray-500"><X /></button>
-            <h3 className="font-bold text-lg mb-1">Cobrança: {faturaPagando.escola_nome}</h3>
+          <div className="bg-white p-6 rounded-xl max-w-lg w-full relative shadow-2xl">
+            <button onClick={() => { setFaturaPagando(null); setResultado(null); }} className="absolute right-4 top-4 text-gray-500 hover:text-gray-800"><X /></button>
+            <h3 className="font-bold text-lg mb-1 text-[#12232b]">Cobrança: {faturaPagando.escola_nome}</h3>
             <p className="text-sm text-gray-500 mb-4">Valor: R$ {(faturaPagando.valor_centavos / 100).toFixed(2)}</p>
 
             {!resultado ? (
               <div className="space-y-4">
                 <div className="flex border rounded-lg overflow-hidden">
-                  <button onClick={() => setMetodo('pix')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 ${metodo === 'pix' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600'}`}><QrCode className="size-4"/> PIX</button>
-                  <button onClick={() => setMetodo('credit_card')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 ${metodo === 'credit_card' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600'}`}><CreditCard className="size-4"/> Cartão</button>
-                  <button onClick={() => setMetodo('boleto')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 ${metodo === 'boleto' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600'}`}><Barcode className="size-4"/> Boleto</button>
+                  <button onClick={() => setMetodo('pix')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 transition ${metodo === 'pix' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}><QrCode className="size-4"/> PIX</button>
+                  <button onClick={() => setMetodo('credit_card')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 transition ${metodo === 'credit_card' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}><CreditCard className="size-4"/> Cartão</button>
+                  <button onClick={() => setMetodo('boleto')} className={`flex-1 py-2 text-sm font-semibold flex items-center justify-center gap-1 transition ${metodo === 'boleto' ? 'bg-[#0d9488] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}><Barcode className="size-4"/> Boleto</button>
                 </div>
 
                 {metodo === 'credit_card' && (
                   <div className="space-y-2">
-                    <input type="text" placeholder="Número do Cartão" value={cardNumber} onChange={e => setCardNumber(e.target.value)} className="w-full border p-2 rounded" />
-                    <input type="text" placeholder="Nome impresso no cartão" value={cardName} onChange={e => setCardName(e.target.value)} className="w-full border p-2 rounded" />
+                    <input type="text" placeholder="Número do Cartão" value={cardNumber} onChange={e => setCardNumber(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                    <input type="text" placeholder="Nome impresso no cartão" value={cardName} onChange={e => setCardName(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
                     <div className="flex gap-2">
-                      <input type="text" placeholder="MM/AA" value={cardExp} onChange={e => setCardExp(e.target.value)} className="w-full border p-2 rounded" />
-                      <input type="text" placeholder="CVV" value={cardCvv} onChange={e => setCardCvv(e.target.value)} className="w-full border p-2 rounded" />
+                      <input type="text" placeholder="MM/AA" value={cardExp} onChange={e => setCardExp(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                      <input type="text" placeholder="CVV" value={cardCvv} onChange={e => setCardCvv(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
                     </div>
                   </div>
                 )}
 
-                {erro && <p className="text-red-500 text-sm">{erro}</p>}
+                {erro && <p className="text-red-500 text-sm font-semibold">{erro}</p>}
 
-                <button onClick={processarPagamento} disabled={processando} className="w-full bg-[#0d9488] text-white py-3 rounded-lg font-bold flex justify-center">
+                <button onClick={processarPagamento} disabled={processando} className="w-full bg-[#0d9488] text-white py-3 rounded-lg font-bold flex justify-center hover:bg-[#0f766e] disabled:opacity-50">
                   {processando ? <Loader2 className="animate-spin" /> : metodo === 'pix' ? 'Gerar PIX' : metodo === 'boleto' ? 'Gerar Boleto' : 'Pagar com Cartão'}
                 </button>
               </div>
             ) : (
               <div className="text-center space-y-4">
                 {resultado.status === 'approved' && <div className="bg-green-100 text-green-700 p-3 rounded-lg font-bold">Pagamento Aprovado!</div>}
+                {resultado.status === 'pending' && metodo === 'pix' && <div className="bg-yellow-50 text-yellow-700 p-2 text-sm rounded">Aguardando pagamento...</div>}
                 
                 {metodo === 'pix' && resultado.point_of_interaction?.transaction_data?.qr_code_base64 && (
                   <>
                     <img src={`data:image/jpeg;base64,${resultado.point_of_interaction.transaction_data.qr_code_base64}`} className="mx-auto size-48 border rounded-lg" />
                     <div className="flex gap-2">
-                      <input readOnly value={resultado.point_of_interaction.transaction_data.qr_code} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded" />
-                      <button onClick={copiarPix} className="bg-gray-100 p-2 rounded hover:bg-gray-200">{copiou ? <Check /> : <Copy />}</button>
+                      <input readOnly value={resultado.point_of_interaction.transaction_data.qr_code} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded text-gray-500" />
+                      <button onClick={copiarPix} className="bg-gray-100 p-2 rounded hover:bg-gray-200 text-gray-700">{copiou ? <Check className="size-4" /> : <Copy className="size-4" />}</button>
                     </div>
                   </>
                 )}
 
                 {metodo === 'boleto' && resultado.transaction_details?.external_resource_url && (
-                  <a href={resultado.transaction_details.external_resource_url} target="_blank" rel="noreferrer" className="block w-full bg-gray-800 text-white py-2 rounded text-center font-bold">
+                  <a href={resultado.transaction_details.external_resource_url} target="_blank" rel="noreferrer" className="block w-full bg-gray-800 text-white py-2 rounded text-center font-bold hover:bg-gray-900">
                     Abrir Boleto
                   </a>
                 )}
                 
-                <button onClick={() => { setFaturaPagando(null); setResultado(null); window.location.reload(); }} className="w-full border py-2 rounded font-bold">Fechar</button>
+                <button onClick={() => { setFaturaPagando(null); setResultado(null); window.location.reload(); }} className="w-full border py-2 rounded font-bold text-gray-700 hover:bg-gray-50">
+                  Fechar e Atualizar
+                </button>
               </div>
             )}
           </div>
