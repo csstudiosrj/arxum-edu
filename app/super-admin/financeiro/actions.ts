@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 export async function gerarPagamentoArxum(
   faturaId: string, 
   metodo: 'pix' | 'boleto' | 'credit_card', 
-  cardToken?: string // <-- O terceiro parâmetro que estava faltando
+  cardToken?: string 
 ) {
   try {
     const admin = createAdminClient()
