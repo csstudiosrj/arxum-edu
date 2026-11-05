@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -34,6 +34,7 @@ const superItems = [
   ['Planos', '/super-admin/planos', WalletCards], 
   ['Add-ons', '/super-admin/addons', Palette],
   ['Financeiro', '/super-admin/financeiro', CircleDollarSign], 
+  ['Comunicação', '/super-admin/comunicacao', Mail],
   ['Sistema', '/super-admin/sistema', Settings],
   ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
