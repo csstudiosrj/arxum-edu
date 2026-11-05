@@ -66,7 +66,6 @@ export async function getInscricoes(): Promise<Inscricao[]> {
 
     if (!data || data.length === 0) return []
 
-    // Busca os consentimentos de uso de imagem para cruzar com as inscrições
     const { data: consentimentos } = await supabase
       .from('consentimentos')
       .select('responsavel_email, aluno_nome')
@@ -81,9 +80,6 @@ export async function getInscricoes(): Promise<Inscricao[]> {
 
     return (data as Omit<Inscricao, 'autorizou_imagem'>[]).map((i) => {
       const chave = `${i.responsavel_email.toLowerCase()}::${i.aluno_nome.toLowerCase()}`
-      // null = inscrição antiga sem consentimento registrado.
-      // true  = consentimento encontrado.
-      // false = ainda não foi registrado (tratamos como não autorizado por padrão).
       const teveAlgumConsentimento = autorizouSet.has(chave)
       return {
         ...i,
@@ -123,6 +119,28 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string) {
         .maybeSingle()
 
       if (!existente) {
+        // ── TRAVA DE SEGURANÇA: LIMITE DE ALUNOS ──
+        const { data: escolaData } = await supabase.from('escolas').select('plano').eq('id', escola.id).single()
+        const { data: plano } = await supabase.from('planos').select('max_alunos, teto_alunos_excedentes').eq('slug', escolaData?.plano || 'semente').single()
+        
+        const maxAlunos = plano?.max_alunos || 0
+        const teto = plano?.teto_alunos_excedentes || 0
+        const totalPermitido = maxAlunos + teto
+
+        const { count } = await supabase
+          .from('alunos')
+          .select('*', { count: 'exact', head: true })
+          .eq('escola_id', escola.id)
+          .eq('status', 'ativo')
+
+        if (maxAlunos > 0 && (count || 0) >= totalPermitido) {
+          return { 
+            success: false, 
+            error: `Limite de tolerância excedido (${totalPermitido} alunos). Para matricular este aluno, faça upgrade de plano nas configurações da escola.` 
+          }
+        }
+
+        // ── CRIA O ALUNO ──
         const { error: erroAluno } = await supabase.from('alunos').insert({
           escola_id: escola.id,
           inscricao_id: inscricao.id,
