@@ -5,7 +5,49 @@ import { Mail, Loader2, Edit, Send, Check, X, Plus, Trash2, Bold, Italic, Underl
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarTemplate, enviarEmailManual, getFaturasDaEscola, criarTemplate, excluirTemplate, type EmailTemplate } from './actions'
 
-// Componente de Editor Visual (WYSIWYG) em React puro
+const MODELOS_BASE = [
+  { 
+    id: 'boas_vindas', 
+    nome: 'Boas-vindas', 
+    slug: 'boas_vindas_escola', 
+    assunto: 'Bem-vindo(a) à ARXUM Edu, {{nome_escola}}!', 
+    categoria: 'Onboarding',
+    html: '<h2>Olá, {{nome_escola}}!</h2><p>É um prazer ter sua escola conosco. Estamos muito felizes em fazer parte da sua jornada educacional.</p><p>Qualquer dúvida, estamos à disposição.</p><p>Equipe ARXUM</p>' 
+  },
+  { 
+    id: 'cobranca_avulsa', 
+    nome: 'Cobrança Manual', 
+    slug: 'cobranca_manual', 
+    assunto: 'Fatura em aberto - {{nome_escola}}', 
+    categoria: 'Cobrança',
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Passando para lembrar sobre a fatura referente a <strong>{{referencia}}</strong> no valor de <strong>{{valor}}</strong>.</p><p>O vencimento é dia {{vencimento}}.</p><p><a href="{{link_pagamento}}" style="background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Pagar Agora</a></p>' 
+  },
+  { 
+    id: 'confirmacao_pagamento', 
+    nome: 'Confirmação de Pagamento', 
+    slug: 'confirmacao_pagamento_escola', 
+    assunto: 'Pagamento Confirmado - {{nome_escola}}', 
+    categoria: 'Cobrança',
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Confirmamos o recebimento do seu pagamento referente a <strong>{{referencia}}</strong>.</p><p>Valor pago: <strong style="color: #0d9488;">{{valor}}</strong></p>' 
+  },
+  { 
+    id: 'aviso_limite', 
+    nome: 'Aviso de Limite de Alunos', 
+    slug: 'aviso_limite_tolerancia', 
+    assunto: 'Atenção: Limite de alunos atingido - {{nome_escola}}', 
+    categoria: 'Conta',
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Notamos que sua escola atingiu o limite de alunos do seu plano atual.</p><p>Para continuar matriculando sem interrupções, entre em contato para avaliarmos um upgrade.</p>' 
+  },
+  { 
+    id: 'em_branco', 
+    nome: 'Começar do Zero (Em branco)', 
+    slug: '', 
+    assunto: '', 
+    categoria: 'Geral',
+    html: '<p>Olá, {{nome_escola}}.</p><p>Digite seu texto aqui...</p>' 
+  }
+]
+
 function RichTextEditor({ value, onChange }: { value: string, onChange: (val: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null)
 
@@ -41,7 +83,7 @@ function RichTextEditor({ value, onChange }: { value: string, onChange: (val: st
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className="p-4 min-h-[300px] outline-none prose prose-sm max-w-none text-[#243942]"
+        className="p-4 min-h-[250px] outline-none prose prose-sm max-w-none text-[#243942]"
         style={{ lineHeight: '1.6' }}
       />
     </div>
@@ -55,23 +97,21 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   const [criando, setCriando] = useState(false)
   const [enviandoManual, setEnviandoManual] = useState<EmailTemplate | null>(null)
   
-  // Filtro
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   
-  // Form states
   const [formAssunto, setFormAssunto] = useState('')
   const [formHtml, setFormHtml] = useState('')
-  const [formAtivo, setFormAtivo] = useState(true)
+  const [formStatus, setFormStatus] = useState<'ativo' | 'inativo' | 'rascunho'>('ativo')
   const [salvando, setSalvando] = useState(false)
   
   // Novo form
+  const [modeloBaseSelecionado, setModeloBaseSelecionado] = useState('em_branco')
   const [novoNome, setNovoNome] = useState('')
   const [novoSlug, setNovoSlug] = useState('')
   const [novoAssunto, setNovoAssunto] = useState('')
   const [novoHtml, setNovoHtml] = useState('')
   const [novaCategoria, setNovaCategoria] = useState('Geral')
 
-  // Manual states
   const [escolaId, setEscolaId] = useState('')
   const [faturas, setFaturas] = useState<any[]>([])
   const [faturaId, setFaturaId] = useState('')
@@ -84,8 +124,21 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
     return templates.filter(t => t.categoria === filtroCategoria)
   }, [templates, filtroCategoria])
 
+  function handleModeloBaseChange(modeloId: string) {
+    setModeloBaseSelecionado(modeloId)
+    const modelo = MODELOS_BASE.find(m => m.id === modeloId)
+    if (modelo) {
+      setNovoNome(modelo.nome === 'Começar do Zero (Em branco)' ? '' : modelo.nome)
+      setNovoSlug(modelo.slug)
+      setNovoAssunto(modelo.assunto)
+      setNovoHtml(modelo.html)
+      setNovaCategoria(modelo.categoria)
+    }
+  }
+
   function abrirCriacao() {
     setCriando(true)
+    setModeloBaseSelecionado('em_branco')
     setNovoNome('')
     setNovoSlug('')
     setNovoAssunto('')
@@ -97,14 +150,14 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
     setEditando(tpl)
     setFormAssunto(tpl.assunto)
     setFormHtml(tpl.corpo_html)
-    setFormAtivo(tpl.ativo)
+    setFormStatus(tpl.ativo ? 'ativo' : 'inativo')
     setCriando(false)
   }
 
   async function handleSalvar() {
     if (!editando) return
     setSalvando(true)
-    const r = await atualizarTemplate(editando.id, { assunto: formAssunto, corpo_html: formHtml, ativo: formAtivo })
+    const r = await atualizarTemplate(editando.id, { assunto: formAssunto, corpo_html: formHtml, ativo: formStatus === 'ativo' })
     setSalvando(false)
     if (r.success) {
       setEditando(null)
@@ -181,7 +234,6 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
           </button>
         </div>
 
-        {/* FILTROS POR CATEGORIA */}
         <div className="mt-8 flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-[#536871] mr-2">
             <Filter className="size-4" /> Filtrar por:
@@ -211,7 +263,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${tpl.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {tpl.ativo ? 'Ativo' : 'Suspenso'}
+                      {tpl.ativo ? 'Ativo' : 'Rascunho'}
                     </span>
                     <button onClick={() => handleExcluir(tpl.id)} className="text-gray-400 hover:text-red-500 transition"><Trash2 className="size-4" /></button>
                   </div>
@@ -228,7 +280,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
                   <Edit className="size-3.5" /> Editar
                 </button>
                 <button onClick={() => abrirEnvioManual(tpl)} className="flex-1 bg-[#0d9488] text-white py-2 rounded-lg text-xs font-semibold hover:bg-[#0f766e] flex justify-center items-center gap-1">
-                  <Send className="size-3.5" /> Enviar Manual
+                  <Send className="size-3.5" /> Enviar
                 </button>
               </div>
             </Panel>
@@ -245,6 +297,18 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
               <button onClick={() => setCriando(false)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
             </header>
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fafcfc]">
+              
+              <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-4 rounded-xl">
+                <label className="block text-xs font-bold mb-2 text-[#0f766e]">Começar a partir de um modelo pronto</label>
+                <select 
+                  value={modeloBaseSelecionado} 
+                  onChange={e => handleModeloBaseChange(e.target.value)} 
+                  className="w-full border border-[#ccfbf1] bg-white p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm font-semibold text-[#0f766e]"
+                >
+                  {MODELOS_BASE.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold mb-1 text-[#536871]">Nome do Template</label>
                 <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Ex: Recuperação de Senha" className="w-full border border-[#d5e0e3] p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm bg-white" />
@@ -288,10 +352,11 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
                 <p className="text-xs text-[#82939a]">Editor Visual de E-mail</p>
               </div>
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-xs font-semibold text-[#30454e] cursor-pointer">
-                  <input type="checkbox" checked={formAtivo} onChange={e => setFormAtivo(e.target.checked)} className="rounded text-[#0d9488]" />
-                  Envio Automático Ativo
-                </label>
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <button onClick={() => setFormStatus('ativo')} className={`px-3 py-1 text-xs font-semibold rounded-md ${formStatus === 'ativo' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500'}`}>Ativo</button>
+                  <button onClick={() => setFormStatus('rascunho')} className={`px-3 py-1 text-xs font-semibold rounded-md ${formStatus === 'rascunho' ? 'bg-white shadow-sm text-orange-500' : 'text-gray-500'}`}>Rascunho</button>
+                  <button onClick={() => setFormStatus('inativo')} className={`px-3 py-1 text-xs font-semibold rounded-md ${formStatus === 'inativo' ? 'bg-white shadow-sm text-gray-600' : 'text-gray-500'}`}>Inativo</button>
+                </div>
                 <button onClick={() => setEditando(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
               </div>
             </header>
@@ -329,7 +394,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
         </div>
       )}
 
-      {/* MODAL ENVIO MANUAL */}
+      {/* MODAL ENVIO MANUAL (PELA TELA DE COMUNICAÇÃO) */}
       {enviandoManual && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white p-6 rounded-xl max-w-md w-full relative shadow-2xl">
