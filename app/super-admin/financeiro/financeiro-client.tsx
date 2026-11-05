@@ -28,9 +28,12 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
   const [descricao, setDescricao] = useState('Assinatura ARXUM')
   const [valorBase, setValorBase] = useState(0)
   const [desconto, setDesconto] = useState('0')
-  const [addon, setAddon] = useState('0')
   const [referencia, setReferencia] = useState(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
   const [carregandoValor, setCarregandoValor] = useState(false)
+
+  // Add-ons
+  const [addonsDisponiveis, setAddonsDisponiveis] = useState<Array<{slug: string, nome: string, preco_centavos: number}>>([])
+  const [addonsSelecionados, setAddonsSelecionados] = useState<string[]>([])
 
   // Extrato e Assinatura
   const [faturas, setFaturas] = useState<any[]>([])
@@ -48,6 +51,9 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
       getDadosCobrancaEscola(escolaId).then(r => {
         if (r.success && r.valorBaseCentavos !== undefined) {
           setValorBase(r.valorBaseCentavos)
+          setAddonsDisponiveis(r.addons || [])
+          // Auto-seleciona todos os add-ons ativos
+          setAddonsSelecionados((r.addons || []).map(a => a.slug))
         } else {
           setErro(r.error || 'Erro ao buscar valor.')
         }
@@ -55,6 +61,8 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
       })
     } else {
       setValorBase(0)
+      setAddonsDisponiveis([])
+      setAddonsSelecionados([])
     }
   }, [escolaId])
 
@@ -79,9 +87,8 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
     setErro('')
     
     const descCentavos = Math.round(parseFloat(desconto.replace(',', '.')) * 100) || 0
-    const addCentavos = Math.round(parseFloat(addon.replace(',', '.')) * 100) || 0
 
-    const r = await gerarCobrancaCheckout(escolaId, descCentavos, addCentavos, descricao, referencia)
+    const r = await gerarCobrancaCheckout(escolaId, descCentavos, addonsSelecionados, descricao, referencia)
     
     setProcessando(false)
     if (!r.success) return setErro(r.error || 'Erro.')
@@ -96,7 +103,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
     if (escola) setEscolaId(escola.id)
     else setEscolaId('')
     setDesconto('0')
-    setAddon('0')
     setLinkGerado(null)
     setErro('')
     setNovaAberta(true)
@@ -144,8 +150,13 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
 
   const valorBaseCentavos = valorBase
   const descontoCentavos = Math.round(parseFloat(desconto.replace(',', '.')) * 100) || 0
-  const addonCentavos = Math.round(parseFloat(addon.replace(',', '.')) * 100) || 0
-  const valorFinal = valorBaseCentavos - descontoCentavos + addonCentavos
+  
+  const somaAddonsCentavos = addonsSelecionados.reduce((acc, slug) => {
+    const addon = addonsDisponiveis.find(a => a.slug === slug)
+    return acc + (addon?.preco_centavos || 0)
+  }, 0)
+
+  const valorFinal = valorBaseCentavos + somaAddonsCentavos - descontoCentavos
 
   return (
     <AdminShell mode="super" active="Financeiro">
@@ -263,15 +274,32 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold mb-1 block text-red-600">Desconto (R$)</label>
-                  <input type="text" value={desconto} onChange={e => setDesconto(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              {addonsDisponiveis.length > 0 && (
+                <div className="border border-[#e5ecee] p-3 rounded-lg bg-[#fafcfc]">
+                  <label className="text-xs font-bold mb-2 block text-[#12232b]">Add-ons Ativos da Escola</label>
+                  <div className="space-y-2">
+                    {addonsDisponiveis.map(addon => (
+                      <label key={addon.slug} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={addonsSelecionados.includes(addon.slug)}
+                          onChange={(e) => {
+                            if (e.target.checked) setAddonsSelecionados([...addonsSelecionados, addon.slug])
+                            else setAddonsSelecionados(addonsSelecionados.filter(s => s !== addon.slug))
+                          }}
+                          className="rounded text-[#0d9488] focus:ring-[#0d9488]" 
+                        />
+                        <span className="flex-1 text-[#243942]">{addon.nome}</span>
+                        <span className="font-semibold text-[#0d9488]">+ {formatarDinheiro(addon.preco_centavos)}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold mb-1 block text-green-600">Add-on (R$)</label>
-                  <input type="text" value={addon} onChange={e => setAddon(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
-                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold mb-1 block text-red-600">Desconto (R$)</label>
+                <input type="text" value={desconto} onChange={e => setDesconto(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
               </div>
 
               <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-4 rounded-lg mt-2">
@@ -279,13 +307,13 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                   <span className="text-gray-600">Valor Base:</span>
                   <span>{formatarDinheiro(valorBaseCentavos)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm mb-1 text-red-600">
+                <div className="flex justify-between items-center text-sm mb-1 text-green-600">
+                  <span>Add-ons:</span>
+                  <span>+ {formatarDinheiro(somaAddonsCentavos)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mb-2 text-red-600">
                   <span>Desconto:</span>
                   <span>- {formatarDinheiro(descontoCentavos)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm mb-2 text-green-600">
-                  <span>Add-on:</span>
-                  <span>+ {formatarDinheiro(addonCentavos)}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-lg border-t border-[#ccfbf1] pt-2 text-[#0f766e]">
                   <span>Total a Pagar:</span>
