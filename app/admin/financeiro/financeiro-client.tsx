@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Search, CircleDollarSign, Clock, CheckCircle2, AlertCircle, FileText, X, Loader2, CreditCard, QrCode, ExternalLink } from 'lucide-react'
+import { Plus, Search, CircleDollarSign, Clock, CheckCircle2, AlertCircle, FileText, X, Loader2, CreditCard, QrCode, ExternalLink, Mail, Copy, Check } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { criarFatura, excluirFatura, type Fatura } from './actions'
+import { criarFatura, excluirFatura, gerarPixAdmin, enviarCobrancaEmail, type Fatura } from './actions'
 
-// ── SEMÂNTICO: cores por status financeiro ──────────────────────────
 const statusStyles: Record<string, string> = {
   pago: 'bg-[#d1fae5] text-[#065f46]',
   em_aberto: 'bg-[#fef3c7] text-[#92400e]',
@@ -38,6 +37,12 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
   const [detalheFatura, setDetalheFatura] = useState<Fatura | null>(null)
   const [processando, setProcessando] = useState(false)
   const [erro, setErro] = useState('')
+
+  // Estados para geração de PIX e envio de e-mail
+  const [gerandoPix, setGerandoPix] = useState(false)
+  const [copiouPix, setCopiouPix] = useState(false)
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [sucessoEmail, setSucessoEmail] = useState('')
 
   const [alunoIdx, setAlunoIdx] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -77,6 +82,7 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
     setProcessando(true)
     setErro('')
     const r = await criarFatura({
+      aluno_id: aluno.id,
       aluno_nome: aluno.nome,
       responsavel_email: aluno.responsavel_email,
       descricao,
@@ -92,6 +98,34 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
     router.refresh()
   }
 
+  async function handleGerarPix(faturaId: string) {
+    setGerandoPix(true)
+    const r = await gerarPixAdmin(faturaId)
+    setGerandoPix(false)
+    
+    if (r.success && r.pix) {
+      // Atualiza o modal localmente
+      setDetalheFatura(prev => prev ? { ...prev, pix_copia_cola: r.pix.copiaCola, pix_qr_imagem: r.pix.qr } : null)
+      router.refresh()
+    } else {
+      alert(r.error)
+    }
+  }
+
+  async function handleEnviarCobranca(faturaId: string) {
+    setEnviandoEmail(true)
+    setSucessoEmail('')
+    const r = await enviarCobrancaEmail(faturaId)
+    setEnviandoEmail(false)
+    
+    if (r.success) {
+      setSucessoEmail('E-mail de cobrança enviado com sucesso!')
+      setTimeout(() => setSucessoEmail(''), 3000)
+    } else {
+      alert(r.error)
+    }
+  }
+
   return (
     <AdminShell mode="school" active="Financeiro">
       <main className="px-5 py-8 lg:px-8">
@@ -103,10 +137,10 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
           />
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/admin/financeiro/mercadopago"
+              href="/admin/configuracoes"
               className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]"
             >
-              <CreditCard className="size-4" /> Conta de Recebimento
+              <CreditCard className="size-4" /> Gateway de Recebimento
             </Link>
             <button
               onClick={() => { limpar(); setNovaFaturaAberta(true) }}
@@ -254,7 +288,7 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold text-[#12232b]">Nova fatura</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Gerar cobrança PIX para o responsável</p>
+                <p className="mt-0.5 text-xs text-[#82939a]">Gerar cobrança para o responsável</p>
               </div>
               <button onClick={() => setNovaFaturaAberta(false)} disabled={processando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
             </header>
@@ -300,28 +334,97 @@ export function FinanceiroClient({ faturas, alunos }: { faturas: Fatura[], aluno
         </div>
       )}
 
-      {/* MODAL DETALHE FATURA */}
+      {/* MODAL DETALHE FATURA (ATUALIZADO) */}
       {detalheFatura && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDetalheFatura(null)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">Fatura</h2>
-                <p className="text-xs text-[#82939a]">{detalheFatura.aluno_nome}</p>
+                <h2 className="text-lg font-bold text-[#12232b]">Fatura de {detalheFatura.aluno_nome}</h2>
+                <p className="text-xs text-[#82939a]">Ref: {detalheFatura.descricao}</p>
               </div>
               <button onClick={() => setDetalheFatura(null)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
             </div>
 
-            <div className="rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4 mb-6">
-              <p className="text-sm font-semibold text-[#243942]">{detalheFatura.descricao}</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{formatarMoeda(detalheFatura.valor_centavos)}</p>
-              <p className="text-xs text-[#82939a] mt-1">Vence em {formatarData(detalheFatura.vencimento)}</p>
-              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold mt-3 ${statusStyles[detalheFatura.status]}`}>
-                {statusLabels[detalheFatura.status]}
-              </span>
+            <div className="overflow-y-auto pr-2 flex-1">
+              <div className="rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4 mb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-semibold text-[#243942]">{formatarMoeda(detalheFatura.valor_centavos)}</p>
+                    <p className="text-xs text-[#82939a] mt-1">Vencimento: {formatarData(detalheFatura.vencimento)}</p>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[detalheFatura.status]}`}>
+                    {statusLabels[detalheFatura.status]}
+                  </span>
+                </div>
+              </div>
+
+              {/* AÇÕES DE COBRANÇA */}
+              {detalheFatura.status !== 'pago' && (
+                <div className="space-y-4 mb-4">
+                  
+                  {!detalheFatura.pix_copia_cola && (
+                    <button 
+                      onClick={() => handleGerarPix(detalheFatura.id)} 
+                      disabled={gerandoPix}
+                      className="w-full bg-white border border-[#d5e0e3] text-[#30454e] py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:border-[#0d9488] transition disabled:opacity-50"
+                    >
+                      {gerandoPix ? <Loader2 className="size-5 animate-spin" /> : <QrCode className="size-5" />}
+                      {gerandoPix ? 'Gerando PIX...' : 'Gerar PIX / Boleto'}
+                    </button>
+                  )}
+
+                  {detalheFatura.pix_copia_cola && (
+                    <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-4 rounded-xl text-center">
+                      <p className="text-xs font-bold text-[#0f766e] uppercase tracking-wider mb-2">PIX Copia e Cola</p>
+                      <div className="flex gap-2">
+                        <input readOnly value={detalheFatura.pix_copia_cola} className="w-full border border-[#ccfbf1] bg-white p-2 text-xs truncate rounded text-gray-500 outline-none" />
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(detalheFatura.pix_copia_cola || '')
+                            setCopiouPix(true)
+                            setTimeout(() => setCopiouPix(false), 2000)
+                          }} 
+                          className="bg-[#0d9488] text-white px-3 py-2 rounded hover:bg-[#0f766e] font-bold text-sm shrink-0"
+                        >
+                          {copiouPix ? <Check className="size-4" /> : <Copy className="size-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {detalheFatura.boleto_url && (
+                    <a href={detalheFatura.boleto_url} target="_blank" rel="noopener noreferrer" className="w-full bg-white border border-[#d5e0e3] text-[#30454e] py-3 rounded-lg font-bold flex justify-center items-center gap-2 hover:border-[#0d9488] transition">
+                      <ExternalLink className="size-5" /> Abrir Boleto
+                    </a>
+                  )}
+
+                  <div className="border-t border-[#e5ecee] pt-4 mt-4">
+                    <button 
+                      onClick={() => handleEnviarCobranca(detalheFatura.id)} 
+                      disabled={enviandoEmail || !!sucessoEmail}
+                      className="w-full py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--cor-primaria, #0d9488)', color: 'white' }}
+                    >
+                      {enviandoEmail ? <Loader2 className="size-5 animate-spin" /> : <Mail className="size-5" />}
+                      {enviandoEmail ? 'Enviando...' : 'Enviar Cobrança por E-mail'}
+                    </button>
+                    {sucessoEmail && (
+                      <p className="text-xs text-green-600 text-center mt-2 flex items-center justify-center gap-1">
+                        <CheckCircle2 className="size-3" /> {sucessoEmail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
+            <div className="pt-4 border-t border-[#e5ecee] flex justify-end shrink-0 mt-4">
+              <button onClick={() => { if(confirm('Excluir esta fatura?')) excluirFatura(detalheFatura.id).then(() => { setDetalheFatura(null); router.refresh() }) }} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1">
+                Excluir Fatura
+              </button>
+            </div>
           </div>
         </div>
       )}
