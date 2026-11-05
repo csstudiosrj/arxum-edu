@@ -1,183 +1,72 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
-import { notificarFaturaGerada } from '@/lib/emails/notificacoes'
-import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
-import { resolverToken } from '@/lib/mercadopago'
 import { revalidatePath } from 'next/cache'
 
-export type Fatura = {
-  id: string
-  aluno_nome: string
-  responsavel_email: string
-  descricao: string
-  valor_centavos: number
-  vencimento: string
-  status: string
-  criado_em: string
-}
-
-export type NovaFatura = {
-  aluno_nome: string
-  responsavel_email: string
-  descricao: string
-  valor_centavos: number
-  vencimento: string
-}
-
-function formatarMoeda(centavos: number): string {
-  return (centavos / 100).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function formatarDataBR(iso: string): string {
+export async function gerarPagamentoArxum(faturaId: string, metodo: 'pix' | 'boleto' | 'credit_card', cardToken?: string) {
   try {
-    return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR')
-  } catch {
-    return iso
-  }
-}
-
-export async function getFaturas(): Promise<Fatura[]> {
-  try {
-    const escola = await getEscolaDoUsuario()
-    if (!escola) return []
-
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('faturas')
-      .select('id, aluno_nome, responsavel_email, descricao, valor_centavos, vencimento, status, criado_em')
-      .eq('escola_id', escola.id)
-      .order('vencimento', { ascending: false })
+    const { data: fatura } = await admin.from('faturamento_escolas').select('*').eq('id', faturaId).single()
+    
+    if (!fatura) return { success: false, error: 'Fatura não encontrada.' }
 
-    if (error) return []
-    return (data || []) as Fatura[]
-  } catch (e) {
-    return []
-  }
-}
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN
+    if (!token) return { success: false, error: 'Token do Mercado Pago não configurado.' }
 
-export async function criarFatura(data: NovaFatura) {
-  try {
-    const escola = await getEscolaDoUsuario()
-    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+    const url = process.env.NEXT_PUBLIC_SITE_URL || 'https://arxum.com.br'
 
-    const admin = createAdminClient()
-    const { data: escolaMp } = await admin
-      .from('escolas')
-      .select('mercadopago_access_token')
-      .eq('id', escola.id)
-      .single()
-
-    const accessToken = resolverToken(escolaMp?.mercadopago_access_token)
-    if (!accessToken) {
-      return { success: false, error: 'A escola precisa configurar a Conta de Recebimento (Mercado Pago) antes de gerar faturas.' }
+    const body: any = {
+      transaction_amount: fatura.valor_centavos / 100,
+      description: fatura.descricao,
+      payer: {
+        email: 'financeiro@escola.com.br', 
+        first_name: 'Escola',
+        last_name: fatura.escola_nome,
+        identification: { type: 'CNPJ', number: '00000000000000' }
+      },
+      external_reference: faturaId,
+      notification_url: `${url}/edu/api/webhooks/mercadopago?faturaId=${faturaId}&tipo=arxum`
     }
 
-    // O pagamento (PIX, cartão ou boleto) é gerado na hora em que o
-    // responsável escolhe como pagar, direto na tela dele.
-    const { error } = await admin.from('faturas').insert({
-      escola_id: escola.id,
-      aluno_nome: data.aluno_nome,
-      responsavel_email: data.responsavel_email,
-      descricao: data.descricao,
-      valor_centavos: data.valor_centavos,
-      vencimento: data.vencimento,
-      gateway: 'mercadopago',
+    if (metodo === 'pix') {
+      body.payment_method_id = 'pix'
+    } else if (metodo === 'boleto') {
+      body.payment_method_id = 'bolbradesco'
+    } else if (metodo === 'credit_card') {
+      if (!cardToken) return { success: false, error: 'Token do cartão não informado.' }
+      body.payment_method_id = 'visa' // O MP identifica a bandeira pelo token
+      body.token = cardToken
+      body.installments = 1
+    }
+
+    const res = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': faturaId + Date.now().toString()
+      },
+      body: JSON.stringify(body)
     })
 
-    if (error) return { success: false, error: error.message }
+    const data = await res.json()
 
-    try {
-      if (data.responsavel_email) {
-        enviarSeAtivo({
-          escolaId: escola.id,
-          evento: 'fatura',
-          enviar: () =>
-            notificarFaturaGerada({
-              para: data.responsavel_email,
-              escolaNome: escola.nome,
-              escolaSlug: escola.slug,
-              alunoNome: data.aluno_nome,
-              descricao: data.descricao,
-              valor: formatarMoeda(data.valor_centavos),
-              vencimento: formatarDataBR(data.vencimento),
-            }),
-        }).catch((e) => console.error('[email fatura]', data.responsavel_email, e))
-      }
-    } catch (e) {}
+    if (!res.ok) return { success: false, error: data.message || 'Erro no Mercado Pago.', detalhes: data }
 
-    revalidatePath('/admin/financeiro')
-    revalidatePath('/responsavel')
-    revalidatePath('/dashboard')
-    return { success: true }
-  } catch (e) {
-    console.error('Erro ao criar fatura:', e)
-    return { success: false, error: 'Erro inesperado ao criar fatura.' }
-  }
-}
+    // Atualiza no banco com os dados retornados (PIX, Boleto ou Cartão)
+    await admin.from('faturamento_escolas').update({
+      gateway: 'mercadopago',
+      gateway_payment_id: String(data.id),
+      gateway_status: data.status,
+      pix_copia_cola: data.point_of_interaction?.transaction_data?.qr_code || null,
+      pix_qr_imagem: data.point_of_interaction?.transaction_data?.qr_code_base64 || null,
+      boleto_linha: data.barcode?.content || null,
+      boleto_url: data.transaction_details?.external_resource_url || null
+    }).eq('id', faturaId)
 
-export async function atualizarStatusFatura(id: string, novoStatus: string) {
-  try {
-    const escola = await getEscolaDoUsuario()
-    if (!escola) return { success: false, error: 'Escola não encontrada.' }
-
-    const admin = createAdminClient()
-    const { error } = await admin
-      .from('faturas')
-      .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
-      .eq('id', id)
-      .eq('escola_id', escola.id)
-
-    if (error) return { success: false, error: error.message }
-
-    revalidatePath('/admin/financeiro')
-    revalidatePath('/responsavel')
-    revalidatePath('/dashboard')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: 'Erro ao atualizar.' }
-  }
-}
-
-export async function excluirFatura(id: string) {
-  try {
-    const escola = await getEscolaDoUsuario()
-    if (!escola) return { success: false, error: 'Escola não encontrada.' }
-
-    const admin = createAdminClient()
-    const { error } = await admin.from('faturas').delete().eq('id', id).eq('escola_id', escola.id)
-    if (error) return { success: false, error: error.message }
-
-    revalidatePath('/admin/financeiro')
-    revalidatePath('/responsavel')
-    revalidatePath('/dashboard')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: 'Erro ao excluir.' }
-  }
-}
-
-export async function getAlunosParaFatura(): Promise<Array<{ nome: string; responsavel_email: string }>> {
-  try {
-    const escola = await getEscolaDoUsuario()
-    if (!escola) return []
-
-    const admin = createAdminClient()
-    const { data } = await admin
-      .from('alunos')
-      .select('nome, responsavel_email')
-      .eq('escola_id', escola.id)
-      .eq('status', 'ativo')
-      .order('nome', { ascending: true })
-
-    return (data || []) as Array<{ nome: string; responsavel_email: string }>
-  } catch (e) {
-    return []
+    revalidatePath('/super-admin/financeiro')
+    return { success: true, data }
+  } catch (e: any) {
+    return { success: false, error: 'Erro interno ao comunicar com o gateway.' }
   }
 }
