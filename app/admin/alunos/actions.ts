@@ -38,6 +38,37 @@ export async function getAlunos(): Promise<Aluno[]> {
   }
 }
 
+export async function getLimiteAlunos() {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return null
+    
+    const admin = createAdminClient()
+    
+    // Pega o plano da escola
+    const { data: escolaData } = await admin.from('escolas').select('plano').eq('id', escola.id).single()
+    
+    // Pega os limites do plano
+    const { data: plano } = await admin.from('planos').select('max_alunos, teto_alunos_excedentes, preco_aluno_extra_centavos').eq('slug', escolaData?.plano || 'semente').single()
+    
+    // Conta os alunos ativos
+    const { count } = await admin
+      .from('alunos')
+      .select('*', { count: 'exact', head: true })
+      .eq('escola_id', escola.id)
+      .eq('status', 'ativo')
+
+    return {
+      max_alunos: plano?.max_alunos || 0,
+      teto_alunos_excedentes: plano?.teto_alunos_excedentes || 0,
+      preco_aluno_extra_centavos: plano?.preco_aluno_extra_centavos || 0,
+      alunos_ativos: count || 0
+    }
+  } catch (e) {
+    return null
+  }
+}
+
 export async function getAlunoDetalhes(id: string) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -58,9 +89,6 @@ export async function getAlunoDetalhes(id: string) {
 }
 
 // ── EXCLUSÃO SEGURA ────────────────────────────────────────────────
-// 1. Deleta o aluno PRIMEIRO (o banco aplica CASCADE no que for configurado).
-// 2. Só depois deleta o usuário do Auth. Se o delete do aluno falhar
-//    por FK (ex: faturas em aberto sem cascade), nada é apagado.
 export async function excluirAluno(id: string) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -77,7 +105,6 @@ export async function excluirAluno(id: string) {
 
     if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
 
-    // 1. Deleta o aluno primeiro (deixa o banco aplicar FK/CASCADE)
     const { error } = await admin
       .from('alunos')
       .delete()
@@ -85,14 +112,12 @@ export async function excluirAluno(id: string) {
       .eq('escola_id', escola.id)
 
     if (error) {
-      // Se falhar por FK, o aluno e o usuário continuam intactos (sem órfão)
       return {
         success: false,
         error: `Não foi possível excluir o aluno: ${error.message}. Considere inativar em vez de excluir.`,
       }
     }
 
-    // 2. Agora sim, remove o usuário do Auth (se existia)
     if (aluno.usuario_id) {
       await admin.auth.admin.deleteUser(aluno.usuario_id).catch((e) => {
         console.error('Aluno excluído, mas usuário do Auth não pôde ser removido:', e)
@@ -107,8 +132,6 @@ export async function excluirAluno(id: string) {
 }
 
 // ── CONVITE AO PORTAL ──────────────────────────────────────────────
-// Ordem correta: cria o usuário no Auth → vincula ao aluno → dispara e-mail.
-// Se algum passo falhar no meio, o registro do aluno não fica sujo.
 export async function convidarAlunoParaPortal(alunoId: string, emailAluno: string) {
   try {
     const escola = await getEscolaDoUsuario()
@@ -120,7 +143,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     const admin = createAdminClient()
 
-    // 1. Verifica o aluno
     const { data: aluno } = await admin
       .from('alunos')
       .select('nome')
@@ -130,7 +152,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
 
-    // 2. Verifica se já existe outro aluno com esse e-mail (evita conflito)
     const { data: alunoComEmail } = await admin
       .from('alunos')
       .select('id')
@@ -143,7 +164,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
       return { success: false, error: 'Este e-mail já está vinculado a outro aluno desta escola.' }
     }
 
-    // 3. Cria (ou reaproveita) o usuário no Auth
     const { data: usuarios } = await admin.auth.admin.listUsers()
     let usuarioExistente = (usuarios?.users || []).find((u) => u.email === emailAluno)
 
@@ -161,7 +181,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
       usuarioExistente = novoUsuario.user
     }
 
-    // 4. Vincula o perfil
     const { error: erroPerfil } = await admin
       .from('perfis')
       .update({
@@ -174,7 +193,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (erroPerfil) return { success: false, error: erroPerfil.message }
 
-    // 5. Atualiza o aluno (só depois do Auth estar OK)
     const { error: erroUpdate } = await admin
       .from('alunos')
       .update({
@@ -186,7 +204,6 @@ export async function convidarAlunoParaPortal(alunoId: string, emailAluno: strin
 
     if (erroUpdate) return { success: false, error: erroUpdate.message }
 
-    // 6. Gera o link mágico e dispara o e-mail
     const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: emailAluno,
