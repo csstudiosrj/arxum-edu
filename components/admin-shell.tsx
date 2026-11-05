@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -25,8 +25,9 @@ const schoolItems = [
   ['Mensagens', '/admin/mensagens', Inbox], ['Agenda', '/admin/agenda', Calendar],
   ['Autorizações', '/admin/autorizacoes', ShieldCheck], ['Galeria', '/admin/galeria', ImageIcon],
   ['EduFlix', '/admin/eduflix', BookOpen], ['Sala virtual', '/admin/sala-virtual', BookOpen],
-  ['Loja', '/admin/loja', CircleDollarSign], ['Exportação', '/admin/exportacao', Database],
-  ['Configurações', '/admin/configuracoes', Settings],
+  ['Loja', '/admin/loja', CircleDollarSign], 
+  ['Add-ons', '/admin/addons', Sparkles], // NOVA ABA AQUI
+  ['Exportação', '/admin/exportacao', Database], ['Configurações', '/admin/configuracoes', Settings],
 ] as const
 
 const superItems = [
