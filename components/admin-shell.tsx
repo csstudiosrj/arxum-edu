@@ -36,6 +36,7 @@ const superItems = [
   ['Add-ons', '/super-admin/addons', Palette],
   ['Financeiro', '/super-admin/financeiro', CircleDollarSign], 
   ['Comunicação', '/super-admin/comunicacao', Mail],
+  ['Monetização', '/super-admin/monetizacao', TrendingUp],
   ['Sistema', '/super-admin/sistema', Settings],
   ['Suporte', '/super-admin/suporte', Headphones],
   ['Métricas', '/super-admin/metricas', BarChart3],
@@ -129,8 +130,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
         <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
         <div className="ml-auto flex items-center gap-4">
-          
-          {/* AQUI ESTÁ A TROCA DO SINO ESTÁTICO PELO COMPONENTE REAL */}
           {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <SinoSuperAdmin />}
           
           <div className="relative">
