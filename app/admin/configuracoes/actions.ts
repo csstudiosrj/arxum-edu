@@ -51,36 +51,75 @@ export async function salvarDadosEscola(data: DadosEscolaInput) {
   }
 }
 
-// ── SOLICITAÇÃO DE RECURSO FUTURO ───────────────────────────────────
-// Quando o admin clica em "Avisar quando estiver pronto" num card de
-// recurso em desenvolvimento, cria um ticket em tickets_suporte com
-// categoria 'sugestao'. O time ARXUM vê no /super-admin/suporte.
-
-export async function solicitarRecursoFuturo(recursoTitulo: string) {
+export async function salvarConfiguracaoPagamento(data: {
+  ciclo_cobranca_loja?: string
+}) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
-    if (!recursoTitulo.trim()) {
-      return { success: false, error: 'Recurso inválido.' }
-    }
+    const admin = createAdminClient()
+    const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
+
+    if (data.ciclo_cobranca_loja !== undefined) payload.ciclo_cobranca_loja = data.ciclo_cobranca_loja
+
+    const { error } = await admin.from('escolas').update(payload).eq('id', escola.id)
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/configuracoes')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao salvar configurações de pagamento.' }
+  }
+}
+
+export async function desconectarMercadoPago() {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    
+    // (Opcional) Aqui você poderia chamar a API do MP para revogar o token, 
+    // mas para simplificar, apenas limpamos do nosso banco.
+
+    const { error } = await admin
+      .from('escolas')
+      .update({
+        mercadopago_access_token: null,
+        mercadopago_refresh_token: null,
+        mercadopago_user_id: null,
+        gateway_preferido: 'proprio',
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/configuracoes')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao desconectar.' }
+  }
+}
+
+export async function solicitarRecursoFuturo(recursoTitulo: string) {
+  // ... mantém a mesma função que já existia
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+    if (!recursoTitulo.trim()) return { success: false, error: 'Recurso inválido.' }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-
     const admin = createAdminClient()
 
     let nomeSolicitante = 'Administrador(a)'
     if (user?.email) {
-      const { data: perfil } = await admin
-        .from('perfis')
-        .select('nome')
-        .eq('email', user.email)
-        .maybeSingle()
+      const { data: perfil } = await admin.from('perfis').select('nome').eq('email', user.email).maybeSingle()
       if (perfil?.nome) nomeSolicitante = perfil.nome
     }
 
-    // Verifica se já existe ticket idêntico aberto recente para não duplicar
     const { data: existente } = await admin
       .from('tickets_suporte')
       .select('id')
@@ -90,9 +129,7 @@ export async function solicitarRecursoFuturo(recursoTitulo: string) {
       .in('status', ['aberto', 'em_andamento'])
       .maybeSingle()
 
-    if (existente) {
-      return { success: true, jaExistia: true }
-    }
+    if (existente) return { success: true, jaExistia: true }
 
     const { error } = await admin.from('tickets_suporte').insert({
       escola_id: escola.id,
@@ -106,11 +143,9 @@ export async function solicitarRecursoFuturo(recursoTitulo: string) {
     })
 
     if (error) return { success: false, error: error.message }
-
     revalidatePath('/admin/configuracoes')
     return { success: true }
   } catch (e) {
-    console.error('Erro ao solicitar recurso futuro:', e)
     return { success: false, error: 'Erro ao registrar interesse.' }
   }
 }
