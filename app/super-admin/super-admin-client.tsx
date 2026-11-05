@@ -36,7 +36,8 @@ export function SuperAdminClient({ metricas }: { metricas: MetricasSaaS }) {
             <Panel className="p-5 h-full">
               <div className="grid size-10 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><Building2 className="size-5" /></div>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Escolas ativas</p>
-              <p className="mt-1 text-3xl font-bold tracking-[-.03em] text-[#0d9488]">{metricas.escolasTotal}</p>
+              {/* CORRIGIDO AQUI: escolasAtivas em vez de escolasTotal */}
+              <p className="mt-1 text-3xl font-bold tracking-[-.03em] text-[#0d9488]">{metricas.escolasAtivas}</p>
               <p className="mt-1 text-xs text-[#82939a]">+{metricas.novosEsteMes} este mês</p>
             </Panel>
           </Link>
