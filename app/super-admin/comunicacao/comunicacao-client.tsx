@@ -5,6 +5,52 @@ import { Mail, Loader2, Edit, Send, Check, X, Plus, Trash2, Bold, Italic, Underl
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarTemplate, enviarEmailManual, getFaturasDaEscola, criarTemplate, excluirTemplate, type EmailTemplate } from './actions'
 
+// MODELOS PRONTOS PARA FACILITAR A VIDA DO USUÁRIO
+const MODELOS_BASE = [
+  { 
+    id: 'boas_vindas', 
+    nome: 'Boas-vindas', 
+    slug: 'boas_vindas', 
+    assunto: 'Bem-vindo(a) à ARXUM Edu, {{nome_escola}}!', 
+    html: '<h2>Olá, {{nome_escola}}!</h2><p>É um prazer ter sua escola conosco. Estamos muito felizes em fazer parte da sua jornada educacional.</p><p>Qualquer dúvida, estamos à disposição.</p><p>Equipe ARXUM</p>' 
+  },
+  { 
+    id: 'cobranca_avulsa', 
+    nome: 'Cobrança / Fatura', 
+    slug: 'cobranca_avulsa', 
+    assunto: 'Fatura em aberto - {{nome_escola}}', 
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Passando para lembrar sobre a fatura referente a <strong>{{referencia}}</strong> no valor de <strong>{{valor}}</strong>.</p><p>O vencimento é dia {{vencimento}}.</p><p><a href="{{link_pagamento}}" style="background-color: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px;">Pagar Agora</a></p>' 
+  },
+  { 
+    id: 'confirmacao_pagamento', 
+    nome: 'Confirmação de Pagamento', 
+    slug: 'confirmacao_pagamento', 
+    assunto: 'Pagamento Confirmado - {{nome_escola}}', 
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Confirmamos o recebimento do seu pagamento referente a <strong>{{referencia}}</strong>.</p><p>Valor pago: <strong style="color: #0d9488;">{{valor}}</strong></p><p>Agradecemos a sua parceria.</p>' 
+  },
+  { 
+    id: 'recuperacao_senha', 
+    nome: 'Aviso de Senha', 
+    slug: 'aviso_senha', 
+    assunto: 'Instruções de acesso à sua conta', 
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Recebemos uma solicitação referente ao acesso da sua conta.</p><p>Se você esqueceu sua senha, por favor entre em contato com nosso suporte para gerar um novo link de acesso.</p>' 
+  },
+  { 
+    id: 'aviso_limite', 
+    nome: 'Aviso de Limite de Alunos', 
+    slug: 'aviso_limite', 
+    assunto: 'Atenção: Limite de alunos atingido - {{nome_escola}}', 
+    html: '<h2>Olá, {{nome_escola}}.</h2><p>Notamos que sua escola atingiu o limite de alunos do seu plano atual.</p><p>Para continuar matriculando sem interrupções, entre em contato para avaliarmos um upgrade de plano.</p>' 
+  },
+  { 
+    id: 'em_branco', 
+    nome: 'Começar do Zero (Em branco)', 
+    slug: '', 
+    assunto: '', 
+    html: '<p>Olá, {{nome_escola}}.</p><p>Digite seu texto aqui...</p>' 
+  }
+]
+
 // Componente de Editor Visual (WYSIWYG) em React puro
 function RichTextEditor({ value, onChange }: { value: string, onChange: (val: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null)
@@ -60,9 +106,11 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   const [salvando, setSalvando] = useState(false)
   
   // Novo form
+  const [modeloSelecionado, setModeloSelecionado] = useState('em_branco')
   const [novoNome, setNovoNome] = useState('')
   const [novoSlug, setNovoSlug] = useState('')
   const [novoAssunto, setNovoAssunto] = useState('')
+  const [novoHtml, setNovoHtml] = useState('')
 
   // Manual states
   const [escolaId, setEscolaId] = useState('')
@@ -71,6 +119,27 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   const [carregandoFaturas, setCarregandoFaturas] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [sucessoMsg, setSucessoMsg] = useState('')
+
+  // Função para aplicar o modelo selecionado
+  function handleModeloChange(modeloId: string) {
+    setModeloSelecionado(modeloId)
+    const modelo = MODELOS_BASE.find(m => m.id === modeloId)
+    if (modelo) {
+      setNovoNome(modelo.nome === 'Começar do Zero (Em branco)' ? '' : modelo.nome)
+      setNovoSlug(modelo.slug)
+      setNovoAssunto(modelo.assunto)
+      setNovoHtml(modelo.html)
+    }
+  }
+
+  function abrirCriacao() {
+    setCriando(true)
+    setModeloSelecionado('em_branco')
+    setNovoNome('')
+    setNovoSlug('')
+    setNovoAssunto('')
+    setNovoHtml('<p>Olá, {{nome_escola}}.</p><p>Digite seu texto aqui...</p>')
+  }
 
   function abrirEdicao(tpl: EmailTemplate) {
     setEditando(tpl)
@@ -96,7 +165,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
   async function handleCriar() {
     if (!novoNome || !novoSlug || !novoAssunto) return alert('Preencha todos os campos.')
     setSalvando(true)
-    const r = await criarTemplate({ nome: novoNome, slug: novoSlug.toLowerCase().replace(/\s+/g, '_'), assunto: novoAssunto, corpo_html: '<p>Olá, {{nome_escola}}.</p><p>Seu texto aqui...</p>' })
+    const r = await criarTemplate({ nome: novoNome, slug: novoSlug.toLowerCase().replace(/\s+/g, '_'), assunto: novoAssunto, corpo_html: novoHtml })
     setSalvando(false)
     if (r.success) {
       setCriando(false)
@@ -155,7 +224,7 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
             title="Central de Comunicação" 
             description="Gerencie os e-mails automáticos e templates de mensagens." 
           />
-          <button onClick={() => setCriando(true)} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
+          <button onClick={abrirCriacao} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
             <Plus className="size-4" /> Novo Template
           </button>
         </div>
@@ -195,29 +264,47 @@ export function ComunicacaoClient({ templates, escolas }: { templates: EmailTemp
       {/* DRAWER CRIAR NOVO TEMPLATE */}
       {criando && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-          <aside className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl relative">
+          <aside className="bg-white w-full max-w-xl h-full flex flex-col shadow-2xl relative">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <h2 className="text-lg font-bold text-[#12232b]">Criar Novo Template</h2>
               <button onClick={() => setCriando(false)} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6]"><X className="size-5" /></button>
             </header>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-[#fafcfc]">
+              
+              {/* SELETOR DE MODELOS PRONTOS */}
+              <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-4 rounded-xl">
+                <label className="block text-xs font-bold mb-2 text-[#0f766e]">Começar a partir de um modelo pronto</label>
+                <select 
+                  value={modeloSelecionado} 
+                  onChange={e => handleModeloChange(e.target.value)} 
+                  className="w-full border border-[#ccfbf1] bg-white p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm font-semibold text-[#0f766e]"
+                >
+                  {MODELOS_BASE.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+                <p className="text-[10px] text-[#0f766e]/70 mt-2">Os campos abaixo serão preenchidos automaticamente com base no modelo escolhido.</p>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold mb-1">Nome do Template</label>
-                <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Ex: Recuperação de Senha" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Nome do Template</label>
+                <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Ex: Recuperação de Senha" className="w-full border border-[#d5e0e3] p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm bg-white" />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Identificador (slug)</label>
-                <input type="text" value={novoSlug} onChange={e => setNovoSlug(e.target.value)} placeholder="Ex: recuperacao_senha" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Identificador (slug)</label>
+                <input type="text" value={novoSlug} onChange={e => setNovoSlug(e.target.value)} placeholder="Ex: recuperacao_senha" className="w-full border border-[#d5e0e3] p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm bg-white" />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Assunto do E-mail</label>
-                <input type="text" value={novoAssunto} onChange={e => setNovoAssunto(e.target.value)} placeholder="Ex: Recupere sua senha - {{nome_escola}}" className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Assunto do E-mail</label>
+                <input type="text" value={novoAssunto} onChange={e => setNovoAssunto(e.target.value)} placeholder="Ex: Recupere sua senha - {{nome_escola}}" className="w-full border border-[#d5e0e3] p-2.5 rounded-lg outline-none focus:border-[#0d9488] text-sm bg-white" />
               </div>
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mt-4">
-                <p className="text-xs text-blue-800">Após criar, você poderá usar o editor visual para escrever o conteúdo do e-mail.</p>
+              
+              <div className="flex-1 flex flex-col">
+                <label className="block text-xs font-bold mb-1 text-[#536871]">Conteúdo do E-mail</label>
+                <RichTextEditor value={novoHtml} onChange={setNovoHtml} />
               </div>
             </div>
-            <footer className="flex justify-end gap-2 border-t border-[#e5ecee] px-6 py-4">
+
+            <footer className="flex justify-end gap-2 border-t border-[#e5ecee] px-6 py-4 bg-white">
               <button onClick={() => setCriando(false)} className="px-4 py-2 text-sm font-semibold text-[#30454e]">Cancelar</button>
               <button onClick={handleCriar} disabled={salvando} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#0f766e] disabled:opacity-50">
                 {salvando ? 'Criando...' : 'Criar Template'}
