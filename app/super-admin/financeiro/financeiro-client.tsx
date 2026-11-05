@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight, CalendarClock } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { type MetricasFinanceiras, type EscolaFinanceiro } from '../actions'
@@ -15,6 +16,8 @@ import {
 } from './actions'
 
 export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFinanceiras, escolas: EscolaFinanceiro[] }) {
+  const searchParams = useSearchParams()
+  
   const [novaAberta, setNovaAberta] = useState(false)
   const [escolaDetalhe, setEscolaDetalhe] = useState<EscolaFinanceiro | null>(null)
   const [processando, setProcessando] = useState(false)
@@ -45,6 +48,17 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
 
   const formatarDinheiro = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+  // Deep Link: Abre a escola se vier via URL
+  useEffect(() => {
+    const escolaIdParam = searchParams.get('escolaId')
+    if (escolaIdParam) {
+      const escolaEncontrada = escolas.find(e => e.id === escolaIdParam)
+      if (escolaEncontrada) {
+        setEscolaDetalhe(escolaEncontrada)
+      }
+    }
+  }, [searchParams, escolas])
+
   useEffect(() => {
     if (escolaId) {
       setCarregandoValor(true)
@@ -52,7 +66,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
         if (r.success && r.valorBaseCentavos !== undefined) {
           setValorBase(r.valorBaseCentavos)
           setAddonsDisponiveis(r.addons || [])
-          // Auto-seleciona todos os add-ons ativos
           setAddonsSelecionados((r.addons || []).map(a => a.slug))
         } else {
           setErro(r.error || 'Erro ao buscar valor.')
@@ -244,7 +257,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
         </Panel>
       </main>
 
-      {/* MODAL NOVA COBRANÇA (Emergência) */}
+      {/* MODAL NOVA COBRANÇA */}
       {novaAberta && !linkGerado && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
           <aside className="bg-white w-full max-w-md h-full p-6 relative shadow-2xl overflow-y-auto">
