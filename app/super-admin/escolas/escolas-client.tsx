@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Search, Building2, Users, DollarSign, Inbox, Eye, Edit, Trash2,
-  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText, MapPin, AlertCircle
+  X, Loader2, Check, Calendar, Mail, MessageCircle, FileText, MapPin, AlertCircle, CalendarClock, ArrowRight
 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { atualizarEscola, excluirEscola, type EscolaSuper, type Plano } from '../actions'
@@ -81,7 +82,6 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
     e.preventDefault()
     if (!editando) return
 
-    // Se o plano mudou, pede confirmação
     if (formPlano !== editando.plano) {
       setConfirmarMudancaPlano(true)
     } else {
@@ -188,49 +188,75 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Escola</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Plano</th>
                     <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Status</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Alunos</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">MRR</th>
-                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Vencimento</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ocupação</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Automação</th>
                     <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-[#6b7d86]">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtradas.map((e) => (
-                    <tr key={e.id} className="border-b border-[#f0f4f5] transition hover:bg-[#fafcfc]">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="grid size-9 place-items-center rounded-lg bg-[#f0f4f5] text-[#536871]"><Building2 className="size-4" /></div>
-                          <div>
-                            <div className="text-sm font-semibold text-[#243942]">{e.nome}</div>
-                            <div className="text-xs text-[#82939a]">{e.slug}</div>
+                  {filtradas.map((e) => {
+                    const limiteTotal = e.max_alunos + e.teto_alunos_excedentes
+                    const ocupacaoPercent = limiteTotal > 0 ? (e.alunos / limiteTotal) * 100 : 0
+                    
+                    return (
+                      <tr key={e.id} className="border-b border-[#f0f4f5] transition hover:bg-[#fafcfc]">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="grid size-9 place-items-center rounded-lg bg-[#f0f4f5] text-[#536871]"><Building2 className="size-4" /></div>
+                            <div>
+                              <div className="text-sm font-semibold text-[#243942]">{e.nome}</div>
+                              <div className="text-xs text-[#82939a]">{e.slug}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: `${corPlano(e.plano)}15`, color: corPlano(e.plano) }}>
-                          {planos.find((p) => p.slug === e.plano)?.nome || e.plano}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[e.status_assinatura]}`}>
-                          {statusLabel[e.status_assinatura]}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-[#4d626c]">{e.alunos}</td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{formatarMoeda(e.mrrCentavos)}</td>
-                      <td className="px-5 py-3.5 text-sm text-[#82939a]">{formatarData(e.data_vencimento)}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
-                            <Edit className="size-4" />
-                          </button>
-                          <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
-                            <Trash2 className="size-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: `${corPlano(e.plano)}15`, color: corPlano(e.plano) }}>
+                            {planos.find((p) => p.slug === e.plano)?.nome || e.plano}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[e.status_assinatura]}`}>
+                            {statusLabel[e.status_assinatura]}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex flex-col gap-1 w-24">
+                            <div className="flex justify-between text-[10px] font-semibold text-[#6b7d86]">
+                              <span>{e.alunos} / {limiteTotal || '∞'}</span>
+                              <span>{limiteTotal > 0 ? `${Math.round(ocupacaoPercent)}%` : ''}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-[#e5ecee] rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${ocupacaoPercent >= 100 ? 'bg-red-500' : ocupacaoPercent >= 80 ? 'bg-yellow-400' : 'bg-[#0d9488]'}`} 
+                                style={{ width: `${Math.min(ocupacaoPercent, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {e.mercadopago_preapproval_id ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0d9488]">
+                              <CalendarClock className="size-3.5" /> Recorrente
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#82939a]">
+                              Manual
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => abrirEdicao(e)} className="rounded-lg p-1.5 text-[#0d9488] hover:bg-[#ccfbf1]" title="Editar">
+                              <Edit className="size-4" />
+                            </button>
+                            <button onClick={() => setConfirmarExclusao(e.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -254,7 +280,7 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
             <div className="flex-1 overflow-y-auto px-6 py-5">
               
               {/* DADOS CADASTRAIS (SOMENTE LEITURA) */}
-              <div className="mb-8 rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4">
+              <div className="mb-6 rounded-xl border border-[#e5ecee] bg-[#fafcfc] p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#536871]">
                   <Building2 className="size-4" /> Dados Cadastrais
                 </h3>
@@ -273,6 +299,30 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                       {[editando.endereco, editando.numero, editando.bairro, editando.cidade, editando.estado].filter(Boolean).join(', ') || 'Não informado'}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* NOVO: LIMITES DE ALUNOS E AUTOMAÇÃO */}
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-[#e5ecee] bg-white p-4">
+                  <h3 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#536871]">
+                    <Users className="size-3" /> Ocupação
+                  </h3>
+                  <p className="text-lg font-bold text-[#12232b]">{editando.alunos} <span className="text-xs font-normal text-gray-500">alunos</span></p>
+                  <p className="text-[10px] text-gray-500 mt-1">Limite: {editando.max_alunos} + {editando.teto_alunos_excedentes} extras</p>
+                </div>
+                <div className="rounded-xl border border-[#e5ecee] bg-white p-4">
+                  <h3 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#536871]">
+                    <CalendarClock className="size-3" /> Cobrança
+                  </h3>
+                  {editando.mercadopago_preapproval_id ? (
+                    <p className="text-sm font-bold text-[#0d9488]">Recorrente Ativa</p>
+                  ) : (
+                    <p className="text-sm font-bold text-gray-500">Manual</p>
+                  )}
+                  <Link href="/super-admin/financeiro" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                    Ir para Financeiro <ArrowRight className="size-3" />
+                  </Link>
                 </div>
               </div>
 
@@ -319,6 +369,18 @@ export function EscolasClient({ escolas, planos }: { escolas: EscolaSuper[]; pla
                   <textarea value={formObservacoes} onChange={(e) => setFormObservacoes(e.target.value)} rows={3} placeholder="Notas sobre essa escola (visível só para ARXUM)" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[#0d9488]" />
                 </div>
               </div>
+
+              {/* LINK PARA COMUNICAÇÃO */}
+              <div className="mt-6 rounded-lg bg-[#f0fdfa] border border-[#ccfbf1] p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-[#0f766e]">Comunicação e E-mails</h4>
+                  <p className="text-[10px] text-[#0f766e]/80 mt-1">Configure os avisos automáticos de cobrança.</p>
+                </div>
+                <Link href="/super-admin/comunicacao" className="bg-[#0d9488] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#0f766e]">
+                  Acessar
+                </Link>
+              </div>
+
             </div>
 
             <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
