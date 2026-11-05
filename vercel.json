@@ -3,6 +3,10 @@
     {
       "path": "/edu/api/cron/regua-cobranca",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/edu/api/cron/faturamento",
+      "schedule": "0 13 * * *"
     }
   ]
 }
