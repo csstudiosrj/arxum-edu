@@ -39,6 +39,7 @@ export function LojaClient({
   const [observacao, setObservacao] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
+  const [redirecionando, setRedirecionando] = useState(false)
   const [erro, setErro] = useState('')
 
   const porCategoria: Record<string, ProdutoLoja[]> = {}
@@ -87,9 +88,9 @@ export function LojaClient({
     setEnviando(true)
     setErro('')
     const result = await criarPedido(carrinho, observacao)
-    setEnviando(false)
-
+    
     if (!result.success) {
+      setEnviando(false)
       setErro(result.error || 'Erro ao finalizar.')
       return
     }
@@ -98,10 +99,21 @@ export function LojaClient({
     setObservacao('')
     setSucesso(true)
     setCarrinhoAberto(false)
-    setTimeout(() => {
-      setSucesso(false)
-      router.push('/responsavel')
-    }, 3000)
+
+    // Se o gateway da escola gerou um link do Mercado Pago, redireciona.
+    if (result.linkPagamento) {
+      setRedirecionando(true)
+      setTimeout(() => {
+        window.location.href = result.linkPagamento!
+      }, 2000)
+    } else {
+      // Se não tiver gateway, apenas fecha e volta.
+      setTimeout(() => {
+        setSucesso(false)
+        setEnviando(false)
+        router.push('/responsavel')
+      }, 3000)
+    }
   }
 
   const estiloMarca = { '--cor-primaria': cor } as React.CSSProperties
@@ -283,7 +295,7 @@ export function LojaClient({
                   className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
                   style={{ backgroundColor: cor }}
                 >
-                  {enviando ? <><Loader2 className="mr-2 inline size-4 animate-spin" />Enviando...</> : estaLogado ? 'Finalizar compra' : 'Entrar e finalizar'}
+                  {enviando ? <><Loader2 className="mr-2 inline size-4 animate-spin" />Processando...</> : estaLogado ? 'Finalizar compra' : 'Entrar e finalizar'}
                 </button>
               </footer>
             )}
@@ -298,10 +310,11 @@ export function LojaClient({
             <div className="mx-auto grid size-16 place-items-center rounded-full" style={{ backgroundColor: `${cor}20`, color: cor }}>
               <CheckCircle2 className="size-8" />
             </div>
-            <h2 className="mt-5 text-2xl font-bold text-white">Pedido enviado!</h2>
+            <h2 className="mt-5 text-2xl font-bold text-white">Pedido registrado!</h2>
             <p className="mt-3 text-sm leading-6 text-[#8aa0ad]">
-              Sua compra foi registrada. A escola entrará em contato para combinar pagamento e entrega.
+              {redirecionando ? 'Redirecionando para o pagamento seguro...' : 'Sua compra foi registrada. A escola entrará em contato.'}
             </p>
+            {redirecionando && <Loader2 className="mt-4 size-5 animate-spin text-white mx-auto" />}
           </div>
         </div>
       )}
