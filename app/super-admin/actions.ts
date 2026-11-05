@@ -183,6 +183,13 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
 }
 
 export async function atualizarEscola(id: string, data: {
+  nome?: string
+  cnpj?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
+  email_contato?: string
   plano?: string
   status_assinatura?: string
   data_vencimento?: string | null
@@ -194,6 +201,14 @@ export async function atualizarEscola(id: string, data: {
     const admin = createAdminClient()
     const payload: Record<string, any> = { atualizado_em: new Date().toISOString() }
 
+    if (data.nome !== undefined) payload.nome = data.nome
+    if (data.cnpj !== undefined) payload.cnpj = data.cnpj || null
+    if (data.endereco !== undefined) payload.endereco = data.endereco || null
+    if (data.cidade !== undefined) payload.cidade = data.cidade || null
+    if (data.estado !== undefined) payload.estado = data.estado || null
+    if (data.telefone !== undefined) payload.telefone = data.telefone || null
+    if (data.email_contato !== undefined) payload.email_contato = data.email_contato || null
+    
     if (data.plano !== undefined) payload.plano = data.plano
     if (data.status_assinatura !== undefined) payload.status_assinatura = data.status_assinatura
     if (data.data_vencimento !== undefined) payload.data_vencimento = data.data_vencimento
