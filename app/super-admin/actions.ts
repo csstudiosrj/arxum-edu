@@ -135,6 +135,10 @@ export type EscolaSuper = {
   endereco: string | null
   numero: string | null
   bairro: string | null
+  mercadopago_preapproval_id: string | null
+  max_alunos: number
+  teto_alunos_excedentes: number
+  preco_aluno_extra_centavos: number
 }
 
 export async function getTodasEscolas(): Promise<EscolaSuper[]> {
@@ -143,14 +147,14 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
 
     const { data: escolas, error } = await admin
       .from('escolas')
-      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em, razao_social, cnpj, cep, endereco, numero, bairro')
+      .select('id, nome, slug, plano, status_assinatura, data_vencimento, observacoes_admin, contato_responsavel, whatsapp, email_contato, cidade, estado, criado_em, razao_social, cnpj, cep, endereco, numero, bairro, mercadopago_preapproval_id')
       .order('nome', { ascending: true })
 
     if (error || !escolas) return []
 
-    const { data: planos } = await admin.from('planos').select('slug, preco_centavos')
-    const precos: Record<string, number> = {}
-    ;(planos || []).forEach((p) => { precos[p.slug] = p.preco_centavos })
+    const { data: planos } = await admin.from('planos').select('slug, preco_centavos, max_alunos, teto_alunos_excedentes, preco_aluno_extra_centavos')
+    const dadosPlanos: Record<string, any> = {}
+    ;(planos || []).forEach((p) => { dadosPlanos[p.slug] = p })
 
     const { data: alunos } = await admin.from('alunos').select('escola_id')
     const { data: perfis } = await admin.from('perfis').select('escola_id')
@@ -161,12 +165,18 @@ export async function getTodasEscolas(): Promise<EscolaSuper[]> {
     const usuariosPorEscola: Record<string, number> = {}
     ;(perfis || []).forEach((p) => { if (p.escola_id) usuariosPorEscola[p.escola_id] = (usuariosPorEscola[p.escola_id] || 0) + 1 })
 
-    return escolas.map((e) => ({
-      ...e,
-      alunos: alunosPorEscola[e.id] || 0,
-      usuarios: usuariosPorEscola[e.id] || 0,
-      mrrCentavos: e.status_assinatura === 'ativa' ? (precos[e.plano] || 0) : 0,
-    })) as EscolaSuper[]
+    return escolas.map((e) => {
+      const p = dadosPlanos[e.plano] || {}
+      return {
+        ...e,
+        alunos: alunosPorEscola[e.id] || 0,
+        usuarios: usuariosPorEscola[e.id] || 0,
+        mrrCentavos: e.status_assinatura === 'ativa' ? (p.preco_centavos || 0) : 0,
+        max_alunos: p.max_alunos || 0,
+        teto_alunos_excedentes: p.teto_alunos_excedentes || 0,
+        preco_aluno_extra_centavos: p.preco_aluno_extra_centavos || 0,
+      }
+    }) as EscolaSuper[]
   } catch (e) {
     return []
   }
