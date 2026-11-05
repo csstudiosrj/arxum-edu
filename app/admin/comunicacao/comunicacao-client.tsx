@@ -6,7 +6,6 @@ import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2 } from 'lucide-r
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarComunicado, excluirComunicado, type Comunicado } from './actions'
 
-// ── SEMÂNTICO: cores por setor ──────────────────────────────────────
 const setorStyles: Record<string, string> = {
   'Coordenação': 'bg-[#dbeafe] text-[#1e40af]',
   'Secretaria': 'bg-[#ccfbf1] text-[#0f766e]',
@@ -14,7 +13,6 @@ const setorStyles: Record<string, string> = {
   'Direção': 'bg-[#ede9fe] text-[#5b21b6]',
 }
 
-// ── SEMÂNTICO: cores por prioridade ─────────────────────────────────
 const prioridadeStyles: Record<string, string> = {
   'alta': 'bg-[#fee2e2] text-[#991b1b]',
   'normal': 'bg-[#e5ecee] text-[#5e7a94]',
@@ -37,7 +35,7 @@ function formatarData(iso: string): string {
   }
 }
 
-export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }) {
+export function ComunicacaoClient({ comunicados, filtros }: { comunicados: Comunicado[], filtros: { series: string[], turnos: string[] } }) {
   const router = useRouter()
   const [novoAberto, setNovoAberto] = useState(false)
   const [comunicadoLido, setComunicadoLido] = useState<Comunicado | null>(null)
@@ -48,6 +46,8 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
   const [mensagem, setMensagem] = useState('')
   const [setor, setSetor] = useState('Secretaria')
   const [prioridade, setPrioridade] = useState('normal')
+  const [segmentoSerie, setSegmentoSerie] = useState('')
+  const [segmentoTurno, setSegmentoTurno] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -56,28 +56,28 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
     setMensagem('')
     setSetor('Secretaria')
     setPrioridade('normal')
+    setSegmentoSerie('')
+    setSegmentoTurno('')
     setErro('')
   }
 
   async function handleEnviar() {
-    if (!titulo.trim()) {
-      setErro('Informe um título.')
-      return
-    }
-    if (!mensagem.trim()) {
-      setErro('Informe a mensagem.')
-      return
-    }
+    if (!titulo.trim()) return setErro('Informe um título.')
+    if (!mensagem.trim()) return setErro('Informe a mensagem.')
 
     setEnviando(true)
     setErro('')
-    const result = await criarComunicado({ titulo, mensagem, setor, prioridade })
+    const result = await criarComunicado({ 
+      titulo, 
+      mensagem, 
+      setor, 
+      prioridade,
+      segmento_serie: segmentoSerie || null,
+      segmento_turno: segmentoTurno || null
+    })
     setEnviando(false)
 
-    if (!result.success) {
-      setErro(result.error || 'Erro ao enviar.')
-      return
-    }
+    if (!result.success) return setErro(result.error || 'Erro ao enviar.')
 
     limparForm()
     setNovoAberto(false)
@@ -189,6 +189,16 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${prioridadeStyles[c.prioridade] || prioridadeStyles.normal}`}>
                           {c.prioridade.charAt(0).toUpperCase() + c.prioridade.slice(1)}
                         </span>
+                        {c.segmento_serie && (
+                          <span className="inline-flex items-center rounded-full bg-purple-100 text-purple-700 px-2 py-0.5 text-[10px] font-semibold">
+                            Série: {c.segmento_serie}
+                          </span>
+                        )}
+                        {c.segmento_turno && (
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-[10px] font-semibold">
+                            Turno: {c.segmento_turno}
+                          </span>
+                        )}
                       </div>
                       <h3
                         className="mt-2 text-sm font-semibold text-[#243942] transition-colors"
@@ -207,18 +217,10 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col gap-1 items-end">
-                      <button
-                        onClick={() => setComunicadoLido(c)}
-                        className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]"
-                        title="Ler comunicado"
-                      >
+                      <button onClick={() => setComunicadoLido(c)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#e5ecee]" title="Ler comunicado">
                         <Eye className="size-4" />
                       </button>
-                      <button
-                        onClick={() => setConfirmarExclusao(c.id)}
-                        className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"
-                        title="Excluir"
-                      >
+                      <button onClick={() => setConfirmarExclusao(c.id)} className="rounded-lg p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -238,7 +240,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold text-[#12232b]">Novo comunicado</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Será enviado para todos os responsáveis</p>
+                <p className="mt-0.5 text-xs text-[#82939a]">Defina para quem este aviso será enviado</p>
               </div>
               <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50">
                 <X className="size-5" />
@@ -249,79 +251,47 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
               <div className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input
-                    type="text"
-                    value={titulo}
-                    onChange={(e) => setTitulo(e.target.value)}
-                    placeholder="Ex: Reunião de pais — 9º Ano A"
-                    className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
+                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Reunião de pais — 9º Ano A" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Mensagem</label>
-                  <textarea
-                    value={mensagem}
-                    onChange={(e) => setMensagem(e.target.value)}
-                    placeholder="Escreva o comunicado completo..."
-                    rows={8}
-                    className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
+                  <textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Escreva o comunicado completo..." rows={6} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Setor</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {setores.map((s) => {
-                      const sel = setor === s
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setSetor(s)}
-                          className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
-                          style={sel ? {
-                            borderColor: 'var(--cor-primaria, #0d9488)',
-                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                            color: 'var(--cor-primaria, #0d9488)',
-                          } : undefined}
-                        >
-                          {s}
-                        </button>
-                      )
-                    })}
+                <div className="grid grid-cols-2 gap-4 border-y border-[#e5ecee] py-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Filtrar por Série</label>
+                    <select value={segmentoSerie} onChange={(e) => setSegmentoSerie(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
+                      <option value="">Todas as séries</option>
+                      {filtros.series.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Filtrar por Turno</label>
+                    <select value={segmentoTurno} onChange={(e) => setSegmentoTurno(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
+                      <option value="">Todos os turnos</option>
+                      {filtros.turnos.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Prioridade</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {prioridades.map((p) => {
-                      const sel = prioridade === p.key
-                      return (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => setPrioridade(p.key)}
-                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${sel ? '' : 'border-[#d5e0e3] bg-white text-[#6b7d86] hover:border-[var(--cor-primaria,#0d9488)]'}`}
-                          style={sel ? {
-                            borderColor: 'var(--cor-primaria, #0d9488)',
-                            backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                            color: 'var(--cor-primaria, #0d9488)',
-                          } : undefined}
-                        >
-                          {p.label}
-                        </button>
-                      )
-                    })}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Setor</label>
+                    <select value={setor} onChange={(e) => setSetor(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
+                      {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Prioridade</label>
+                    <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
+                      {prioridades.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                    </select>
                   </div>
                 </div>
 
-                {erro && (
-                  <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">
-                    {erro}
-                  </p>
-                )}
+                {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
               </div>
             </div>
 
@@ -329,12 +299,7 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
               <button onClick={() => setNovoAberto(false)} disabled={enviando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50">
                 Cancelar
               </button>
-              <button
-                onClick={handleEnviar}
-                disabled={enviando}
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
-              >
+              <button onClick={handleEnviar} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50" style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}>
                 {enviando ? <><Loader2 className="size-4 animate-spin" /> Enviando...</> : <><Send className="size-4" /> Enviar comunicado</>}
               </button>
             </footer>
@@ -349,9 +314,11 @@ export function ComunicacaoClient({ comunicados }: { comunicados: Comunicado[] }
           <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
             <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
               <div className="flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${setorStyles[comunicadoLido.setor] || 'bg-[#e5ecee] text-[#5e7a94]'}`}>{comunicadoLido.setor}</span>
                   {comunicadoLido.prioridade === 'alta' && <span className="rounded-full bg-[#fee2e2] px-2 py-1 text-[10px] font-bold text-[#991b1b]">Alta prioridade</span>}
+                  {comunicadoLido.segmento_serie && <span className="rounded-full bg-purple-100 text-purple-700 px-2 py-1 text-[10px] font-bold">Série: {comunicadoLido.segmento_serie}</span>}
+                  {comunicadoLido.segmento_turno && <span className="rounded-full bg-indigo-100 text-indigo-700 px-2 py-1 text-[10px] font-bold">Turno: {comunicadoLido.segmento_turno}</span>}
                 </div>
                 <h2 className="mt-3 text-xl font-bold text-[#12232b]">{comunicadoLido.titulo}</h2>
                 <p className="mt-1 text-xs text-[#82939a]">Por {comunicadoLido.autor_nome} · {formatarData(comunicadoLido.criado_em)}</p>
