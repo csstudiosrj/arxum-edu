@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
+import { Resend } from 'resend'
+import { criarPagamentoPix, criarPagamentoBoleto } from '@/lib/mercadopago'
 
 export type Fatura = {
   id: string
@@ -16,8 +18,6 @@ export type Fatura = {
   status: string
   pago_em: string | null
   criado_em: string
-  pagarme_qr_code?: string | null
-  pagarme_qr_code_url?: string | null
   gateway?: string | null
   gateway_payment_id?: string | null
   gateway_status?: string | null
@@ -69,6 +69,7 @@ export async function getAlunosParaFatura(): Promise<Array<{ id: string; nome: s
 }
 
 export async function criarFatura(data: {
+  aluno_id?: string
   aluno_nome: string
   responsavel_email: string
   descricao: string
@@ -81,32 +82,124 @@ export async function criarFatura(data: {
 
     const admin = createAdminClient()
     
-    // Buscar o ID do aluno para vincular
-    const { data: aluno } = await admin
-      .from('alunos')
-      .select('id')
-      .eq('escola_id', escola.id)
-      .eq('responsavel_email', data.responsavel_email)
-      .limit(1)
-      .maybeSingle()
+    // Buscar o ID do aluno para vincular se não foi passado
+    let finalAlunoId = data.aluno_id
+    if (!finalAlunoId) {
+      const { data: aluno } = await admin
+        .from('alunos')
+        .select('id')
+        .eq('escola_id', escola.id)
+        .eq('responsavel_email', data.responsavel_email)
+        .limit(1)
+        .maybeSingle()
+      finalAlunoId = aluno?.id
+    }
 
-    const { error } = await admin.from('faturas').insert({
+    const { data: fatura, error } = await admin.from('faturas').insert({
       escola_id: escola.id,
-      aluno_id: aluno?.id || null,
+      aluno_id: finalAlunoId || null,
       aluno_nome: data.aluno_nome,
       responsavel_email: data.responsavel_email,
       descricao: data.descricao,
       valor_centavos: data.valor_centavos,
       vencimento: data.vencimento,
       status: 'em_aberto'
-    })
+    }).select('id').single()
 
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/financeiro')
-    return { success: true }
+    return { success: true, faturaId: fatura.id }
   } catch (e) {
     return { success: false, error: 'Erro ao criar fatura.' }
+  }
+}
+
+export async function gerarPixAdmin(faturaId: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { data: fatura } = await admin.from('faturas').select('*').eq('id', faturaId).eq('escola_id', escola.id).single()
+    if (!fatura) return { success: false, error: 'Fatura não encontrada.' }
+
+    const { data: escolaData } = await admin.from('escolas').select('mercadopago_access_token').eq('id', escola.id).single()
+    const token = (escolaData as any)?.mercadopago_access_token
+    if (!token) return { success: false, error: 'A escola não configurou o Mercado Pago nas Configurações.' }
+
+    const pix = await criarPagamentoPix({
+      accessToken: token,
+      faturaId: fatura.id,
+      valorCentavos: fatura.valor_centavos,
+      descricao: `${fatura.descricao} - ${fatura.aluno_nome}`,
+      emailPagador: fatura.responsavel_email,
+    })
+
+    if (!pix.success) return { success: false, error: pix.error }
+
+    await admin.from('faturas').update({
+      gateway: 'mercadopago',
+      gateway_payment_id: pix.paymentId,
+      gateway_status: pix.status,
+      pix_copia_cola: pix.pixCopiaCola,
+      pix_qr_imagem: pix.pixQrImagem,
+      pix_expira_em: pix.expiraEm,
+      metodo_pagamento: 'pix',
+    }).eq('id', faturaId)
+
+    revalidatePath('/admin/financeiro')
+    return { success: true, pix: { copiaCola: pix.pixCopiaCola, qr: pix.pixQrImagem } }
+  } catch (e) {
+    return { success: false, error: 'Erro ao gerar PIX.' }
+  }
+}
+
+export async function enviarCobrancaEmail(faturaId: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { data: fatura } = await admin.from('faturas').select('*').eq('id', faturaId).eq('escola_id', escola.id).single()
+    if (!fatura) return { success: false, error: 'Fatura não encontrada.' }
+
+    if (!fatura.responsavel_email) return { success: false, error: 'Responsável sem e-mail cadastrado.' }
+
+    // Busca o template de cobrança (usando o que já criamos no super admin)
+    const { data: template } = await admin.from('email_templates').select('*').eq('slug', 'cobranca_manual').maybeSingle()
+    if (!template) return { success: false, error: 'Template de cobrança não encontrado.' }
+
+    if (process.env.RESEND_API_KEY) {
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      
+      let html = template.corpo_html
+      let assunto = template.assunto
+      
+      const vars: Record<string, string> = {
+        '{{nome_escola}}': escola.nome,
+        '{{valor}}': `R$ ${(fatura.valor_centavos / 100).toFixed(2).replace('.', ',')}`,
+        '{{vencimento}}': new Date(fatura.vencimento + 'T12:00:00').toLocaleDateString('pt-BR'),
+        '{{referencia}}': fatura.descricao,
+        '{{link_pagamento}}': fatura.pix_copia_cola || fatura.boleto_url || `${process.env.NEXT_PUBLIC_SITE_URL}/edu/responsavel`
+      }
+      
+      Object.entries(vars).forEach(([k, v]) => {
+        html = html.split(k).join(v)
+        assunto = assunto.split(k).join(v)
+      })
+
+      await resend.emails.send({
+        from: 'ARXUM Edu <financeiro@arxum.com.br>',
+        to: fatura.responsavel_email,
+        subject: assunto,
+        html: `<div style="font-family: sans-serif; color: #12232b; max-width: 600px; margin: 0 auto; border: 1px solid #e5ecee; border-radius: 12px; overflow: hidden;"><div style="background-color: #0d9488; padding: 24px; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">${escola.nome}</h1></div><div style="padding: 32px;">${html}</div></div>`
+      })
+    }
+
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao enviar e-mail.' }
   }
 }
 
