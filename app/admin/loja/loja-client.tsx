@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash2, X, Loader2, CheckCircle2, Package } from 'lucide-react'
-import { criarPedido, type ProdutoLoja, type ItemCarrinho } from './actions'
+import { criarPedido, type Produto, type ItemCarrinho } from './actions'
 
 const categoriaLabel: Record<string, string> = {
   uniformes: 'Uniformes',
@@ -26,7 +26,7 @@ export function LojaClient({
   cor,
   logoUrl,
 }: {
-  produtos: ProdutoLoja[]
+  produtos: Produto[]
   estaLogado: boolean
   escolaNome: string
   slug: string
@@ -41,7 +41,7 @@ export function LojaClient({
   const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
 
-  const porCategoria: Record<string, ProdutoLoja[]> = {}
+  const porCategoria: Record<string, Produto[]> = {}
   produtos.forEach((p) => {
     if (!porCategoria[p.categoria]) porCategoria[p.categoria] = []
     porCategoria[p.categoria].push(p)
@@ -51,7 +51,7 @@ export function LojaClient({
   const totalCentavos = carrinho.reduce((s, i) => s + i.quantidade * i.preco_unitario_centavos, 0)
   const base = `/edu/${slug}`
 
-  function adicionar(produto: ProdutoLoja) {
+  function adicionar(produto: Produto) {
     setCarrinho((prev) => {
       const existente = prev.find((i) => i.produto_id === produto.id)
       if (existente) {
