@@ -190,22 +190,56 @@ export async function getMeusComunicados(): Promise<ComunicadoResponsavel[]> {
   try {
     const email = await getEmailUsuario()
     if (!email) return []
+
     const admin = createAdminClient()
+    
+    // 1. Buscar os filhos para saber as séries e turnos
+    const { data: filhos } = await admin
+      .from('alunos')
+      .select('serie, turno, escola_id')
+      .eq('responsavel_email', email)
+      .eq('status', 'ativo')
+
+    if (!filhos || filhos.length === 0) return []
+
+    const series = filhos.map(f => f.serie).filter(Boolean) as string[]
+    const turnos = filhos.map(f => f.turno).filter(Boolean) as string[]
+    const escolaId = filhos[0].escola_id
+
+    // 2. Buscar comunicados da escola
     const { data: coms, error } = await admin
       .from('comunicados')
-      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em')
+      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno')
+      .eq('escola_id', escolaId)
       .eq('ativo', true)
       .order('criado_em', { ascending: false })
-      .limit(20)
+      .limit(50)
+
     if (error || !coms) return []
+
+    // 3. Filtrar por segmentação (Série ou Turno)
+    const comunicadosFiltrados = coms.filter(c => {
+      const matchSerie = !c.segmento_serie || series.includes(c.segmento_serie)
+      const matchTurno = !c.segmento_turno || turnos.includes(c.segmento_turno)
+      return matchSerie && matchTurno
+    })
+
+    // 4. Buscar leituras
     const { data: leituras } = await admin
       .from('comunicados_leituras')
       .select('comunicado_id')
       .eq('responsavel_email', email)
+
     const lidosSet = new Set((leituras || []).map((l) => l.comunicado_id))
-    return coms.map((c) => ({
-      id: c.id, titulo: c.titulo, mensagem: c.mensagem, setor: c.setor,
-      prioridade: c.prioridade, autor_nome: c.autor_nome, criado_em: c.criado_em,
+
+    return comunicadosFiltrados.map((c) => ({
+      id: c.id, 
+      titulo: c.titulo, 
+      mensagem: c.mensagem, 
+      setor: c.setor,
+      prioridade: c.prioridade, 
+      autor_nome: c.autor_nome, 
+      criado_em: c.criado_em,
       lido: lidosSet.has(c.id),
     })) as ComunicadoResponsavel[]
   } catch (e) { return [] }
