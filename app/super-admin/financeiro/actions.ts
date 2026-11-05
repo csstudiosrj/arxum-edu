@@ -27,19 +27,15 @@ export async function gerarCobrancaCheckout(
 ) {
   try {
     const admin = createAdminClient()
-    
-    // 1. Busca escola e plano para recalcular no servidor
     const { data: escola } = await admin.from('escolas').select('nome, plano').eq('id', escolaId).single()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const { data: plano } = await admin.from('planos').select('preco_centavos').eq('slug', escola.plano).single()
     if (!plano) return { success: false, error: 'Plano não encontrado.' }
 
-    // 2. Calcula o valor final
     const valorFinalCentavos = plano.preco_centavos - descontoCentavos + addonCentavos
     if (valorFinalCentavos <= 0) return { success: false, error: 'O valor final deve ser maior que zero.' }
 
-    // 3. Cria a fatura no banco
     const vencimento = new Date()
     vencimento.setDate(vencimento.getDate() + 7)
 
@@ -57,7 +53,6 @@ export async function gerarCobrancaCheckout(
 
     if (errFatura || !fatura) return { success: false, error: 'Erro ao criar fatura no banco.' }
 
-    // 4. Gera o Link no Mercado Pago
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN
     if (!token) return { success: false, error: 'Token MP não configurado.' }
     const baseUrl = 'https://www.arxum.com.br'
@@ -73,11 +68,7 @@ export async function gerarCobrancaCheckout(
       payer: { email: 'financeiro@escola.com.br', name: escola.nome },
       external_reference: fatura.id,
       notification_url: `${baseUrl}/edu/api/webhooks/mercadopago`,
-      back_urls: {
-        success: `${baseUrl}/edu/super-admin/financeiro`,
-        failure: `${baseUrl}/edu/super-admin/financeiro`,
-        pending: `${baseUrl}/edu/super-admin/financeiro`
-      },
+      back_urls: { success: `${baseUrl}/edu/super-admin/financeiro`, failure: `${baseUrl}/edu/super-admin/financeiro`, pending: `${baseUrl}/edu/super-admin/financeiro` },
       auto_return: 'approved',
       payment_methods: { installments: 12 }
     }
@@ -91,7 +82,6 @@ export async function gerarCobrancaCheckout(
     
     if (!res.ok) return { success: false, error: data.message || 'Erro no Mercado Pago.' }
 
-    // 5. Salva o link no banco
     await admin.from('faturamento_escolas').update({
       gateway: 'mercadopago',
       gateway_payment_id: data.id,
@@ -105,7 +95,6 @@ export async function gerarCobrancaCheckout(
   }
 }
 
-// Botão de emergência (Sincronização Manual)
 export async function sincronizarPagamentoManual(faturaId: string) {
   try {
     const admin = createAdminClient()
@@ -141,4 +130,76 @@ export async function getFaturasPorEscola(escolaId: string) {
     .eq('escola_id', escolaId)
     .order('vencimento', { ascending: false })
   return data || []
+}
+
+// ── ASSINATURA RECORRENTE (PREAPPROVAL) ──────────────────────────────
+
+export async function getInfoAssinaturaEscola(escolaId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin.from('escolas').select('mercadopago_preapproval_id, status_assinatura').eq('id', escolaId).single()
+  return data
+}
+
+export async function gerarAssinaturaRecorrente(escolaId: string) {
+  try {
+    const admin = createAdminClient()
+    const { data: escola } = await admin.from('escolas').select('nome, plano, email_contato').eq('id', escolaId).single()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const { data: plano } = await admin.from('planos').select('preco_centavos').eq('slug', escola.plano).single()
+    if (!plano) return { success: false, error: 'Plano não encontrado.' }
+
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN
+    if (!token) return { success: false, error: 'Token MP não configurado.' }
+    const baseUrl = 'https://www.arxum.com.br'
+
+    const body = {
+      reason: `Assinatura ARXUM - Plano ${escola.plano}`,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: plano.preco_centavos / 100,
+        currency_id: 'BRL'
+      },
+      back_url: `${baseUrl}/edu/super-admin/financeiro`,
+      payer_email: escola.email_contato || 'financeiro@escola.com.br',
+      status: 'pending'
+    }
+
+    const res = await fetch('https://api.mercadopago.com/preapproval', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await res.json()
+
+    if (!res.ok) return { success: false, error: data.message || 'Erro no Mercado Pago.' }
+
+    await admin.from('escolas').update({ mercadopago_preapproval_id: data.id }).eq('id', escolaId)
+    revalidatePath('/super-admin/financeiro')
+    return { success: true, link: data.init_point }
+  } catch (e: any) {
+    return { success: false, error: 'Erro interno ao gerar assinatura.' }
+  }
+}
+
+export async function cancelarAssinaturaRecorrente(escolaId: string, preapprovalId: string) {
+  try {
+    const admin = createAdminClient()
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN
+
+    if (token) {
+      await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' })
+      })
+    }
+
+    await admin.from('escolas').update({ mercadopago_preapproval_id: null, status_assinatura: 'cancelada' }).eq('id', escolaId)
+    revalidatePath('/super-admin/financeiro')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao cancelar assinatura.' }
+  }
 }
