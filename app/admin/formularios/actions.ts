@@ -7,7 +7,6 @@ import {
   type Formulario,
   type CampoFormulario,
   type RespostaFormulario,
-  type TipoCampo,
 } from '@/lib/cms/tipos-formulario'
 import { revalidatePath } from 'next/cache'
 
@@ -56,6 +55,7 @@ export async function getFormularioPorId(id: string): Promise<{ formulario: Form
       campos: ((campos || []) as CampoFormulario[]).map((c) => ({
         ...c,
         opcoes: Array.isArray(c.opcoes) ? c.opcoes : [],
+        condicao: c.condicao || null,
       })),
     }
   } catch (e) {
@@ -167,7 +167,6 @@ export async function salvarCampos(formularioId: string, campos: CampoFormulario
 
     const admin = createAdminClient()
 
-    // Confirma que o formulário pertence à escola
     const { data: formulario } = await admin
       .from('formularios')
       .select('id')
@@ -177,7 +176,6 @@ export async function salvarCampos(formularioId: string, campos: CampoFormulario
 
     if (!formulario) return { success: false, error: 'Formulário não encontrado.' }
 
-    // Estratégia: apaga todos os campos e reinsere com a ordem atual
     const { error: erroDelete } = await admin
       .from('formulario_campos')
       .delete()
@@ -203,6 +201,7 @@ export async function salvarCampos(formularioId: string, campos: CampoFormulario
             validacao_max: c.validacao_max,
             ordem: index,
             secao: c.secao || null,
+            condicao: c.condicao || null,
           }))
         )
 

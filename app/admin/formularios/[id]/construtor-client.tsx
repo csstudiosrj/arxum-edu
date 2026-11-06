@@ -4,15 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, ChevronUp, ChevronDown, Edit, Trash2, Plus, X, Loader2, Save, Check,
+  ArrowLeft, ChevronUp, ChevronDown, Trash2, Plus, X, Loader2, Save, Check,
   Eye, ExternalLink, Type, AlignLeft, CircleDot, CheckSquare, ToggleLeft, Hash,
-  Calendar, IdCard, Phone, Mail, Upload, Settings, FileText,
+  Calendar, IdCard, Phone, Mail, Upload, Settings, FileText, GitBranch,
 } from 'lucide-react'
 import { AdminShell, Panel } from '@/components/admin-shell'
-import { BannerUpload } from '@/components/banner-upload'
 import {
-  TIPOS_CAMPO, TIPOS_FORMULARIO, tipoInfo, gerarSlugFormulario,
-  type Formulario, type CampoFormulario, type TipoCampo,
+  TIPOS_CAMPO, TIPOS_FORMULARIO, tipoInfo,
+  type Formulario, type CampoFormulario, type TipoCampo, type CondicaoCampo,
 } from '@/lib/cms/tipos-formulario'
 import { salvarCampos, atualizarFormulario } from '../actions'
 
@@ -41,6 +40,7 @@ function novoCampo(tipo: TipoCampo, ordem: number): CampoFormulario {
     validacao_max: null,
     ordem,
     secao: null,
+    condicao: null,
   }
 }
 
@@ -60,7 +60,6 @@ export function ConstrutorClient({
   const [salvou, setSalvou] = useState(false)
   const [erro, setErro] = useState('')
 
-  // Configurações do formulário
   const [titulo, setTitulo] = useState(formulario.titulo)
   const [descricao, setDescricao] = useState(formulario.descricao || '')
   const [tipo, setTipo] = useState(formulario.tipo)
@@ -115,6 +114,24 @@ export function ConstrutorClient({
     atualizarCampo('opcoes', campoSelecionado.opcoes.filter((_, i) => i !== idx))
   }
 
+  function configurarCondicao(campoPaiId: string) {
+    if (!campoPaiId) {
+      atualizarCampo('condicao', null)
+      return
+    }
+    const cond: CondicaoCampo = {
+      campo_id: campoPaiId,
+      operador: 'igual',
+      valor: '',
+    }
+    atualizarCampo('condicao', cond)
+  }
+
+  function atualizarCondicao<K extends keyof CondicaoCampo>(key: K, valor: CondicaoCampo[K]) {
+    if (!campoSelecionado || !campoSelecionado.condicao) return
+    atualizarCampo('condicao', { ...campoSelecionado.condicao, [key]: valor })
+  }
+
   async function handleSalvar(publicar?: boolean) {
     setSalvando(true)
     setErro('')
@@ -152,13 +169,12 @@ export function ConstrutorClient({
     setTimeout(() => setSalvou(false), 2500)
   }
 
+  const camposAnteriores = selecionadoIdx !== null ? campos.slice(0, selecionadoIdx) : []
+
   return (
     <AdminShell mode="school" active="Formulários">
       <main className="px-5 py-8 lg:px-8">
-        <Link
-          href="/admin/formularios"
-          className="inline-flex items-center gap-2 text-sm text-[#6b7d86] hover:brightness-75"
-        >
+        <Link href="/admin/formularios" className="inline-flex items-center gap-2 text-sm text-[#6b7d86] hover:brightness-75">
           <ArrowLeft className="size-4" /> Todos os formulários
         </Link>
 
@@ -241,7 +257,6 @@ export function ConstrutorClient({
 
         {aba === 'campos' && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-            {/* Coluna de campos */}
             <div>
               <Panel>
                 <div className="flex items-center justify-between border-b border-[#e5ecee] px-5 py-3">
@@ -313,6 +328,7 @@ export function ConstrutorClient({
                             <div className="flex items-center gap-2">
                               <p className="truncate text-sm font-semibold text-[#243942]">{c.label}</p>
                               {c.obrigatorio && <span className="text-[10px] font-bold text-[#dc2626]">*</span>}
+                              {c.condicao && <span className="text-[10px] font-bold bg-[#e5ecee] text-[#6b7d86] px-1.5 py-0.5 rounded"><GitBranch size={10} className="inline mr-1"/>Condicional</span>}
                             </div>
                             <p className="mt-0.5 truncate text-xs text-[#82939a]">
                               {info.label}
@@ -334,7 +350,6 @@ export function ConstrutorClient({
               </Panel>
             </div>
 
-            {/* Coluna de propriedades */}
             <div>
               {campoSelecionado ? (
                 <Panel>
@@ -462,6 +477,47 @@ export function ConstrutorClient({
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {camposAnteriores.length > 0 && (
+                      <div className="pt-4 border-t border-[#e5ecee]">
+                        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-[#536871]">
+                          <GitBranch className="size-3.5" /> Lógica Condicional
+                        </label>
+                        <p className="mb-2 text-[10px] text-[#82939a]">Só mostre este campo se:</p>
+                        
+                        <select
+                          value={campoSelecionado.condicao?.campo_id || ''}
+                          onChange={(e) => configurarCondicao(e.target.value)}
+                          className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
+                        >
+                          <option value="">Sempre mostrar</option>
+                          {camposAnteriores.map(c => (
+                            <option key={c.id} value={c.id}>Se "{c.label}"...</option>
+                          ))}
+                        </select>
+
+                        {campoSelecionado.condicao && (
+                          <div className="mt-2 grid grid-cols-[1fr_2fr] gap-2">
+                            <select
+                              value={campoSelecionado.condicao.operador}
+                              onChange={(e) => atualizarCondicao('operador', e.target.value as any)}
+                              className="w-full rounded-lg border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
+                            >
+                              <option value="igual">For igual a</option>
+                              <option value="diferente">For diferente de</option>
+                              <option value="contem">Contiver</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={campoSelecionado.condicao.valor}
+                              onChange={(e) => atualizarCondicao('valor', e.target.value)}
+                              placeholder="Valor esperado..."
+                              className="w-full rounded-lg border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

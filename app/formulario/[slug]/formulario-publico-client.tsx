@@ -38,8 +38,6 @@ export function FormularioPublicoClient({
   const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
 
-  // Expõe --cor-primaria no wrapper para que qualquer componente interno
-  // (BannerUpload, por exemplo) herde a cor própria deste formulário.
   const estiloWrapper = {
     backgroundColor: '#f6f8f9',
     '--cor-primaria': cor,
@@ -49,12 +47,37 @@ export function FormularioPublicoClient({
     setRespostas((atual) => ({ ...atual, [id]: valor }))
   }
 
+  const camposVisiveis = campos.filter((c) => {
+    if (!c.condicao) return true
+    const respostaPai = respostas[c.condicao.campo_id]
+    if (respostaPai === undefined || respostaPai === null) return false
+
+    const valorEsperado = c.condicao.valor
+    const valorAtual = String(respostaPai)
+
+    switch (c.condicao.operador) {
+      case 'igual': return valorAtual === valorEsperado
+      case 'diferente': return valorAtual !== valorEsperado
+      case 'contem': return valorAtual.includes(valorEsperado)
+      default: return true
+    }
+  })
+
   function validar(): string | null {
-    for (const c of campos) {
-      if (!c.obrigatorio) continue
+    for (const c of camposVisiveis) {
       const v = c.tipo === 'upload' ? uploads[c.id] : respostas[c.id]
-      if (v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) {
+      
+      if (c.obrigatorio && (v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0))) {
         return `Preencha o campo: ${c.label}`
+      }
+
+      if (typeof v === 'string' && (c.tipo === 'texto_curto' || c.tipo === 'texto_longo')) {
+        if (c.validacao_min && v.length > 0 && v.length < c.validacao_min) {
+          return `O campo "${c.label}" precisa ter pelo menos ${c.validacao_min} caracteres.`
+        }
+        if (c.validacao_max && v.length > c.validacao_max) {
+          return `O campo "${c.label}" deve ter no máximo ${c.validacao_max} caracteres.`
+        }
       }
     }
     return null
@@ -71,7 +94,7 @@ export function FormularioPublicoClient({
     }
 
     const dadosFinais: Record<string, any> = {}
-    for (const c of campos) {
+    for (const c of camposVisiveis) {
       dadosFinais[c.id] = c.tipo === 'upload' ? uploads[c.id] || null : respostas[c.id] ?? null
     }
 
@@ -123,7 +146,7 @@ export function FormularioPublicoClient({
 
         <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-sm lg:p-8">
           <div className="space-y-6">
-            {campos.map((c) => (
+            {camposVisiveis.map((c) => (
               <CampoRenderer
                 key={c.id}
                 campo={c}
@@ -176,7 +199,6 @@ function CampoRenderer({
   uploadUrl?: string
   onUpload: (url: string) => void
 }) {
-  // Focus usa --cor-primaria (definida no wrapper com a cor do formulário)
   const baseInput = 'w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2.5 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]'
 
   return (
