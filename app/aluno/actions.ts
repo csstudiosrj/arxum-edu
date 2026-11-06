@@ -4,62 +4,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAlunoDoUsuario } from '@/lib/auth/aluno-atual'
 import { revalidatePath } from 'next/cache'
 
-export type NotaAluno = {
-  disciplina: string
-  periodo: string
-  nota: number | null
-  faltas: number
-  observacao: string | null
-}
-
-export type EventoAluno = {
-  id: string
-  titulo: string
-  descricao: string | null
-  tipo: string
-  data_evento: string
-  hora_evento: string | null
-}
-
-export type ComunicadoAluno = {
-  id: string
-  titulo: string
-  mensagem: string
-  setor: string
-  prioridade: string
-  autor_nome: string
-  criado_em: string
-  lido: boolean
-}
-
-export type AulaPendente = {
-  id: string
-  titulo: string
-  descricao: string | null
-  tipo: string
-  conteudo_url: string | null
-  duracao_minutos: number | null
-  modulo_titulo: string
-  disciplina: string
-  concluida: boolean
-  anotacao: string | null
-}
-
-export type AulaDetalhe = AulaPendente & {
-  modulo_id: string
-  aulas_do_modulo: Array<{ id: string; titulo: string; concluida: boolean; ordem: number }>
-}
-
-export type VideoaulaAluno = {
-  id: string
-  titulo: string
-  descricao: string | null
-  disciplina: string
-  serie: string | null
-  duracao_minutos: number | null
-  video_url: string
-  visualizacoes: number
-}
+export type NotaAluno = { disciplina: string; periodo: string; nota: number | null; faltas: number; observacao: string | null }
+export type EventoAluno = { id: string; titulo: string; descricao: string | null; tipo: string; data_evento: string; hora_evento: string | null }
+export type ComunicadoAluno = { id: string; titulo: string; mensagem: string; setor: string; prioridade: string; autor_nome: string; criado_em: string; lido: boolean }
+export type AulaPendente = { id: string; titulo: string; descricao: string | null; tipo: string; conteudo_url: string | null; duracao_minutos: number | null; modulo_titulo: string; disciplina: string; concluida: boolean; anotacao: string | null }
+export type AulaDetalhe = AulaPendente & { modulo_id: string; aulas_do_modulo: Array<{ id: string; titulo: string; concluida: boolean; ordem: number }> }
+export type VideoaulaAluno = { id: string; titulo: string; descricao: string | null; disciplina: string; serie: string | null; duracao_minutos: number | null; video_url: string; visualizacoes: number }
 
 async function getAlunoContexto() {
   const aluno = await getAlunoDoUsuario()
@@ -79,11 +29,7 @@ export async function getMinhasNotas(): Promise<NotaAluno[]> {
     const ctx = await getAlunoContexto()
     if (!ctx) return []
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('notas')
-      .select('disciplina, periodo, nota, faltas, observacao')
-      .eq('aluno_id', ctx.alunoId)
-      .order('disciplina', { ascending: true })
+    const { data, error } = await admin.from('notas').select('disciplina, periodo, nota, faltas, observacao').eq('aluno_id', ctx.alunoId).order('disciplina', { ascending: true })
     if (error) return []
     return (data || []) as NotaAluno[]
   } catch (e) { return [] }
@@ -95,17 +41,8 @@ export async function getMeusEventosAluno(): Promise<EventoAluno[]> {
     if (!ctx) return []
     const admin = createAdminClient()
     const hoje = new Date().toISOString().split('T')[0]
-    const { data, error } = await admin
-      .from('eventos')
-      .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie')
-      .eq('escola_id', ctx.escolaId)
-      .eq('ativo', true)
-      .gte('data_evento', hoje)
-      .order('data_evento', { ascending: true })
-      .limit(20)
-
+    const { data, error } = await admin.from('eventos').select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie').eq('escola_id', ctx.escolaId).eq('ativo', true).gte('data_evento', hoje).order('data_evento', { ascending: true }).limit(20)
     if (error || !data) return []
-
     return data.filter((e: any) => {
       if (e.publico === 'todos') return true
       if (e.serie && ctx.alunoSerie && e.serie.toLowerCase().includes(ctx.alunoSerie.toLowerCase())) return true
@@ -120,33 +57,20 @@ export async function getMeusComunicadosAluno(): Promise<ComunicadoAluno[]> {
     const ctx = await getAlunoContexto()
     if (!ctx) return []
     const admin = createAdminClient()
-    const { data: coms, error } = await admin
-      .from('comunicados')
-      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno')
-      .eq('escola_id', ctx.escolaId)
-      .eq('ativo', true)
-      .order('criado_em', { ascending: false })
-      .limit(50)
-
+    const { data: coms, error } = await admin.from('comunicados').select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno').eq('escola_id', ctx.escolaId).eq('ativo', true).order('criado_em', { ascending: false }).limit(50)
     if (error || !coms) return []
-
+    
     const filtrados = coms.filter((c: any) => {
       const matchSerie = !c.segmento_serie || (ctx.alunoSerie && c.segmento_serie.toLowerCase() === ctx.alunoSerie.toLowerCase())
       const matchTurno = !c.segmento_turno || (ctx.alunoTurno && c.segmento_turno.toLowerCase() === ctx.alunoTurno.toLowerCase())
       return matchSerie && matchTurno
     })
 
-    const { data: leituras } = await admin
-      .from('comunicados_leituras')
-      .select('comunicado_id')
-      .eq('responsavel_email', ctx.alunoEmail)
-
+    const { data: leituras } = await admin.from('comunicados_leituras').select('comunicado_id').eq('responsavel_email', ctx.alunoEmail)
     const lidosSet = new Set((leituras || []).map((l) => l.comunicado_id))
 
     return filtrados.map((c: any) => ({
-      id: c.id, titulo: c.titulo, mensagem: c.mensagem, setor: c.setor,
-      prioridade: c.prioridade, autor_nome: c.autor_nome, criado_em: c.criado_em,
-      lido: lidosSet.has(c.id),
+      id: c.id, titulo: c.titulo, mensagem: c.mensagem, setor: c.setor, prioridade: c.prioridade, autor_nome: c.autor_nome, criado_em: c.criado_em, lido: lidosSet.has(c.id),
     })) as ComunicadoAluno[]
   } catch (e) { return [] }
 }
@@ -158,31 +82,15 @@ export async function getMinhasAulas(): Promise<AulaPendente[]> {
     const admin = createAdminClient()
     const { data: mods } = await admin.from('modulos').select('id, titulo, disciplina').eq('escola_id', ctx.escolaId).eq('publicado', true)
     if (!mods || mods.length === 0) return []
-    
-    const { data: aulas } = await admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos')
-      .in('modulo_id', mods.map(m => m.id))
-      .eq('publicado', true)
-      .order('ordem', { ascending: true })
+    const { data: aulas } = await admin.from('aulas').select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos').in('modulo_id', mods.map(m => m.id)).eq('publicado', true).order('ordem', { ascending: true })
     if (!aulas) return []
-
-    const { data: progressos } = await admin
-      .from('aulas_progresso')
-      .select('aula_id, concluida, anotacao')
-      .eq('responsavel_email', ctx.alunoEmail)
-      .eq('aluno_nome', ctx.alunoNome)
-
+    const { data: progressos } = await admin.from('aulas_progresso').select('aula_id, concluida, anotacao').eq('responsavel_email', ctx.alunoEmail).eq('aluno_nome', ctx.alunoNome)
     const progressoMap: Record<string, { concluida: boolean; anotacao: string | null }> = {}
     ;(progressos || []).forEach((p) => { progressoMap[p.aula_id] = { concluida: p.concluida, anotacao: p.anotacao } })
 
     return aulas.map((a) => {
       const mod = mods.find((m) => m.id === a.modulo_id)
-      return {
-        id: a.id, titulo: a.titulo, descricao: a.descricao, tipo: a.tipo, conteudo_url: a.conteudo_url,
-        duracao_minutos: a.duracao_minutos, modulo_titulo: mod?.titulo || '', disciplina: mod?.disciplina || '',
-        concluida: progressoMap[a.id]?.concluida || false, anotacao: progressoMap[a.id]?.anotacao || null,
-      }
+      return { id: a.id, titulo: a.titulo, descricao: a.descricao, tipo: a.tipo, conteudo_url: a.conteudo_url, duracao_minutos: a.duracao_minutos, modulo_titulo: mod?.titulo || '', disciplina: mod?.disciplina || '', concluida: progressoMap[a.id]?.concluida || false, anotacao: progressoMap[a.id]?.anotacao || null }
     }) as AulaPendente[]
   } catch (e) { return [] }
 }
@@ -194,20 +102,15 @@ export async function getAulaDetalhe(aulaId: string): Promise<AulaDetalhe | null
     const admin = createAdminClient()
     const { data: aula } = await admin.from('aulas').select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos').eq('id', aulaId).eq('publicado', true).maybeSingle()
     if (!aula) return null
-
     const { data: mod } = await admin.from('modulos').select('id, titulo, disciplina, escola_id, publicado').eq('id', aula.modulo_id).eq('escola_id', ctx.escolaId).eq('publicado', true).maybeSingle()
     if (!mod) return null
-
     const { data: todasAulas } = await admin.from('aulas').select('id, titulo, ordem, publicado').eq('modulo_id', mod.id).eq('publicado', true).order('ordem', { ascending: true })
     const { data: progressos } = await admin.from('aulas_progresso').select('aula_id, concluida, anotacao').eq('responsavel_email', ctx.alunoEmail).eq('aluno_nome', ctx.alunoNome)
-
     const progressoMap: Record<string, { concluida: boolean; anotacao: string | null }> = {}
     ;(progressos || []).forEach((p) => { progressoMap[p.aula_id] = { concluida: p.concluida, anotacao: p.anotacao } })
 
     return {
-      id: aula.id, titulo: aula.titulo, descricao: aula.descricao, tipo: aula.tipo, conteudo_url: aula.conteudo_url,
-      duracao_minutos: aula.duracao_minutos, modulo_id: mod.id, modulo_titulo: mod.titulo, disciplina: mod.disciplina,
-      concluida: progressoMap[aula.id]?.concluida || false, anotacao: progressoMap[aula.id]?.anotacao || null,
+      id: aula.id, titulo: aula.titulo, descricao: aula.descricao, tipo: aula.tipo, conteudo_url: aula.conteudo_url, duracao_minutos: aula.duracao_minutos, modulo_id: mod.id, modulo_titulo: mod.titulo, disciplina: mod.disciplina, concluida: progressoMap[aula.id]?.concluida || false, anotacao: progressoMap[aula.id]?.anotacao || null,
       aulas_do_modulo: (todasAulas || []).map((a) => ({ id: a.id, titulo: a.titulo, ordem: a.ordem, concluida: progressoMap[a.id]?.concluida || false })),
     }
   } catch (e) { return null }
@@ -219,12 +122,8 @@ export async function salvarAnotacaoAluno(aulaId: string, anotacao: string) {
     if (!ctx) return { success: false, error: 'Sessão expirada.' }
     const admin = createAdminClient()
     const { data: existente } = await admin.from('aulas_progresso').select('id').eq('aula_id', aulaId).eq('responsavel_email', ctx.alunoEmail).eq('aluno_nome', ctx.alunoNome).maybeSingle()
-
-    if (existente) {
-      await admin.from('aulas_progresso').update({ anotacao, atualizado_em: new Date().toISOString() }).eq('id', existente.id)
-    } else {
-      await admin.from('aulas_progresso').insert({ aula_id: aulaId, responsavel_email: ctx.alunoEmail, aluno_nome: ctx.alunoNome, anotacao })
-    }
+    if (existente) await admin.from('aulas_progresso').update({ anotacao, atualizado_em: new Date().toISOString() }).eq('id', existente.id)
+    else await admin.from('aulas_progresso').insert({ aula_id: aulaId, responsavel_email: ctx.alunoEmail, aluno_nome: ctx.alunoNome, anotacao })
     revalidatePath(`/aluno/aulas/${aulaId}`); revalidatePath('/aluno/aulas')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao salvar.' } }
@@ -237,12 +136,8 @@ export async function marcarAulaConcluida(aulaId: string, concluida: boolean) {
     const admin = createAdminClient()
     const { data: existente } = await admin.from('aulas_progresso').select('id').eq('aula_id', aulaId).eq('responsavel_email', ctx.alunoEmail).eq('aluno_nome', ctx.alunoNome).maybeSingle()
     const payload = { concluida, concluida_em: concluida ? new Date().toISOString() : null, atualizado_em: new Date().toISOString() }
-
-    if (existente) {
-      await admin.from('aulas_progresso').update(payload).eq('id', existente.id)
-    } else {
-      await admin.from('aulas_progresso').insert({ aula_id: aulaId, responsavel_email: ctx.alunoEmail, aluno_nome: ctx.alunoNome, ...payload })
-    }
+    if (existente) await admin.from('aulas_progresso').update(payload).eq('id', existente.id)
+    else await admin.from('aulas_progresso').insert({ aula_id: aulaId, responsavel_email: ctx.alunoEmail, aluno_nome: ctx.alunoNome, ...payload })
     revalidatePath(`/aluno/aulas/${aulaId}`); revalidatePath('/aluno/aulas')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao atualizar.' } }
