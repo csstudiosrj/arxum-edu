@@ -69,7 +69,6 @@ export function ProfessorShell({
   const iniciais = professorNome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
   const temBranding = marca?.usaBranding && marca.logoUrl
 
-  // ── ESSENCIAL: define --cor-primaria no wrapper quando branding ativo ──
   const estiloMarca = marca?.usaBranding
     ? ({ '--cor-primaria': marca.corPrimaria } as React.CSSProperties)
     : undefined
