@@ -7,7 +7,6 @@ import { criarOcorrenciaProfessor, atualizarOcorrenciaProfessor, excluirOcorrenc
 
 type IconeComponente = typeof AlertCircle
 
-// ── SEMÂNTICO: cores por tipo de ocorrência ─────────────────────────
 const TIPOS: Array<{ key: string; label: string; icone: IconeComponente; cor: string }> = [
   { key: 'pedagogica', label: 'Pedagógica', icone: BookOpen, cor: '#3b82f6' },
   { key: 'disciplinar', label: 'Disciplinar', icone: ShieldAlert, cor: '#dc2626' },
@@ -16,7 +15,6 @@ const TIPOS: Array<{ key: string; label: string; icone: IconeComponente; cor: st
   { key: 'outro', label: 'Outro', icone: FileQuestion, cor: '#6b7d86' },
 ]
 
-// ── SEMÂNTICO: cores por gravidade ──────────────────────────────────
 const GRAVIDADES = [
   { key: 'baixa', label: 'Baixa', style: 'bg-[#e5ecee] text-[#5e7a94]' },
   { key: 'media', label: 'Média', style: 'bg-[#fef3c7] text-[#92400e]' },
@@ -253,7 +251,11 @@ export function OcorrenciasProfessorClient({
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
                   <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
-                    {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome} {a.serie ? `— ${a.serie}` : ''}</option>)}
+                    {alunos.map((a, i) => (
+                      <option key={a.id} value={String(i)}>
+                        {a.nome} {a.serie ? `— ${a.serie}` : ''} {a.turno ? `(${a.turno})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
