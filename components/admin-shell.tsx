@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileSignature, FileText, Globe, GraduationCap, Headphones, HeartPulse, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, UserCog, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileSignature, FileText, Globe, GraduationCap, Headphones, HeartPulse, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, UserCog, Users, WalletCards, X, HelpCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -32,6 +32,7 @@ const schoolItems = [
   ['Importação', '/admin/importacao', UploadCloud],
   ['Exportação', '/admin/exportacao', Database], 
   ['Suporte', '/admin/suporte', Headphones],
+  ['Central de Ajuda', '/admin/ajuda', HelpCircle],
   ['Configurações', '/admin/configuracoes', Settings],
 ] as const
 
