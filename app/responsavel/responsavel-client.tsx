@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, Download, TrendingUp, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, Download, TrendingUp, FileSignature, PenTool, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
-import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
-import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados, getDadosParaDocumento, getNotasParaBoletim, registrarEmissaoDocumento } from './actions'
+import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho, TermoResponsavel } from './actions'
+import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados, getDadosParaDocumento, getNotasParaBoletim, registrarEmissaoDocumento, getMeusTermosPendentes, assinarTermoEletronicamente } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
 import { CheckoutFatura } from '@/components/checkout-fatura'
 import { gerarDocumentoHTML } from '@/lib/documentos/gerador'
@@ -22,6 +22,7 @@ const menu: MenuItem[] = [
   [FileText,'Matrículas','#matriculas'],
   [BookOpen,'Boletim','#boletim'],
   [WalletCards,'Financeiro','#financeiro'],
+  [FileSignature,'Termos','#termos'],
   [MessageSquare,'Comunicação','#comunicacao'],
   [CalendarDays,'Agenda','#agenda'],
   [ImageIcon,'Fotos','#fotos'],
@@ -209,6 +210,14 @@ export function ResponsavelClient({
 
   const [emitindo, setEmitindo] = useState<string | null>(null)
 
+  const [termos, setTermos] = useState<TermoResponsavel[]>([])
+  const [termoAberto, setTermoAberto] = useState<TermoResponsavel | null>(null)
+  const [assinando, setAssinando] = useState(false)
+
+  useEffect(() => {
+    getMeusTermosPendentes().then(setTermos)
+  }, [])
+
   useEffect(() => {
     if (!filhos.length) return
     const salvo = typeof window !== 'undefined' ? localStorage.getItem('arxum_filho_ativo') : null
@@ -272,6 +281,21 @@ export function ResponsavelClient({
     if (result.success) {
       setAutorizacaoAberta(null); setObservacao(''); router.refresh()
     } else { alert(result.error || 'Erro ao responder.') }
+  }
+
+  async function handleAssinarTermo() {
+    if (!termoAberto) return
+    setAssinando(true)
+    const r = await assinarTermoEletronicamente(termoAberto.id)
+    setAssinando(false)
+    
+    if (r.success) {
+      setTermoAberto(null)
+      setTermos(termos.map(t => t.id === termoAberto.id ? { ...t, status: 'assinado', assinado_em: new Date().toISOString() } : t))
+      alert('Termo assinado com sucesso!')
+    } else {
+      alert(r.error)
+    }
   }
 
   async function handleBaixarDados() {
@@ -354,6 +378,7 @@ export function ResponsavelClient({
   const faturasEmAberto = faturas.filter((f) => f.status === 'em_aberto' || f.status === 'vencido')
   const autorizacoesPendentes = autorizacoes.filter((a) => !a.resposta)
   const ocorrenciasNaoLidas = ocorrencias.filter((o) => !o.lida)
+  const termosPendentes = termos.filter(t => t.status === 'pendente')
   const temBranding = marca?.usaBranding && marca.logoUrl
 
   const estiloMarca = marca?.usaBranding
@@ -475,6 +500,36 @@ export function ResponsavelClient({
                     </button>
                   )
                 })}
+              </div>
+            </section>
+          )}
+
+          {/* NOVA SEÇÃO: TERMOS E ASSINATURAS */}
+          {termosPendentes.length > 0 && (
+            <section id="termos" className="mb-10">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold flex items-center gap-2"><FileSignature className="text-[#0d9488]"/> Termos para Assinar</h3>
+                <span className="rounded-full bg-[#dc2626] px-2.5 py-0.5 text-[10px] font-bold text-white">{termosPendentes.length}</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {termosPendentes.map((t) => (
+                  <article key={t.id} className="rounded-xl border-2 border-[#0d9488]/20 bg-white p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#ccfbf1] text-[#0d9488]"><FileSignature size={20}/></div>
+                      <div className="flex-1">
+                        <h4 className="text-base font-bold">{t.titulo}</h4>
+                        <p className="mt-1 text-xs text-[#82939a]">Para o aluno: <strong className="text-[#243942]">{t.aluno_nome}</strong></p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setTermoAberto(t)}
+                      className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-90"
+                      style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+                    >
+                      <PenTool className="size-4"/> Ler e Assinar
+                    </button>
+                  </article>
+                ))}
               </div>
             </section>
           )}
@@ -1222,6 +1277,40 @@ export function ResponsavelClient({
           router.refresh()
         }}
       />
+    )}
+
+    {termoAberto && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40" onClick={() => !assinando && setTermoAberto(null)} />
+        <div className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-2xl">
+          <header className="flex items-start justify-between border-b border-[#e5ecee] px-6 py-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#0d9488]">Assinatura Eletrônica</p>
+              <h2 className="mt-1 text-xl font-bold text-[#12232b]">{termoAberto.titulo}</h2>
+            </div>
+            <button onClick={() => setTermoAberto(null)} disabled={assinando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
+          </header>
+          
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="prose prose-sm max-w-none prose-p:text-[#243942] prose-p:leading-7 prose-headings:text-[#12232b]" dangerouslySetInnerHTML={{ __html: termoAberto.conteudo_html }} />
+          </div>
+
+          <footer className="border-t border-[#e5ecee] bg-[#fafcfc] p-5 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-xs text-[#82939a] text-center max-w-lg">
+              <ShieldCheck className="size-5 shrink-0 text-[#0d9488]" />
+              Ao clicar em "Assinar", você concorda com os termos acima. Serão registrados seu e-mail, endereço IP e data/hora para validade jurídica.
+            </div>
+            <button
+              onClick={handleAssinarTermo}
+              disabled={assinando}
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg px-8 py-3 text-sm font-bold text-white transition hover:brightness-90 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
+              {assinando ? <Loader2 className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> Assinar Termo</>}
+            </button>
+          </footer>
+        </div>
+      </div>
     )}
   </div>
 }

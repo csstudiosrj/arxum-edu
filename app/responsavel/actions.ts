@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notificarRespostaAutorizacao } from '@/lib/emails/notificacoes'
 import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
+import crypto from 'node:crypto'
 
 export type DocumentosMatricula = {
   rg_aluno?: { url: string; nome: string } | null
@@ -109,6 +111,16 @@ export type Filho = {
   nome: string
   serie: string | null
   turno: string | null
+}
+
+export type TermoResponsavel = {
+  id: string
+  titulo: string
+  conteudo_html: string
+  status: string
+  criado_em: string
+  aluno_nome: string
+  assinado_em: string | null
 }
 
 async function getEmailUsuario(): Promise<string | null> {
@@ -685,5 +697,82 @@ export async function registrarEmissaoDocumento(alunoId: string, escolaId: strin
     return { success: true }
   } catch (e) {
     return { success: false }
+  }
+}
+
+export async function getMeusTermosPendentes(): Promise<TermoResponsavel[]> {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return []
+
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('termos_assinatura')
+      .select(`
+        id, titulo, conteudo_html, status, criado_em, assinado_em,
+        alunos ( nome )
+      `)
+      .eq('responsavel_email', email)
+      .in('status', ['pendente', 'assinado'])
+      .order('criado_em', { ascending: false })
+
+    if (error || !data) return []
+
+    return data.map((t: any) => ({
+      id: t.id,
+      titulo: t.titulo,
+      conteudo_html: t.conteudo_html,
+      status: t.status,
+      criado_em: t.criado_em,
+      assinado_em: t.assinado_em,
+      aluno_nome: t.alunos?.nome || 'Aluno',
+    })) as TermoResponsavel[]
+  } catch (e) {
+    return []
+  }
+}
+
+export async function assinarTermoEletronicamente(termoId: string) {
+  try {
+    const email = await getEmailUsuario()
+    if (!email) return { success: false, error: 'Sessão expirada.' }
+
+    const admin = createAdminClient()
+
+    const { data: termo } = await admin
+      .from('termos_assinatura')
+      .select('*')
+      .eq('id', termoId)
+      .eq('responsavel_email', email)
+      .maybeSingle()
+
+    if (!termo) return { success: false, error: 'Termo não encontrado.' }
+    if (termo.status === 'assinado') return { success: false, error: 'Este termo já foi assinado.' }
+
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0].trim() || 'Desconhecido'
+
+    const timestamp = new Date().toISOString()
+    const hash = crypto.createHash('sha256')
+      .update(`${termo.id}|${termo.conteudo_html}|${email}|${timestamp}|ARXUM_SECRET_SALT`)
+      .digest('hex')
+
+    const { error } = await admin
+      .from('termos_assinatura')
+      .update({
+        status: 'assinado',
+        assinado_em: timestamp,
+        ip_assinatura: ip,
+        hash_assinatura: hash
+      })
+      .eq('id', termoId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/responsavel')
+    revalidatePath('/admin/termos')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao assinar termo.' }
   }
 }
