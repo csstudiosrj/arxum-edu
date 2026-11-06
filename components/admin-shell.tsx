@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileText, Globe, GraduationCap, Headphones, HeartPulse, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UserCog, Users, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -20,13 +20,14 @@ const schoolItems = [
   ['Unidades', '/admin/unidades', Network], ['Usuários', '/admin/usuarios', UserCog],
   ['Matrículas', '/admin/matriculas', FileText], ['Formulários', '/admin/formularios', SlidersHorizontal],
   ['Alunos', '/admin/alunos', Users], ['Professores', '/admin/professores', GraduationCap],
+  ['Recursos', '/admin/recursos', HeartPulse], // NOVO MENU
   ['Notas', '/admin/notas', TrendingUp], ['Ocorrências', '/admin/ocorrencias', AlertCircle],
   ['Financeiro', '/admin/financeiro', WalletCards], ['Comunicação', '/admin/comunicacao', Bell],
   ['Mensagens', '/admin/mensagens', Inbox], ['Agenda', '/admin/agenda', Calendar],
   ['Autorizações', '/admin/autorizacoes', ShieldCheck], ['Galeria', '/admin/galeria', ImageIcon],
   ['EduFlix', '/admin/eduflix', BookOpen], ['Sala virtual', '/admin/sala-virtual', BookOpen],
   ['Loja', '/admin/loja', CircleDollarSign], 
-  ['Add-ons', '/admin/addons', Sparkles], // NOVA ABA AQUI
+  ['Add-ons', '/admin/addons', Sparkles],
   ['Exportação', '/admin/exportacao', Database], ['Configurações', '/admin/configuracoes', Settings],
 ] as const
 

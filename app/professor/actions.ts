@@ -12,6 +12,9 @@ export type AlunoResumo = {
   serie: string | null
   turno: string | null
   responsavel_email: string
+  anamnese_alergias: string | null
+  anamnese_medicamentos: string | null
+  anamnese_plano_saude: string | null
 }
 
 export type NotaProfessor = {
@@ -55,21 +58,52 @@ async function buscarAlunoValidado(alunoId: string, escolaId: string) {
   return aluno
 }
 
-export async function getAlunosDoProfessor(): Promise<AlunoResumo[]> {
+export async function getAlunosDoProfessor(): Promise<{ alunos: AlunoResumo[], configRecursos: any }> {
+  try {
+    const prof = await getProfessorDoUsuario()
+    if (!prof) return { alunos: [], configRecursos: { saude: [], eduflix: [], sala_virtual: [] } }
+
+    const admin = createAdminClient()
+    
+    const { data, error } = await admin
+      .from('alunos')
+      .select('id, nome, serie, turno, responsavel_email, anamnese_alergias, anamnese_medicamentos, anamnese_plano_saude')
+      .eq('escola_id', prof.escola_id)
+      .eq('status', 'ativo')
+      .order('nome', { ascending: true })
+
+    if (error) return { alunos: [], configRecursos: { saude: [], eduflix: [], sala_virtual: [] } }
+
+    const { data: escola } = await admin
+      .from('escolas')
+      .select('config_recursos')
+      .eq('id', prof.escola_id)
+      .maybeSingle()
+
+    const configRecursos = escola?.config_recursos || { saude: [], eduflix: [], sala_virtual: [] }
+
+    return { alunos: (data || []) as AlunoResumo[], configRecursos }
+  } catch (e) {
+    return { alunos: [], configRecursos: { saude: [], eduflix: [], sala_virtual: [] } }
+  }
+}
+
+export async function getOcorrenciasSaudeAluno(alunoId: string): Promise<OcorrenciaProfessor[]> {
   try {
     const prof = await getProfessorDoUsuario()
     if (!prof) return []
 
     const admin = createAdminClient()
     const { data, error } = await admin
-      .from('alunos')
-      .select('id, nome, serie, turno, responsavel_email')
+      .from('ocorrencias')
+      .select('id, aluno_nome, tipo, gravidade, titulo, descricao, providencias, autor_nome, criado_em')
       .eq('escola_id', prof.escola_id)
-      .eq('status', 'ativo')
-      .order('nome', { ascending: true })
+      .eq('aluno_id', alunoId)
+      .eq('tipo', 'saude')
+      .order('criado_em', { ascending: false })
 
     if (error) return []
-    return (data || []) as AlunoResumo[]
+    return (data || []) as OcorrenciaProfessor[]
   } catch (e) {
     return []
   }
