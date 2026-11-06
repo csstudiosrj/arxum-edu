@@ -68,6 +68,8 @@ async function getAlunoContexto() {
     alunoId: aluno.id,
     escolaId: aluno.escola_id,
     alunoNome: aluno.nome,
+    alunoSerie: aluno.serie,
+    alunoTurno: aluno.turno,
     alunoEmail: aluno.email_aluno || aluno.responsavel_email,
   }
 }
@@ -99,17 +101,27 @@ export async function getMeusEventosAluno(): Promise<EventoAluno[]> {
     const admin = createAdminClient()
     const hoje = new Date().toISOString().split('T')[0]
 
+    // Busca todos os eventos futuros da escola
     const { data, error } = await admin
       .from('eventos')
-      .select('id, titulo, descricao, tipo, data_evento, hora_evento')
+      .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie')
       .eq('escola_id', ctx.escolaId)
       .eq('ativo', true)
       .gte('data_evento', hoje)
       .order('data_evento', { ascending: true })
-      .limit(15)
+      .limit(20)
 
-    if (error) return []
-    return (data || []) as EventoAluno[]
+    if (error || !data) return []
+
+    // Filtra os eventos baseados no público-alvo e série do aluno
+    const eventosFiltrados = data.filter((e: any) => {
+      if (e.publico === 'todos') return true
+      if (e.serie && ctx.alunoSerie && e.serie.toLowerCase().includes(ctx.alunoSerie.toLowerCase())) return true
+      if (e.serie && ctx.alunoSerie && ctx.alunoSerie.toLowerCase().includes(e.serie.toLowerCase())) return true
+      return false
+    })
+
+    return eventosFiltrados as EventoAluno[]
   } catch (e) {
     return []
   }
@@ -121,16 +133,26 @@ export async function getMeusComunicadosAluno(): Promise<ComunicadoAluno[]> {
     if (!ctx) return []
 
     const admin = createAdminClient()
+    
+    // Busca todos os comunicados da escola
     const { data: coms, error } = await admin
       .from('comunicados')
-      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em')
+      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno')
       .eq('escola_id', ctx.escolaId)
       .eq('ativo', true)
       .order('criado_em', { ascending: false })
-      .limit(20)
+      .limit(50)
 
     if (error || !coms) return []
 
+    // Filtra por segmentação (Série ou Turno)
+    const comunicadosFiltrados = coms.filter((c: any) => {
+      const matchSerie = !c.segmento_serie || (ctx.alunoSerie && c.segmento_serie.toLowerCase() === ctx.alunoSerie.toLowerCase())
+      const matchTurno = !c.segmento_turno || (ctx.alunoTurno && c.segmento_turno.toLowerCase() === ctx.alunoTurno.toLowerCase())
+      return matchSerie && matchTurno
+    })
+
+    // Busca leituras
     const { data: leituras } = await admin
       .from('comunicados_leituras')
       .select('comunicado_id')
@@ -138,7 +160,7 @@ export async function getMeusComunicadosAluno(): Promise<ComunicadoAluno[]> {
 
     const lidosSet = new Set((leituras || []).map((l) => l.comunicado_id))
 
-    return coms.map((c) => ({
+    return comunicadosFiltrados.map((c: any) => ({
       id: c.id,
       titulo: c.titulo,
       mensagem: c.mensagem,
