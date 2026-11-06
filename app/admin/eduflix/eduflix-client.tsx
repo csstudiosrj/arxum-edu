@@ -22,7 +22,7 @@ export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAd
   const [serie, setSerie] = useState('')
   const [tipo, setTipo] = useState<'video' | 'live'>('video')
   
-  // URLs dos arquivos (serão preenchidas pelo Uploadthing)
+  // URLs dos arquivos
   const [videoUrl, setVideoUrl] = useState('')
   const [capaUrl, setCapaUrl] = useState('')
   
@@ -31,7 +31,7 @@ export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAd
   const [dataLive, setDataLive] = useState('')
   const [duracao, setDuracao] = useState('')
 
-  // Estados de upload do Uploadthing
+  // Estados de upload
   const [enviandoVideo, setEnviandoVideo] = useState(false)
   const [enviandoCapa, setEnviandoCapa] = useState(false)
 
@@ -197,7 +197,6 @@ export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAd
                 <div className="border border-[#e5ecee] bg-[#fafcfc] p-4 rounded-lg space-y-4">
                   <p className="text-xs font-bold text-[#0d9488] uppercase">Arquivos do Vídeo</p>
                   
-                  {/* UPLOAD DO VÍDEO */}
                   <div>
                     <label className="block text-xs font-bold mb-2">Arquivo de Vídeo</label>
                     {videoUrl ? (
@@ -232,7 +231,6 @@ export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAd
                     )}
                   </div>
 
-                  {/* UPLOAD DA CAPA */}
                   <div>
                     <label className="block text-xs font-bold mb-2">Imagem de Capa (Thumbnail)</label>
                     {capaUrl ? (
