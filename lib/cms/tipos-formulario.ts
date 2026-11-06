@@ -11,6 +11,12 @@ export type TipoCampo =
   | 'email'
   | 'upload'
 
+export type CondicaoCampo = {
+  campo_id: string
+  operador: 'igual' | 'diferente' | 'contem'
+  valor: string
+}
+
 export type CampoFormulario = {
   id: string
   formulario_id: string
@@ -25,6 +31,7 @@ export type CampoFormulario = {
   validacao_max: number | null
   ordem: number
   secao: string | null
+  condicao: CondicaoCampo | null
 }
 
 export type Formulario = {
