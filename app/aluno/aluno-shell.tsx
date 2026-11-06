@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   BookOpen, Calendar, Home, LogOut, Menu, MessageSquare,
-  PlayCircle, TrendingUp, Video, X, type LucideIcon,
+  PlayCircle, TrendingUp, Video, X, ClipboardCheck, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
@@ -18,6 +18,7 @@ const menu: MenuItem[] = [
   ['Início', '/aluno', Home],
   ['Boletim', '/aluno/boletim', TrendingUp],
   ['Aulas', '/aluno/aulas', Video],
+  ['Atividades', '/aluno/atividades', ClipboardCheck],
   ['EduFlix', '/aluno/eduflix', PlayCircle],
   ['Agenda', '/aluno/agenda', Calendar],
   ['Comunicados', '/aluno/comunicados', MessageSquare],
@@ -71,7 +72,6 @@ export function AlunoShell({
   const iniciais = alunoNome.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
   const temBranding = marca?.usaBranding && marca.logoUrl
 
-  // ── ESSENCIAL: define --cor-primaria no wrapper quando branding ativo ──
   const estiloMarca = marca?.usaBranding
     ? ({ '--cor-primaria': marca.corPrimaria } as React.CSSProperties)
     : undefined
