@@ -30,7 +30,9 @@ const schoolItems = [
   ['Loja', '/admin/loja', CircleDollarSign], 
   ['Add-ons', '/admin/addons', Sparkles],
   ['Importação', '/admin/importacao', UploadCloud],
-  ['Exportação', '/admin/exportacao', Database], ['Configurações', '/admin/configuracoes', Settings],
+  ['Exportação', '/admin/exportacao', Database], 
+  ['Suporte', '/admin/suporte', Headphones],
+  ['Configurações', '/admin/configuracoes', Settings],
 ] as const
 
 const superItems = [
