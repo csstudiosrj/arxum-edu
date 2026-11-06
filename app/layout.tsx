@@ -16,6 +16,7 @@ import {
   Montserrat,
   Manrope,
 } from 'next/font/google'
+import { PWARegister } from '@/components/pwa-register'
 import './globals.css'
 
 const syne = Syne({ subsets: ['latin'], variable: '--font-syne', display: 'swap' })
@@ -58,6 +59,7 @@ export const metadata: Metadata = {
   },
   description: 'Matrículas, comunicação, financeiro, sala virtual e EduFlix em uma única plataforma.',
   generator: 'ARXUM Suite',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
@@ -65,6 +67,11 @@ export const metadata: Metadata = {
       { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: '/apple-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'ARXUM Edu',
+    statusBarStyle: 'black-translucent',
   },
   openGraph: {
     type: 'website',
@@ -88,6 +95,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={fontVars}>
       <body className="antialiased">
         {children}
+        <PWARegister />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
