@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Save, Check, Type,
   LayoutTemplate, ExternalLink, Trash2, Plus, Image as ImageIcon, RefreshCw,
-  FileText, Building2, MessageSquare,
+  FileText, Building2, MessageSquare, Globe, Lock, Zap
 } from 'lucide-react'
+import Link from 'next/link'
+import { Editor } from 'react-simple-wysiwyg'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { BannerUpload } from '@/components/banner-upload'
 import { FONTES_PARES } from '@/lib/fonts'
 import {
   BLOCO_LABELS, gerarSlug,
   type ConteudoHome, type BannerHero,
-  type ConteudoPaginas,
+  type ConteudoPaginas, type PaginaExtra
 } from '@/lib/cms/defaults'
 import { salvarConteudoHome, atualizarFontePar, salvarConteudoPaginas } from '@/lib/cms/actions'
 
@@ -23,21 +25,26 @@ type Props = {
   fontePar: string
   slug: string
   escolaNome: string
+  plano: string
+  limiteExtras: number
+  temAddonPaginas: boolean
 }
 
 function gerarId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
-// Estilo padrão de ícone com fundo color-mix da cor primária
 const estiloIconeMarca: React.CSSProperties = {
   backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
   color: 'var(--cor-primaria, #0d9488)',
 }
 
-export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, escolaNome }: Props) {
+export function SiteClient({ 
+  conteudoInicial, paginasInicial, fontePar, slug, escolaNome, 
+  plano, limiteExtras, temAddonPaginas 
+}: Props) {
   const router = useRouter()
-  const [aba, setAba] = useState<'home' | 'paginas'>('home')
+  const [aba, setAba] = useState<'home' | 'paginas' | 'extras'>('home')
   const [conteudo, setConteudo] = useState<ConteudoHome>(conteudoInicial)
   const [paginas, setPaginas] = useState<ConteudoPaginas>(paginasInicial)
   const [fonte, setFonte] = useState(fontePar)
@@ -104,6 +111,33 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
     setTimeout(() => setSalvou(false), 2500)
   }
 
+  function adicionarPaginaExtra() {
+    if (paginas.paginas_extras.length >= limiteExtras) {
+      alert('Você atingiu o limite de páginas extras do seu plano.')
+      return
+    }
+    const novaPagina: PaginaExtra = {
+      id: gerarId(),
+      slug: 'nova-pagina',
+      titulo: 'Nova Página',
+      conteudo_html: '<p>Escreva o conteúdo da página aqui...</p>'
+    }
+    setPaginas({ ...paginas, paginas_extras: [...paginas.paginas_extras, novaPagina] })
+  }
+
+  function removerPaginaExtra(id: string) {
+    setPaginas({ ...paginas, paginas_extras: paginas.paginas_extras.filter(p => p.id !== id) })
+  }
+
+  function editarPaginaExtra(id: string, dados: Partial<PaginaExtra>) {
+    setPaginas({
+      ...paginas,
+      paginas_extras: paginas.paginas_extras.map(p => p.id === id ? { ...p, ...dados } : p)
+    })
+  }
+
+  const limiteAtingido = paginas.paginas_extras.length >= limiteExtras
+
   return (
     <AdminShell mode="school" active="Site">
       <main className="px-5 py-8 lg:px-8">
@@ -146,17 +180,18 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
           <div className="mt-6 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">{erro}</div>
         )}
 
-        <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
+        <div className="mt-8 flex gap-1 border-b border-[#e5ecee] overflow-x-auto">
           {[
             { key: 'home', label: 'Home' },
             { key: 'paginas', label: 'Páginas internas' },
+            { key: 'extras', label: 'Páginas extras' },
           ].map((t) => {
             const ativo = aba === t.key
             return (
               <button
                 key={t.key}
-                onClick={() => setAba(t.key as 'home' | 'paginas')}
-                className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${ativo ? '' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
+                onClick={() => setAba(t.key as any)}
+                className={`whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition ${ativo ? '' : 'border-transparent text-[#6b7d86] hover:text-[#243942]'}`}
                 style={ativo ? {
                   borderColor: 'var(--cor-primaria, #0d9488)',
                   color: 'var(--cor-primaria, #0d9488)',
@@ -322,12 +357,18 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
                   <CampoTexto label="Título" valor={paginas.a_escola.titulo} onChange={(v) => setPaginas({ ...paginas, a_escola: { ...paginas.a_escola, titulo: v } })} />
                 </div>
                 <CampoTexto label="Subtítulo" valor={paginas.a_escola.subtitulo} onChange={(v) => setPaginas({ ...paginas, a_escola: { ...paginas.a_escola, subtitulo: v } })} />
-                <CampoTextoLongo
-                  label="Texto (separe parágrafos com uma linha em branco)"
-                  valor={paginas.a_escola.texto}
-                  onChange={(v) => setPaginas({ ...paginas, a_escola: { ...paginas.a_escola, texto: v } })}
-                  rows={10}
-                />
+                
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Texto da página</label>
+                  <div className="rounded-lg border border-[#d5e0e3] bg-white overflow-hidden">
+                    <Editor 
+                      value={paginas.a_escola.texto} 
+                      onChange={(e: any) => setPaginas({ ...paginas, a_escola: { ...paginas.a_escola, texto: e.target.value } })}
+                      containerProps={{ style: { minHeight: '200px', outline: 'none', padding: '12px' } }}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Imagem principal (opcional)</label>
                   <BannerUpload
@@ -503,6 +544,90 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
             </Panel>
           </div>
         )}
+
+        {aba === 'extras' && (
+          <div className="mt-6 space-y-6">
+            <Panel>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#e5ecee] px-5 py-4 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-9 place-items-center rounded-lg" style={estiloIconeMarca}>
+                    <Globe className="size-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-[#12232b]">Páginas Extras</h2>
+                    <p className="text-xs text-[#82939a]">
+                      Criadas: {paginas.paginas_extras.length} de {limiteExtras} disponíveis no seu plano.
+                    </p>
+                  </div>
+                </div>
+                
+                {limiteAtingido ? (
+                  <Link
+                    href="/admin/addons"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#f59e0b] px-4 py-2 text-xs font-semibold text-white hover:brightness-90"
+                  >
+                    <Zap className="size-4" /> Fazer Upgrade (Add-on)
+                  </Link>
+                ) : (
+                  <button
+                    onClick={adicionarPaginaExtra}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cor-primaria,#0d9488)] px-4 py-2 text-xs font-semibold text-white hover:brightness-90"
+                  >
+                    <Plus className="size-4" /> Nova Página
+                  </button>
+                )}
+              </div>
+              
+              <div className="p-5 space-y-6">
+                {paginas.paginas_extras.length === 0 ? (
+                  <div className="text-center py-10 bg-[#fafcfc] rounded-lg border border-dashed border-[#dce5e8]">
+                    <Globe className="size-8 mx-auto text-[#a0afb4] mb-3" />
+                    <p className="text-sm font-semibold text-[#6b7d86]">Nenhuma página extra criada.</p>
+                    {limiteExtras > 0 && <p className="text-xs text-[#82939a] mt-1">Clique em "Nova Página" para começar.</p>}
+                  </div>
+                ) : (
+                  paginas.paginas_extras.map((pagina) => (
+                    <div key={pagina.id} className="rounded-xl border border-[#e5ecee] bg-white overflow-hidden">
+                      <div className="bg-[#fafcfc] px-4 py-3 border-b border-[#e5ecee] flex justify-between items-center">
+                        <div className="flex items-center gap-3 flex-1">
+                          <input
+                            type="text"
+                            value={pagina.titulo}
+                            onChange={(e) => editarPaginaExtra(pagina.id, { titulo: e.target.value })}
+                            placeholder="Título da Página"
+                            className="w-1/2 rounded border border-[#d5e0e3] px-2 py-1 text-sm font-bold text-[#243942] focus:border-[var(--cor-primaria,#0d9488)] outline-none"
+                          />
+                          <div className="flex items-center gap-1 text-xs text-[#6b7d86]">
+                            <span>/escola/</span>
+                            <input
+                              type="text"
+                              value={pagina.slug}
+                              onChange={(e) => editarPaginaExtra(pagina.id, { slug: gerarSlug(e.target.value) })}
+                              className="w-32 rounded border border-[#d5e0e3] px-2 py-1 text-xs font-mono focus:border-[var(--cor-primaria,#0d9488)] outline-none"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removerPaginaExtra(pagina.id)}
+                          className="text-[#dc2626] hover:bg-red-50 p-1.5 rounded"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <Editor 
+                          value={pagina.conteudo_html} 
+                          onChange={(e: any) => editarPaginaExtra(pagina.id, { conteudo_html: e.target.value })}
+                          containerProps={{ style: { minHeight: '150px', outline: 'none', padding: '12px', border: '1px solid #e5ecee', borderRadius: '8px' } }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Panel>
+          </div>
+        )}
       </main>
     </AdminShell>
   )
@@ -525,34 +650,13 @@ function CampoTexto({ label, valor, onChange, placeholder }: { label: string; va
   )
 }
 
-function CampoTextoLongo({ label, valor, onChange, rows = 3, placeholder }: { label: string; valor: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold text-[#536871]">{label}</label>
-      <textarea
-        value={valor}
-        onChange={(e) => onChange(e.target.value)}
-        rows={rows}
-        placeholder={placeholder}
-        className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-      />
-    </div>
-  )
-}
-
 function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']; onChange: (d: Partial<ConteudoHome['blocos']['hero']>) => void }) {
   function adicionarBanner() {
     const banner: BannerHero = { id: gerarId(), url: '', titulo: '', subtitulo: '' }
     onChange({ banners: [...bloco.banners, banner] })
   }
-
-  function removerBanner(id: string) {
-    onChange({ banners: bloco.banners.filter((b) => b.id !== id) })
-  }
-
-  function editarBanner(id: string, dados: Partial<BannerHero>) {
-    onChange({ banners: bloco.banners.map((b) => b.id === id ? { ...b, ...dados } : b) })
-  }
+  function removerBanner(id: string) { onChange({ banners: bloco.banners.filter((b) => b.id !== id) }) }
+  function editarBanner(id: string, dados: Partial<BannerHero>) { onChange({ banners: bloco.banners.map((b) => b.id === id ? { ...b, ...dados } : b) }) }
 
   return (
     <div className="space-y-5">
@@ -560,7 +664,10 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
         <CampoTexto label="Título principal" valor={bloco.titulo} onChange={(v) => onChange({ titulo: v })} />
         <CampoTexto label="Destaque do título (cor primária)" valor={bloco.titulo_destaque} onChange={(v) => onChange({ titulo_destaque: v })} />
       </div>
-      <CampoTextoLongo label="Subtítulo" valor={bloco.subtitulo} onChange={(v) => onChange({ subtitulo: v })} rows={2} />
+      <div>
+         <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Subtítulo</label>
+         <textarea value={bloco.subtitulo} onChange={(e) => onChange({ subtitulo: e.target.value })} rows={2} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <CampoTexto label="Botão primário (texto)" valor={bloco.cta_primario_label} onChange={(v) => onChange({ cta_primario_label: v })} />
         <CampoTexto label="Botão primário (destino)" valor={bloco.cta_primario_href} onChange={(v) => onChange({ cta_primario_href: v })} placeholder="/matricula" />
@@ -572,14 +679,7 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Tempo de rotação do carrossel (segundos)</label>
-        <input
-          type="number"
-          min={2}
-          max={20}
-          value={bloco.intervalo_segundos}
-          onChange={(e) => onChange({ intervalo_segundos: parseInt(e.target.value, 10) || 5 })}
-          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
-        />
+        <input type="number" min={2} max={20} value={bloco.intervalo_segundos} onChange={(e) => onChange({ intervalo_segundos: parseInt(e.target.value, 10) || 5 })} className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
       </div>
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
@@ -588,13 +688,9 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
             <ImageIcon className="size-4" style={{ color: 'var(--cor-primaria, #0d9488)' }} />
             <p className="text-sm font-semibold text-[#243942]">Banners do carrossel ({bloco.banners.length})</p>
           </div>
-          <button onClick={adicionarBanner} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
-            <Plus className="size-3.5" /> Adicionar banner
-          </button>
+          <button onClick={adicionarBanner} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"><Plus className="size-3.5" /> Adicionar banner</button>
         </div>
-        <p className="mb-4 text-xs text-[#82939a]">
-          Sem banners, o hero mostra um card decorativo. Com banners, o carrossel é ativado.
-        </p>
+        <p className="mb-4 text-xs text-[#82939a]">Sem banners, o hero mostra um card decorativo. Com banners, o carrossel é ativado.</p>
 
         {bloco.banners.length === 0 ? (
           <p className="py-6 text-center text-xs text-[#a0afb4]">Nenhum banner adicionado ainda.</p>
@@ -604,26 +700,12 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
               <div key={b.id} className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Banner {i + 1}</p>
-                  <button onClick={() => removerBanner(b.id)} className="rounded p-1 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Remover banner">
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  <button onClick={() => removerBanner(b.id)} className="rounded p-1 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Remover banner"><Trash2 className="size-3.5" /></button>
                 </div>
                 <BannerUpload urlAtual={b.url} onUploaded={(url) => editarBanner(b.id, { url })} />
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    value={b.titulo}
-                    onChange={(e) => editarBanner(b.id, { titulo: e.target.value })}
-                    placeholder="Título sobre a imagem (opcional)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
-                  <input
-                    type="text"
-                    value={b.subtitulo}
-                    onChange={(e) => editarBanner(b.id, { subtitulo: e.target.value })}
-                    placeholder="Subtítulo (opcional)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
+                  <input type="text" value={b.titulo} onChange={(e) => editarBanner(b.id, { titulo: e.target.value })} placeholder="Título sobre a imagem (opcional)" className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
+                  <input type="text" value={b.subtitulo} onChange={(e) => editarBanner(b.id, { subtitulo: e.target.value })} placeholder="Subtítulo (opcional)" className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
               </div>
             ))}
@@ -635,15 +717,9 @@ function EditorHero({ bloco, onChange }: { bloco: ConteudoHome['blocos']['hero']
 }
 
 function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['segmentos']; onChange: (d: Partial<ConteudoHome['blocos']['segmentos']>) => void }) {
-  function editarItem(id: string, dados: Partial<{ titulo: string; descricao: string }>) {
-    onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) })
-  }
-  function adicionarItem() {
-    onChange({ itens: [...bloco.itens, { id: gerarId(), titulo: 'Novo segmento', descricao: 'Descrição do segmento.' }] })
-  }
-  function removerItem(id: string) {
-    onChange({ itens: bloco.itens.filter((i) => i.id !== id) })
-  }
+  function editarItem(id: string, dados: Partial<{ titulo: string; descricao: string }>) { onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) }) }
+  function adicionarItem() { onChange({ itens: [...bloco.itens, { id: gerarId(), titulo: 'Novo segmento', descricao: 'Descrição do segmento.' }] }) }
+  function removerItem(id: string) { onChange({ itens: bloco.itens.filter((i) => i.id !== id) }) }
 
   return (
     <div className="space-y-5">
@@ -651,14 +727,15 @@ function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['s
         <CampoTexto label="Eyebrow" valor={bloco.eyebrow} onChange={(v) => onChange({ eyebrow: v })} />
         <CampoTexto label="Título" valor={bloco.titulo} onChange={(v) => onChange({ titulo: v })} />
       </div>
-      <CampoTextoLongo label="Descrição" valor={bloco.descricao} onChange={(v) => onChange({ descricao: v })} rows={2} />
+      <div>
+         <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
+         <textarea value={bloco.descricao} onChange={(e) => onChange({ descricao: e.target.value })} rows={2} className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
+      </div>
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Segmentos ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
-            <Plus className="size-3.5" /> Adicionar
-          </button>
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"><Plus className="size-3.5" /> Adicionar</button>
         </div>
         <div className="space-y-2">
           {bloco.itens.map((i) => (
@@ -668,9 +745,7 @@ function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['s
                   <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
-                <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
-                  <Trash2 className="size-3.5" />
-                </button>
+                <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"><Trash2 className="size-3.5" /></button>
               </div>
             </div>
           ))}
@@ -681,15 +756,9 @@ function EditorSegmentos({ bloco, onChange }: { bloco: ConteudoHome['blocos']['s
 }
 
 function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']['diferenciais']; onChange: (d: Partial<ConteudoHome['blocos']['diferenciais']>) => void }) {
-  function editarItem(id: string, dados: Partial<{ titulo: string; descricao: string }>) {
-    onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) })
-  }
-  function adicionarItem() {
-    onChange({ itens: [...bloco.itens, { id: gerarId(), titulo: 'Novo diferencial', descricao: 'Descrição.' }] })
-  }
-  function removerItem(id: string) {
-    onChange({ itens: bloco.itens.filter((i) => i.id !== id) })
-  }
+  function editarItem(id: string, dados: Partial<{ titulo: string; descricao: string }>) { onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) }) }
+  function adicionarItem() { onChange({ itens: [...bloco.itens, { id: gerarId(), titulo: 'Novo diferencial', descricao: 'Descrição.' }] }) }
+  function removerItem(id: string) { onChange({ itens: bloco.itens.filter((i) => i.id !== id) }) }
 
   return (
     <div className="space-y-5">
@@ -701,9 +770,7 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Diferenciais ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
-            <Plus className="size-3.5" /> Adicionar
-          </button>
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"><Plus className="size-3.5" /> Adicionar</button>
         </div>
         <div className="space-y-2">
           {bloco.itens.map((i) => (
@@ -713,9 +780,7 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
                   <input type="text" value={i.titulo} onChange={(e) => editarItem(i.id, { titulo: e.target.value })} className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                   <textarea value={i.descricao} onChange={(e) => editarItem(i.id, { descricao: e.target.value })} rows={2} className="w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
-                <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
-                  <Trash2 className="size-3.5" />
-                </button>
+                <button onClick={() => removerItem(i.id)} className="rounded p-1.5 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"><Trash2 className="size-3.5" /></button>
               </div>
             </div>
           ))}
@@ -726,21 +791,13 @@ function EditorDiferenciais({ bloco, onChange }: { bloco: ConteudoHome['blocos']
 }
 
 function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['noticias']; onChange: (d: Partial<ConteudoHome['blocos']['noticias']>) => void }) {
-  function editarItem(id: string, dados: Partial<{ slug: string; data: string; titulo: string; categoria: string; resumo: string; corpo: string; imagem_url: string }>) {
-    onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) })
-  }
+  function editarItem(id: string, dados: Partial<{ slug: string; data: string; titulo: string; categoria: string; resumo: string; corpo: string; imagem_url: string }>) { onChange({ itens: bloco.itens.map((i) => i.id === id ? { ...i, ...dados } : i) }) }
   function adicionarItem() {
     const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase().replace('.', '')
-    onChange({
-      itens: [...bloco.itens, { id: gerarId(), slug: '', data: hoje, titulo: 'Nova notícia', categoria: 'Geral', resumo: '', corpo: '', imagem_url: '' }],
-    })
+    onChange({ itens: [...bloco.itens, { id: gerarId(), slug: '', data: hoje, titulo: 'Nova notícia', categoria: 'Geral', resumo: '', corpo: '', imagem_url: '' }] })
   }
-  function removerItem(id: string) {
-    onChange({ itens: bloco.itens.filter((i) => i.id !== id) })
-  }
-  function regerarSlug(id: string, titulo: string) {
-    editarItem(id, { slug: gerarSlug(titulo) })
-  }
+  function removerItem(id: string) { onChange({ itens: bloco.itens.filter((i) => i.id !== id) }) }
+  function regerarSlug(id: string, titulo: string) { editarItem(id, { slug: gerarSlug(titulo) }) }
 
   return (
     <div className="space-y-5">
@@ -750,22 +807,13 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
       </div>
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Quantidade exibida na home</label>
-        <input
-          type="number"
-          min={1}
-          max={6}
-          value={bloco.quantidade}
-          onChange={(e) => onChange({ quantidade: parseInt(e.target.value, 10) || 3 })}
-          className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]"
-        />
+        <input type="number" min={1} max={6} value={bloco.quantidade} onChange={(e) => onChange({ quantidade: parseInt(e.target.value, 10) || 3 })} className="w-32 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]" />
       </div>
 
       <div className="rounded-lg border border-[#e5ecee] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-[#243942]">Notícias ({bloco.itens.length})</p>
-          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]">
-            <Plus className="size-3.5" /> Adicionar notícia
-          </button>
+          <button onClick={adicionarItem} className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"><Plus className="size-3.5" /> Adicionar notícia</button>
         </div>
 
         {bloco.itens.length === 0 ? (
@@ -776,69 +824,24 @@ function EditorNoticias({ bloco, onChange }: { bloco: ConteudoHome['blocos']['no
               <div key={n.id} className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">Notícia {i + 1}</p>
-                  <button onClick={() => removerItem(n.id)} className="rounded p-1 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]">
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  <button onClick={() => removerItem(n.id)} className="rounded p-1 text-[#6b7d86] hover:bg-[#fee2e2] hover:text-[#dc2626]"><Trash2 className="size-3.5" /></button>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    value={n.data}
-                    onChange={(e) => editarItem(n.id, { data: e.target.value })}
-                    placeholder="Data (ex: 12 OUT 2026)"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
-                  <input
-                    type="text"
-                    value={n.categoria}
-                    onChange={(e) => editarItem(n.id, { categoria: e.target.value })}
-                    placeholder="Categoria"
-                    className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
+                  <input type="text" value={n.data} onChange={(e) => editarItem(n.id, { data: e.target.value })} placeholder="Data (ex: 12 OUT 2026)" className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
+                  <input type="text" value={n.categoria} onChange={(e) => editarItem(n.id, { categoria: e.target.value })} placeholder="Categoria" className="w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
                 </div>
 
-                <input
-                  type="text"
-                  value={n.titulo}
-                  onChange={(e) => editarItem(n.id, { titulo: e.target.value })}
-                  placeholder="Título da notícia"
-                  className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                />
+                <input type="text" value={n.titulo} onChange={(e) => editarItem(n.id, { titulo: e.target.value })} placeholder="Título da notícia" className="mt-2 w-full rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-sm font-semibold text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
 
                 <div className="mt-2 flex gap-2">
-                  <input
-                    type="text"
-                    value={n.slug}
-                    onChange={(e) => editarItem(n.id, { slug: e.target.value })}
-                    placeholder="URL amigável (slug)"
-                    className="flex-1 rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => regerarSlug(n.id, n.titulo)}
-                    className="inline-flex items-center gap-1 rounded border border-[#b8c9ce] bg-white px-2 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
-                    title="Gerar slug a partir do título"
-                  >
-                    <RefreshCw className="size-3" /> Gerar
-                  </button>
+                  <input type="text" value={n.slug} onChange={(e) => editarItem(n.id, { slug: e.target.value })} placeholder="URL amigável (slug)" className="flex-1 rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
+                  <button type="button" onClick={() => regerarSlug(n.id, n.titulo)} className="inline-flex items-center gap-1 rounded border border-[#b8c9ce] bg-white px-2 py-1.5 text-xs font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]" title="Gerar slug a partir do título"><RefreshCw className="size-3" /> Gerar</button>
                 </div>
 
-                <textarea
-                  value={n.resumo}
-                  onChange={(e) => editarItem(n.id, { resumo: e.target.value })}
-                  rows={2}
-                  placeholder="Resumo curto (aparece no card)"
-                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                />
+                <textarea value={n.resumo} onChange={(e) => editarItem(n.id, { resumo: e.target.value })} rows={2} placeholder="Resumo curto (aparece no card)" className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
 
-                <textarea
-                  value={n.corpo}
-                  onChange={(e) => editarItem(n.id, { corpo: e.target.value })}
-                  rows={6}
-                  placeholder="Conteúdo completo da notícia"
-                  className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs leading-5 text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]"
-                />
+                <textarea value={n.corpo} onChange={(e) => editarItem(n.id, { corpo: e.target.value })} rows={6} placeholder="Conteúdo completo da notícia" className="mt-2 w-full resize-none rounded border border-[#d5e0e3] bg-white px-2 py-1.5 text-xs leading-5 text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
 
                 <div className="mt-2">
                   <BannerUpload urlAtual={n.imagem_url} onUploaded={(url) => editarItem(n.id, { imagem_url: url })} />
