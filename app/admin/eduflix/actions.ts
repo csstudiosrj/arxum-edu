@@ -1,4 +1,3 @@
-// VERSAO ATUALIZADA 2026-11-06 - FORCAR DEPLOY
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -131,4 +130,3 @@ export async function excluirVideo(id: string) {
     return { success: false, error: 'Erro ao excluir vídeo.' }
   }
 }
-
