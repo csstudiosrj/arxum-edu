@@ -177,7 +177,6 @@ export async function excluirModuloProfessor(id: string) {
 
     const admin = createAdminClient()
 
-    // Só pode excluir módulo próprio
     const { data: mod } = await admin
       .from('modulos')
       .select('id, professor_id')
@@ -214,7 +213,6 @@ export async function criarAulaProfessor(moduloId: string, data: NovaAulaProfess
 
     const admin = createAdminClient()
 
-    // Confirma que o módulo é da escola e visível a ele
     const { data: mod } = await admin
       .from('modulos')
       .select('id, professor_id')
@@ -268,7 +266,6 @@ export async function excluirAulaProfessor(id: string) {
 
     const admin = createAdminClient()
 
-    // Confirma que a aula está em um módulo visível ao professor
     const { data: aula } = await admin
       .from('aulas')
       .select('id, modulo_id')
