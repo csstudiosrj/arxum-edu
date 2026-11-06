@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, Download, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
 import { createClient } from '@/lib/supabase/client'
 import type { InscricaoResponsavel, DocumentosMatricula, ComunicadoResponsavel, FaturaResponsavel, EventoResponsavel, AutorizacaoResponsavel, BoletimAluno, AlbumResponsavel, OcorrenciaResponsavel, Filho } from './actions'
-import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados } from './actions'
+import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeusDados, solicitarExclusaoDados, getDadosParaDocumento, getNotasParaBoletim, registrarEmissaoDocumento } from './actions'
 import type { MarcaEscola } from '@/lib/auth/marca'
 import { CheckoutFatura } from '@/components/checkout-fatura'
+import { gerarDocumentoHTML } from '@/lib/documentos/gerador'
 
 type MenuItem = readonly [LucideIcon, string, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -198,15 +199,15 @@ export function ResponsavelClient({
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [alunoResposta, setAlunoResposta] = useState<string>(filhos[0]?.nome || '')
   
-  // Checkout
   const [faturaCheckout, setFaturaCheckout] = useState<FaturaResponsavel | null>(null)
 
-  // LGPD
   const [baixandoDados, setBaixandoDados] = useState(false)
   const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false)
   const [motivoExclusao, setMotivoExclusao] = useState('')
   const [enviandoExclusao, setEnviandoExclusao] = useState(false)
   const [mensagemLgpd, setMensagemLgpd] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+
+  const [emitindo, setEmitindo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!filhos.length) return
@@ -319,6 +320,34 @@ export function ResponsavelClient({
         ? 'Você já tem uma solicitação em análise. Nossa equipe entrará em contato.'
         : 'Solicitação registrada. Nossa equipe entrará em contato em até 15 dias, conforme a LGPD.',
     })
+  }
+
+  async function handleEmitirDocumento(tipo: 'matricula' | 'frequencia' | 'boletim') {
+    if (!filhoAtivo) return
+    setEmitindo(tipo)
+    
+    const res = await getDadosParaDocumento(filhoAtivo.id)
+    if (!res.success || !res.dados) {
+      alert(res.error)
+      setEmitindo(null)
+      return
+    }
+
+    let dadosExtras = undefined
+    if (tipo === 'boletim') {
+      const notas = await getNotasParaBoletim(filhoAtivo.id)
+      dadosExtras = notas
+    }
+
+    await registrarEmissaoDocumento(filhoAtivo.id, res.dados.escolaId, tipo)
+
+    gerarDocumentoHTML({
+      tipo,
+      ...res.dados,
+      dadosExtras
+    })
+
+    setEmitindo(null)
   }
 
   const naoLidos = comunicados.filter((c) => !c.lido).length
@@ -449,6 +478,57 @@ export function ResponsavelClient({
               </div>
             </section>
           )}
+
+          {/* NOVA SEÇÃO: SECRETARIA DIGITAL */}
+          <section id="documentos" className="mb-10">
+            <h3 className="mb-4 text-lg font-bold">Secretaria Digital</h3>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-[#dbe5e8] bg-white p-5 flex flex-col justify-between">
+                <div>
+                  <div className="grid size-10 place-items-center rounded-lg bg-[#f0fdfa] text-[#0d9488] mb-3"><FileText className="size-5"/></div>
+                  <h4 className="font-bold text-[#243942]">Declaração de Matrícula</h4>
+                  <p className="text-xs text-[#82939a] mt-1">Comprova que o aluno está matriculado.</p>
+                </div>
+                <button 
+                  onClick={() => handleEmitirDocumento('matricula')} 
+                  disabled={emitindo === 'matricula'}
+                  className="mt-4 w-full border border-[#0d9488] text-[#0d9488] py-2 rounded-lg text-xs font-bold hover:bg-[#f0fdfa] flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  {emitindo === 'matricula' ? <Loader2 className="size-4 animate-spin"/> : <Download className="size-4"/>} Emitir PDF
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-[#dbe5e8] bg-white p-5 flex flex-col justify-between">
+                <div>
+                  <div className="grid size-10 place-items-center rounded-lg bg-[#f0fdfa] text-[#0d9488] mb-3"><CheckCircle2 className="size-5"/></div>
+                  <h4 className="font-bold text-[#243942]">Declaração de Frequência</h4>
+                  <p className="text-xs text-[#82939a] mt-1">Atesta a frequência regular do aluno.</p>
+                </div>
+                <button 
+                  onClick={() => handleEmitirDocumento('frequencia')} 
+                  disabled={emitindo === 'frequencia'}
+                  className="mt-4 w-full border border-[#0d9488] text-[#0d9488] py-2 rounded-lg text-xs font-bold hover:bg-[#f0fdfa] flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  {emitindo === 'frequencia' ? <Loader2 className="size-4 animate-spin"/> : <Download className="size-4"/>} Emitir PDF
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-[#dbe5e8] bg-white p-5 flex flex-col justify-between">
+                <div>
+                  <div className="grid size-10 place-items-center rounded-lg bg-[#f0fdfa] text-[#0d9488] mb-3"><TrendingUp className="size-5"/></div>
+                  <h4 className="font-bold text-[#243942]">Boletim Escolar</h4>
+                  <p className="text-xs text-[#82939a] mt-1">Relatório completo de notas e faltas.</p>
+                </div>
+                <button 
+                  onClick={() => handleEmitirDocumento('boletim')} 
+                  disabled={emitindo === 'boletim'}
+                  className="mt-4 w-full border border-[#0d9488] text-[#0d9488] py-2 rounded-lg text-xs font-bold hover:bg-[#f0fdfa] flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  {emitindo === 'boletim' ? <Loader2 className="size-4 animate-spin"/> : <Download className="size-4"/>} Emitir PDF
+                </button>
+              </div>
+            </div>
+          </section>
 
           {autorizacoesPendentes.length > 0 && (
             <section id="autorizacoes" className="mb-10">
@@ -1133,7 +1213,6 @@ export function ResponsavelClient({
       </div>
     )}
 
-    {/* CHECKOUT DE FATURA (PIX/BOLETO/CARTÃO) */}
     {faturaCheckout && (
       <CheckoutFatura
         fatura={{ id: faturaCheckout.id, descricao: faturaCheckout.descricao, valor_centavos: faturaCheckout.valor_centavos }}
