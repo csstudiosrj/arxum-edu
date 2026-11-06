@@ -1,33 +1,22 @@
 'use client'
 
-import { Users, TrendingUp, WalletCards, MessageSquare, AlertCircle, Award, CheckCircle2, Clock, XCircle, BarChart3, BookOpen, ShieldAlert, Heart, FileQuestion, ShoppingCart } from 'lucide-react'
+import { useState } from 'react'
+import { Users, TrendingUp, WalletCards, MessageSquare, AlertCircle, Award, CheckCircle2, Clock, XCircle, BarChart3, BookOpen, ShieldAlert, Heart, FileQuestion, ShoppingCart, Download, Loader2 } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import type { RelatorioData } from './actions'
+import { exportarRelatorioCSV, type RelatorioData } from './actions'
 
-// ── SEMÂNTICO: cores por status ─────────────────────────────────────
 const statusLabels: Record<string, string> = {
-  inscrito: 'Inscrito',
-  em_analise: 'Em análise',
-  entrevista: 'Entrevista',
-  aprovado: 'Aprovado',
-  matriculado: 'Matriculado',
-  lista_espera: 'Lista de espera',
-  nao_aprovado: 'Não aprovado',
-  cancelado: 'Cancelado',
+  inscrito: 'Inscrito', em_analise: 'Em análise', entrevista: 'Entrevista',
+  aprovado: 'Aprovado', matriculado: 'Matriculado', lista_espera: 'Lista de espera',
+  nao_aprovado: 'Não aprovado', cancelado: 'Cancelado',
 }
 
 const statusCores: Record<string, string> = {
-  inscrito: '#5e7a94',
-  em_analise: '#d97706',
-  entrevista: '#3b82f6',
-  aprovado: '#0d9488',
-  matriculado: '#065f46',
-  lista_espera: '#d97706',
-  nao_aprovado: '#dc2626',
-  cancelado: '#82939a',
+  inscrito: '#5e7a94', em_analise: '#d97706', entrevista: '#3b82f6',
+  aprovado: '#0d9488', matriculado: '#065f46', lista_espera: '#d97706',
+  nao_aprovado: '#dc2626', cancelado: '#82939a',
 }
 
-// ── SEMÂNTICO: cores por tipo de ocorrência ─────────────────────────
 const tipoOcorrencia: Record<string, { label: string; cor: string; icone: typeof AlertCircle }> = {
   pedagogica: { label: 'Pedagógica', cor: '#3b82f6', icone: BookOpen },
   disciplinar: { label: 'Disciplinar', cor: '#dc2626', icone: ShieldAlert },
@@ -55,6 +44,39 @@ function Barra({ label, valor, max, cor }: { label: string; valor: number; max: 
   )
 }
 
+function BotaoCSV({ tipo }: { tipo: 'inadimplencia' | 'notas' | 'engajamento' }) {
+  const [carregando, setCarregando] = useState(false)
+
+  async function handleExportar() {
+    setCarregando(true)
+    const r = await exportarRelatorioCSV(tipo)
+    setCarregando(false)
+
+    if (r.success && r.csv) {
+      const blob = new Blob([`\uFEFF${r.csv}`], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `arxum-${tipo}-${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      alert(r.error || 'Erro ao exportar.')
+    }
+  }
+
+  return (
+    <button
+      onClick={handleExportar}
+      disabled={carregando}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)] disabled:opacity-50"
+    >
+      {carregando ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+      Exportar CSV
+    </button>
+  )
+}
+
 export function RelatoriosClient({ data }: { data: RelatorioData }) {
   const maxMatriculas = Math.max(...data.matriculasPorStatus.map((m) => m.total), 1)
   const maxOcorrencias = Math.max(...data.ocorrenciasPorTipo.map((o) => o.total), 1)
@@ -77,10 +99,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
             <div className="flex items-start justify-between">
               <div
                 className="grid size-10 place-items-center rounded-lg"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                  color: 'var(--cor-primaria, #0d9488)',
-                }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)', color: 'var(--cor-primaria, #0d9488)' }}
               >
                 <Users className="size-5" />
               </div>
@@ -125,10 +144,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
             <div className="mb-5 flex items-center gap-3">
               <div
                 className="grid size-9 place-items-center rounded-lg"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                  color: 'var(--cor-primaria, #0d9488)',
-                }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)', color: 'var(--cor-primaria, #0d9488)' }}
               >
                 <Users className="size-4" />
               </div>
@@ -144,13 +160,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
                 {data.matriculasPorStatus
                   .sort((a, b) => b.total - a.total)
                   .map((m) => (
-                    <Barra
-                      key={m.status}
-                      label={statusLabels[m.status] || m.status}
-                      valor={m.total}
-                      max={maxMatriculas}
-                      cor={statusCores[m.status] || '#6b7d86'}
-                    />
+                    <Barra key={m.status} label={statusLabels[m.status] || m.status} valor={m.total} max={maxMatriculas} cor={statusCores[m.status] || '#6b7d86'} />
                   ))}
               </div>
             )}
@@ -194,10 +204,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
             <div className="mb-5 flex items-center gap-3">
               <div
                 className="grid size-9 place-items-center rounded-lg"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                  color: 'var(--cor-primaria, #0d9488)',
-                }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)', color: 'var(--cor-primaria, #0d9488)' }}
               >
                 <BarChart3 className="size-4" />
               </div>
@@ -247,13 +254,7 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
                   .map((o) => {
                     const info = tipoOcorrencia[o.tipo] || tipoOcorrencia.outro
                     return (
-                      <Barra
-                        key={o.tipo}
-                        label={info.label}
-                        valor={o.total}
-                        max={maxOcorrencias}
-                        cor={info.cor}
-                      />
+                      <Barra key={o.tipo} label={info.label} valor={o.total} max={maxOcorrencias} cor={info.cor} />
                     )
                   })}
               </div>
@@ -263,13 +264,15 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <Panel className="p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]">
-                <WalletCards className="size-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-[#12232b]">Financeiro</h2>
-                <p className="text-xs text-[#82939a]">Situação das faturas</p>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="grid size-9 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]">
+                  <WalletCards className="size-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#12232b]">Financeiro</h2>
+                  <p className="text-xs text-[#82939a]">Situação das faturas</p>
+                </div>
               </div>
             </div>
             <div className="space-y-3">
@@ -285,6 +288,9 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
                 <span className="text-xs font-semibold text-[#991b1b]">Vencido</span>
                 <span className="text-base font-bold text-[#991b1b]">{formatarMoeda(data.receitaVencida)}</span>
               </div>
+            </div>
+            <div className="mt-4">
+              <BotaoCSV tipo="inadimplencia" />
             </div>
           </Panel>
 
@@ -348,6 +354,11 @@ export function RelatoriosClient({ data }: { data: RelatorioData }) {
               </div>
             </div>
           </Panel>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <BotaoCSV tipo="notas" />
+          <BotaoCSV tipo="engajamento" />
         </div>
       </main>
     </AdminShell>
