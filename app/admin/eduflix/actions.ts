@@ -1,3 +1,4 @@
+// VERSAO ATUALIZADA 2026-11-06 - FORCAR DEPLOY
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
