@@ -12,12 +12,13 @@ export default async function NotasProfessorPage() {
   const prof = await getProfessorDoUsuario()
   if (!prof) redirect('/login')
 
-  const [alunos, notas, escola] = await Promise.all([
+  const [dadosAlunos, notas, escola] = await Promise.all([
     getAlunosDoProfessor(),
     getNotasDoProfessor(),
     getEscolaPorId(prof.escola_id),
   ])
 
+  const alunos = dadosAlunos.alunos
   const marca = escola ? marcaDaEscola(escola) : null
 
   return (

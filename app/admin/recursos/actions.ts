@@ -4,23 +4,38 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 
+export type ConfigRecursos = {
+  saude: string[]
+  eduflix: string[]
+  sala_virtual: string[]
+  notas: string[]
+  atividades: string[]
+}
+
+const CONFIG_PADRAO: ConfigRecursos = {
+  saude: [],
+  eduflix: [],
+  sala_virtual: [],
+  notas: [],
+  atividades: [],
+}
+
 export async function getConfiguracaoRecursos() {
   try {
     const escola = await getEscolaDoUsuario()
-    if (!escola) return { config: { saude: [], eduflix: [], sala_virtual: [] }, seriesDisponiveis: [] }
+    if (!escola) return { config: CONFIG_PADRAO, seriesDisponiveis: [] }
 
     const admin = createAdminClient()
     
-    // 1. Pega a configuração atual
     const { data: escolaData } = await admin
       .from('escolas')
       .select('config_recursos')
       .eq('id', escola.id)
       .maybeSingle()
 
-    const config = escolaData?.config_recursos || { saude: [], eduflix: [], sala_virtual: [] }
+    // Garante que se o banco tiver o formato antigo, a gente mescla com o novo
+    const config = { ...CONFIG_PADRAO, ...(escolaData?.config_recursos || {}) }
 
-    // 2. Pega todas as séries distintas que existem na escola
     const { data: alunos } = await admin
       .from('alunos')
       .select('serie')
@@ -31,11 +46,11 @@ export async function getConfiguracaoRecursos() {
 
     return { config, seriesDisponiveis }
   } catch (e) {
-    return { config: { saude: [], eduflix: [], sala_virtual: [] }, seriesDisponiveis: [] }
+    return { config: CONFIG_PADRAO, seriesDisponiveis: [] }
   }
 }
 
-export async function salvarConfiguracaoRecursos(config: { saude: string[]; eduflix: string[]; sala_virtual: string[] }) {
+export async function salvarConfiguracaoRecursos(config: ConfigRecursos) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
@@ -49,7 +64,7 @@ export async function salvarConfiguracaoRecursos(config: { saude: string[]; eduf
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/recursos')
-    revalidatePath('/professor/alunos')
+    revalidatePath('/professor')
     revalidatePath('/aluno')
     return { success: true }
   } catch (e) {

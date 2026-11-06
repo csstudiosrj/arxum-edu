@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { HeartPulse, PlayCircle, Video, Save, Check, Loader2 } from 'lucide-react'
+import { HeartPulse, PlayCircle, Video, Save, Check, Loader2, TrendingUp, ClipboardCheck } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { salvarConfiguracaoRecursos } from './actions'
+import { salvarConfiguracaoRecursos, type ConfigRecursos } from './actions'
 
-export function RecursosClient({ configInicial, seriesDisponiveis }: { configInicial: any, seriesDisponiveis: string[] }) {
-  const [config, setConfig] = useState({
+export function RecursosClient({ configInicial, seriesDisponiveis }: { configInicial: ConfigRecursos, seriesDisponiveis: string[] }) {
+  const [config, setConfig] = useState<ConfigRecursos>({
     saude: configInicial.saude || [],
     eduflix: configInicial.eduflix || [],
-    sala_virtual: configInicial.sala_virtual || []
+    sala_virtual: configInicial.sala_virtual || [],
+    notas: configInicial.notas || [],
+    atividades: configInicial.atividades || []
   })
   const [salvando, setSalvando] = useState(false)
   const [salvou, setSalvou] = useState(false)
 
-  function toggle(modulo: 'saude' | 'eduflix' | 'sala_virtual', serie: string) {
+  function toggle(modulo: keyof ConfigRecursos, serie: string) {
     const atual = config[modulo]
     let novo
     if (atual.includes(serie)) {
@@ -40,8 +42,10 @@ export function RecursosClient({ configInicial, seriesDisponiveis }: { configIni
 
   const modulos = [
     { key: 'saude', label: 'Diário de Saúde', desc: 'Registro de febre, medicação e ocorrências médicas.', icon: HeartPulse },
+    { key: 'notas', label: 'Boletim e Notas', desc: 'Lançamento de notas, faltas e boletins.', icon: TrendingUp },
+    { key: 'atividades', label: 'Atividades', desc: 'Envio de tarefas, trabalhos e quizzes.', icon: ClipboardCheck },
+    { key: 'sala_virtual', label: 'Sala Virtual', desc: 'Módulos, aulas e conteúdos em texto/PDF.', icon: Video },
     { key: 'eduflix', label: 'EduFlix', desc: 'Catálogo de videoaulas gravadas e lives.', icon: PlayCircle },
-    { key: 'sala_virtual', label: 'Sala Virtual', desc: 'Módulos, aulas, conteúdos e atividades.', icon: Video },
   ] as const
 
   return (
@@ -51,7 +55,7 @@ export function RecursosClient({ configInicial, seriesDisponiveis }: { configIni
           <SectionHeading
             eyebrow="Configurações"
             title="Recursos por Série"
-            description="Escolha quais módulos estão disponíveis para cada série da escola."
+            description="Escolha quais módulos estão disponíveis para cada série da escola. Ex: Maternal não tem Notas, mas tem Diário de Saúde."
           />
           <div className="flex items-center gap-2">
             {salvou && (

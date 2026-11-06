@@ -12,12 +12,13 @@ export default async function OcorrenciasProfessorPage() {
   const prof = await getProfessorDoUsuario()
   if (!prof) redirect('/login')
 
-  const [alunos, ocorrencias, escola] = await Promise.all([
+  const [dadosAlunos, ocorrencias, escola] = await Promise.all([
     getAlunosDoProfessor(),
     getOcorrenciasDoProfessor(),
     getEscolaPorId(prof.escola_id),
   ])
 
+  const alunos = dadosAlunos.alunos
   const marca = escola ? marcaDaEscola(escola) : null
 
   return (
