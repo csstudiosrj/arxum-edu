@@ -305,3 +305,4 @@ export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAd
     </div>
   )
 }
+
