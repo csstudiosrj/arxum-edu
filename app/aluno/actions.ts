@@ -1,421 +1,305 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAlunoDoUsuario } from '@/lib/auth/aluno-atual'
+import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
+import { enviarConviteAluno } from '@/lib/emails/convite-aluno'
 import { revalidatePath } from 'next/cache'
 
-export type NotaAluno = {
-  disciplina: string
-  periodo: string
-  nota: number | null
-  faltas: number
-  observacao: string | null
-}
-
-export type EventoAluno = {
+export type Aluno = {
   id: string
-  titulo: string
-  descricao: string | null
-  tipo: string
-  data_evento: string
-  hora_evento: string | null
-}
-
-export type ComunicadoAluno = {
-  id: string
-  titulo: string
-  mensagem: string
-  setor: string
-  prioridade: string
-  autor_nome: string
-  criado_em: string
-  lido: boolean
-}
-
-export type AulaPendente = {
-  id: string
-  titulo: string
-  descricao: string | null
-  tipo: string
-  conteudo_url: string | null
-  duracao_minutos: number | null
-  modulo_titulo: string
-  disciplina: string
-  concluida: boolean
-  anotacao: string | null
-}
-
-export type AulaDetalhe = AulaPendente & {
-  modulo_id: string
-  aulas_do_modulo: Array<{ id: string; titulo: string; concluida: boolean; ordem: number }>
-}
-
-export type VideoaulaAluno = {
-  id: string
-  titulo: string
-  descricao: string | null
-  disciplina: string
+  nome: string
   serie: string | null
-  duracao_minutos: number | null
-  video_url: string
-  visualizacoes: number
+  turno: string | null
+  responsavel_nome: string
+  responsavel_email: string
+  responsavel_telefone: string | null
+  email_aluno: string | null
+  usuario_id: string | null
+  status: string
+  criado_em: string
 }
 
-async function getAlunoContexto() {
-  const aluno = await getAlunoDoUsuario()
-  if (!aluno) return null
-  return {
-    alunoId: aluno.id,
-    escolaId: aluno.escola_id,
-    alunoNome: aluno.nome,
-    alunoSerie: aluno.serie,
-    alunoTurno: aluno.turno,
-    alunoEmail: aluno.email_aluno || aluno.responsavel_email,
-  }
-}
-
-export async function getMinhasNotas(): Promise<NotaAluno[]> {
+export async function getAlunos(): Promise<Aluno[]> {
   try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
 
-    const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('notas')
-      .select('disciplina, periodo, nota, faltas, observacao')
-      .eq('aluno_id', ctx.alunoId)
-      .order('disciplina', { ascending: true })
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('alunos')
+      .select('id, nome, serie, turno, responsavel_nome, responsavel_email, responsavel_telefone, email_aluno, usuario_id, status, criado_em')
+      .eq('escola_id', escola.id)
+      .order('nome', { ascending: true })
 
     if (error) return []
-    return (data || []) as NotaAluno[]
+    return (data || []) as Aluno[]
   } catch (e) {
     return []
   }
 }
 
-export async function getMeusEventosAluno(): Promise<EventoAluno[]> {
+export async function getLimiteAlunos() {
   try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return []
-
-    const admin = createAdminClient()
-    const hoje = new Date().toISOString().split('T')[0]
-
-    // Busca todos os eventos futuros da escola
-    const { data, error } = await admin
-      .from('eventos')
-      .select('id, titulo, descricao, tipo, data_evento, hora_evento, publico, serie')
-      .eq('escola_id', ctx.escolaId)
-      .eq('ativo', true)
-      .gte('data_evento', hoje)
-      .order('data_evento', { ascending: true })
-      .limit(20)
-
-    if (error || !data) return []
-
-    // Filtra os eventos baseados no público-alvo e série do aluno
-    const eventosFiltrados = data.filter((e: any) => {
-      if (e.publico === 'todos') return true
-      if (e.serie && ctx.alunoSerie && e.serie.toLowerCase().includes(ctx.alunoSerie.toLowerCase())) return true
-      if (e.serie && ctx.alunoSerie && ctx.alunoSerie.toLowerCase().includes(e.serie.toLowerCase())) return true
-      return false
-    })
-
-    return eventosFiltrados as EventoAluno[]
-  } catch (e) {
-    return []
-  }
-}
-
-export async function getMeusComunicadosAluno(): Promise<ComunicadoAluno[]> {
-  try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return []
-
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return null
+    
     const admin = createAdminClient()
     
-    // Busca todos os comunicados da escola
-    const { data: coms, error } = await admin
-      .from('comunicados')
-      .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno')
-      .eq('escola_id', ctx.escolaId)
-      .eq('ativo', true)
-      .order('criado_em', { ascending: false })
-      .limit(50)
-
-    if (error || !coms) return []
-
-    // Filtra por segmentação (Série ou Turno)
-    const comunicadosFiltrados = coms.filter((c: any) => {
-      const matchSerie = !c.segmento_serie || (ctx.alunoSerie && c.segmento_serie.toLowerCase() === ctx.alunoSerie.toLowerCase())
-      const matchTurno = !c.segmento_turno || (ctx.alunoTurno && c.segmento_turno.toLowerCase() === ctx.alunoTurno.toLowerCase())
-      return matchSerie && matchTurno
-    })
-
-    // Busca leituras
-    const { data: leituras } = await admin
-      .from('comunicados_leituras')
-      .select('comunicado_id')
-      .eq('responsavel_email', ctx.alunoEmail)
-
-    const lidosSet = new Set((leituras || []).map((l) => l.comunicado_id))
-
-    return comunicadosFiltrados.map((c: any) => ({
-      id: c.id,
-      titulo: c.titulo,
-      mensagem: c.mensagem,
-      setor: c.setor,
-      prioridade: c.prioridade,
-      autor_nome: c.autor_nome,
-      criado_em: c.criado_em,
-      lido: lidosSet.has(c.id),
-    })) as ComunicadoAluno[]
-  } catch (e) {
-    return []
-  }
-}
-
-export async function getMinhasAulas(): Promise<AulaPendente[]> {
-  try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return []
-
-    const admin = createAdminClient()
-
-    const { data: mods } = await admin
-      .from('modulos')
-      .select('id, titulo, disciplina')
-      .eq('escola_id', ctx.escolaId)
-      .eq('publicado', true)
-
-    if (!mods || mods.length === 0) return []
-
-    const idsMods = mods.map((m) => m.id)
-
-    const { data: aulas } = await admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos')
-      .in('modulo_id', idsMods)
-      .eq('publicado', true)
-      .order('ordem', { ascending: true })
-
-    if (!aulas) return []
-
-    const { data: progressos } = await admin
-      .from('aulas_progresso')
-      .select('aula_id, concluida, anotacao')
-      .eq('responsavel_email', ctx.alunoEmail)
-      .eq('aluno_nome', ctx.alunoNome)
-
-    const progressoMap: Record<string, { concluida: boolean; anotacao: string | null }> = {}
-    ;(progressos || []).forEach((p) => {
-      progressoMap[p.aula_id] = { concluida: p.concluida, anotacao: p.anotacao }
-    })
-
-    return aulas.map((a) => {
-      const mod = mods.find((m) => m.id === a.modulo_id)
-      return {
-        id: a.id,
-        titulo: a.titulo,
-        descricao: a.descricao,
-        tipo: a.tipo,
-        conteudo_url: a.conteudo_url,
-        duracao_minutos: a.duracao_minutos,
-        modulo_titulo: mod?.titulo || '',
-        disciplina: mod?.disciplina || '',
-        concluida: progressoMap[a.id]?.concluida || false,
-        anotacao: progressoMap[a.id]?.anotacao || null,
-      }
-    }) as AulaPendente[]
-  } catch (e) {
-    return []
-  }
-}
-
-export async function getAulaDetalhe(aulaId: string): Promise<AulaDetalhe | null> {
-  try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return null
-
-    const admin = createAdminClient()
-
-    const { data: aula } = await admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, tipo, conteudo_url, duracao_minutos')
-      .eq('id', aulaId)
-      .eq('publicado', true)
-      .maybeSingle()
-
-    if (!aula) return null
-
-    const { data: mod } = await admin
-      .from('modulos')
-      .select('id, titulo, disciplina, escola_id, publicado')
-      .eq('id', aula.modulo_id)
-      .eq('escola_id', ctx.escolaId)
-      .eq('publicado', true)
-      .maybeSingle()
-
-    if (!mod) return null
-
-    const { data: todasAulas } = await admin
-      .from('aulas')
-      .select('id, titulo, ordem, publicado')
-      .eq('modulo_id', mod.id)
-      .eq('publicado', true)
-      .order('ordem', { ascending: true })
-
-    const { data: progressos } = await admin
-      .from('aulas_progresso')
-      .select('aula_id, concluida, anotacao')
-      .eq('responsavel_email', ctx.alunoEmail)
-      .eq('aluno_nome', ctx.alunoNome)
-
-    const progressoMap: Record<string, { concluida: boolean; anotacao: string | null }> = {}
-    ;(progressos || []).forEach((p) => {
-      progressoMap[p.aula_id] = { concluida: p.concluida, anotacao: p.anotacao }
-    })
+    const { data: escolaData } = await admin.from('escolas').select('plano').eq('id', escola.id).single()
+    
+    const { data: plano } = await admin.from('planos').select('max_alunos, teto_alunos_excedentes, preco_aluno_extra_centavos').eq('slug', escolaData?.plano || 'semente').single()
+    
+    const { count } = await admin
+      .from('alunos')
+      .select('*', { count: 'exact', head: true })
+      .eq('escola_id', escola.id)
+      .eq('status', 'ativo')
 
     return {
-      id: aula.id,
-      titulo: aula.titulo,
-      descricao: aula.descricao,
-      tipo: aula.tipo,
-      conteudo_url: aula.conteudo_url,
-      duracao_minutos: aula.duracao_minutos,
-      modulo_id: mod.id,
-      modulo_titulo: mod.titulo,
-      disciplina: mod.disciplina,
-      concluida: progressoMap[aula.id]?.concluida || false,
-      anotacao: progressoMap[aula.id]?.anotacao || null,
-      aulas_do_modulo: (todasAulas || []).map((a) => ({
-        id: a.id,
-        titulo: a.titulo,
-        ordem: a.ordem,
-        concluida: progressoMap[a.id]?.concluida || false,
-      })),
+      max_alunos: plano?.max_alunos || 0,
+      teto_alunos_excedentes: plano?.teto_alunos_excedentes || 0,
+      preco_aluno_extra_centavos: plano?.preco_aluno_extra_centavos || 0,
+      alunos_ativos: count || 0
     }
   } catch (e) {
     return null
   }
 }
 
-export async function salvarAnotacaoAluno(aulaId: string, anotacao: string) {
+export async function getAlunoDetalhes(id: string) {
   try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return { success: false, error: 'Sessão expirada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return null
 
     const admin = createAdminClient()
-
-    const { data: existente } = await admin
-      .from('aulas_progresso')
-      .select('id')
-      .eq('aula_id', aulaId)
-      .eq('responsavel_email', ctx.alunoEmail)
-      .eq('aluno_nome', ctx.alunoNome)
+    const { data } = await admin
+      .from('alunos')
+      .select('*')
+      .eq('id', id)
+      .eq('escola_id', escola.id)
       .maybeSingle()
 
-    if (existente) {
-      const { error } = await admin
-        .from('aulas_progresso')
-        .update({ anotacao, atualizado_em: new Date().toISOString() })
-        .eq('id', existente.id)
-      if (error) return { success: false, error: error.message }
-    } else {
-      const { error } = await admin.from('aulas_progresso').insert({
-        aula_id: aulaId,
-        responsavel_email: ctx.alunoEmail,
-        aluno_nome: ctx.alunoNome,
-        anotacao,
-      })
-      if (error) return { success: false, error: error.message }
-    }
-
-    revalidatePath(`/aluno/aulas/${aulaId}`)
-    revalidatePath('/aluno/aulas')
-    return { success: true }
+    return data
   } catch (e) {
-    return { success: false, error: 'Erro ao salvar.' }
+    return null
   }
 }
 
-export async function marcarAulaConcluida(aulaId: string, concluida: boolean) {
+export async function excluirAluno(id: string) {
   try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return { success: false, error: 'Sessão expirada.' }
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
 
-    const { data: existente } = await admin
-      .from('aulas_progresso')
-      .select('id')
-      .eq('aula_id', aulaId)
-      .eq('responsavel_email', ctx.alunoEmail)
-      .eq('aluno_nome', ctx.alunoNome)
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('usuario_id')
+      .eq('id', id)
+      .eq('escola_id', escola.id)
       .maybeSingle()
 
-    const payload = {
-      concluida,
-      concluida_em: concluida ? new Date().toISOString() : null,
-      atualizado_em: new Date().toISOString(),
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
+
+    const { error } = await admin
+      .from('alunos')
+      .delete()
+      .eq('id', id)
+      .eq('escola_id', escola.id)
+
+    if (error) {
+      return {
+        success: false,
+        error: `Não foi possível excluir o aluno: ${error.message}. Considere inativar em vez de excluir.`,
+      }
     }
 
-    if (existente) {
-      const { error } = await admin.from('aulas_progresso').update(payload).eq('id', existente.id)
-      if (error) return { success: false, error: error.message }
-    } else {
-      const { error } = await admin.from('aulas_progresso').insert({
-        aula_id: aulaId,
-        responsavel_email: ctx.alunoEmail,
-        aluno_nome: ctx.alunoNome,
-        ...payload,
+    if (aluno.usuario_id) {
+      await admin.auth.admin.deleteUser(aluno.usuario_id).catch((e) => {
+        console.error('Aluno excluído, mas usuário do Auth não pôde ser removido:', e)
       })
-      if (error) return { success: false, error: error.message }
     }
 
-    revalidatePath(`/aluno/aulas/${aulaId}`)
-    revalidatePath('/aluno/aulas')
+    revalidatePath('/admin/alunos')
     return { success: true }
   } catch (e) {
-    return { success: false, error: 'Erro ao atualizar.' }
+    return { success: false, error: 'Erro ao excluir aluno.' }
   }
 }
 
-export async function getVideoaulasAluno(): Promise<VideoaulaAluno[]> {
+export async function convidarAlunoParaPortal(alunoId: string, emailAluno: string) {
   try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return []
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    if (!emailAluno || !emailAluno.includes('@')) {
+      return { success: false, error: 'Informe um e-mail válido para o aluno.' }
+    }
 
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('videoaulas')
-      .select('id, titulo, descricao, disciplina, serie, duracao_minutos, video_url, visualizacoes')
-      .eq('escola_id', ctx.escolaId)
-      .eq('publicado', true)
-      .order('criado_em', { ascending: false })
 
-    if (error) return []
-    return (data || []) as VideoaulaAluno[]
-  } catch (e) {
-    return []
-  }
-}
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('nome')
+      .eq('id', alunoId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
 
-export async function marcarComunicadoLidoAluno(comunicadoId: string) {
-  try {
-    const ctx = await getAlunoContexto()
-    if (!ctx) return { success: false }
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
 
-    const admin = createAdminClient()
-    const { error } = await admin.from('comunicados_leituras').insert({
-      comunicado_id: comunicadoId,
-      responsavel_email: ctx.alunoEmail,
+    const { data: alunoComEmail } = await admin
+      .from('alunos')
+      .select('id')
+      .eq('email_aluno', emailAluno)
+      .eq('escola_id', escola.id)
+      .neq('id', alunoId)
+      .maybeSingle()
+
+    if (alunoComEmail) {
+      return { success: false, error: 'Este e-mail já está vinculado a outro aluno desta escola.' }
+    }
+
+    const { data: usuarios } = await admin.auth.admin.listUsers()
+    let usuarioExistente = (usuarios?.users || []).find((u) => u.email === emailAluno)
+
+    if (!usuarioExistente) {
+      const { data: novoUsuario, error: erroAuth } = await admin.auth.admin.createUser({
+        email: emailAluno,
+        email_confirm: true,
+        user_metadata: { nome: aluno.nome, papel: 'aluno' },
+      })
+
+      if (erroAuth || !novoUsuario.user) {
+        return { success: false, error: erroAuth?.message || 'Erro ao criar usuário.' }
+      }
+
+      usuarioExistente = novoUsuario.user
+    }
+
+    const { error: erroPerfil } = await admin
+      .from('perfis')
+      .update({
+        escola_id: escola.id,
+        nome: aluno.nome,
+        papel: 'aluno',
+        ativo: true,
+      })
+      .eq('id', usuarioExistente.id)
+
+    if (erroPerfil) return { success: false, error: erroPerfil.message }
+
+    const { error: erroUpdate } = await admin
+      .from('alunos')
+      .update({
+        email_aluno: emailAluno,
+        usuario_id: usuarioExistente.id,
+      })
+      .eq('id', alunoId)
+      .eq('escola_id', escola.id)
+
+    if (erroUpdate) return { success: false, error: erroUpdate.message }
+
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: emailAluno,
+      options: { redirectTo: 'https://arxum.com.br/primeiro-acesso' },
     })
 
-    if (error && error.code !== '23505') return { success: false }
-    revalidatePath('/aluno')
+    if (erroLink || !linkData?.properties?.action_link) {
+      return {
+        success: true,
+        aviso: 'Aluno vinculado, mas houve falha ao gerar o link. Use "Reenviar convite" depois.',
+      }
+    }
+
+    const envio = await enviarConviteAluno({
+      para: emailAluno,
+      alunoNome: aluno.nome,
+      escolaNome: escola.nome,
+      escolaSlug: escola.slug,
+      linkMagico: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return {
+        success: true,
+        aviso: 'Aluno vinculado, mas houve falha ao enviar o e-mail. Use "Reenviar convite" depois.',
+      }
+    }
+
+    revalidatePath('/admin/alunos')
     return { success: true }
   } catch (e) {
-    return { success: false }
+    console.error('Erro ao convidar aluno:', e)
+    return { success: false, error: 'Erro ao convidar aluno.' }
+  }
+}
+
+export async function reenviarConviteAluno(alunoId: string) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('nome, email_aluno, usuario_id')
+      .eq('id', alunoId)
+      .eq('escola_id', escola.id)
+      .maybeSingle()
+
+    if (!aluno) return { success: false, error: 'Aluno não encontrado.' }
+    if (!aluno.email_aluno) return { success: false, error: 'Este aluno ainda não tem e-mail cadastrado.' }
+    if (!aluno.usuario_id) return { success: false, error: 'O aluno ainda não foi vinculado ao portal.' }
+
+    const { data: usuario } = await admin.auth.admin.getUserById(aluno.usuario_id)
+    if (!usuario?.user) {
+      return { success: false, error: 'Usuário não encontrado. Convide novamente.' }
+    }
+
+    const { data: linkData, error: erroLink } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: aluno.email_aluno,
+      options: { redirectTo: 'https://arxum.com.br/primeiro-acesso' },
+    })
+
+    if (erroLink || !linkData?.properties?.action_link) {
+      return { success: false, error: erroLink?.message || 'Erro ao gerar link.' }
+    }
+
+    const envio = await enviarConviteAluno({
+      para: aluno.email_aluno,
+      alunoNome: aluno.nome,
+      escolaNome: escola.nome,
+      escolaSlug: escola.slug,
+      linkMagico: linkData.properties.action_link,
+    })
+
+    if (!envio.success) {
+      return { success: false, error: envio.error || 'Erro ao enviar e-mail.' }
+    }
+
+    revalidatePath('/admin/alunos')
+    return { success: true, enviadoPara: aluno.email_aluno }
+  } catch (e) {
+    console.error('Erro ao reenviar convite:', e)
+    return { success: false, error: 'Erro ao reenviar convite.' }
+  }
+}
+
+export async function getHistoricoDocumentosAluno(alunoId: string) {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('documentos_emitidos')
+      .select('*')
+      .eq('aluno_id', alunoId)
+      .order('emitido_em', { ascending: false })
+
+    if (error) return []
+    return data || []
+  } catch (e) {
+    return []
   }
 }
