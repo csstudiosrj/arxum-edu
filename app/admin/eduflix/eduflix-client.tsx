@@ -2,331 +2,308 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Play, Eye, Users, TrendingUp, Video, Edit, Trash2, X, Loader2, Check, EyeOff } from 'lucide-react'
-import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
-import { criarVideoaula, atualizarVideoaula, alternarPublicacao, excluirVideoaula, type Videoaula } from './actions'
+import { Plus, PlayCircle, Radio, Eye, EyeOff, Trash2, X, Loader2, Check, Video, Clock, Users, UploadCloud } from 'lucide-react'
+import { SectionHeading } from '@/components/admin-shell'
+import { criarVideoAdmin, alternarPublicacaoVideo, excluirVideo, type VideoAdmin } from './actions'
+import { UploadButton } from '@/lib/uploadthing'
 
-const disciplinas = ['Matemática', 'Português', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Inglês', 'Artes', 'Educação Física', 'Filosofia', 'Sociologia']
-
-function formatarDuracao(minutos: number | null): string {
-  if (!minutos) return '—'
-  return `${minutos} min`
-}
-
-export function EduflixAdminClient({ videoaulas }: { videoaulas: Videoaula[] }) {
+export function EduflixAdminClient({ videosIniciais }: { videosIniciais: VideoAdmin[] }) {
   const router = useRouter()
-  const [busca, setBusca] = useState('')
-  const [filtroDisciplina, setFiltroDisciplina] = useState('Todas')
-  const [novoAberto, setNovoAberto] = useState(false)
-  const [editando, setEditando] = useState<Videoaula | null>(null)
-  const [confirmarExclusao, setConfirmarExclusao] = useState<string | null>(null)
+  const [videos, setVideos] = useState(videosIniciais)
+  const [modalAberto, setModalAberto] = useState(false)
   const [processando, setProcessando] = useState<string | null>(null)
-
-  // Form states
-  const [titulo, setTitulo] = useState('')
-  const [descricao, setDescricao] = useState('')
-  const [disciplina, setDisciplina] = useState('Matemática')
-  const [serie, setSerie] = useState('')
-  const [duracao, setDuracao] = useState('')
-  const [url, setUrl] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
-  const filtradas = videoaulas.filter((v) => {
-    const matchDisc = filtroDisciplina === 'Todas' || v.disciplina === filtroDisciplina
-    const matchBusca = busca === '' || v.titulo.toLowerCase().includes(busca.toLowerCase())
-    return matchDisc && matchBusca
-  })
+  // Formulário
+  const [titulo, setTitulo] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [disciplina, setDisciplina] = useState('')
+  const [serie, setSerie] = useState('')
+  const [tipo, setTipo] = useState<'video' | 'live'>('video')
+  
+  // URLs dos arquivos (serão preenchidas pelo Uploadthing)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [capaUrl, setCapaUrl] = useState('')
+  
+  // Dados da Live
+  const [linkLive, setLinkLive] = useState('')
+  const [dataLive, setDataLive] = useState('')
+  const [duracao, setDuracao] = useState('')
 
-  const publicadas = videoaulas.filter(v => v.publicado).length
-  const totalViews = videoaulas.reduce((acc, v) => acc + (v.visualizacoes || 0), 0)
+  // Estados de upload do Uploadthing
+  const [enviandoVideo, setEnviandoVideo] = useState(false)
+  const [enviandoCapa, setEnviandoCapa] = useState(false)
 
   function limpar() {
-    setTitulo('')
-    setDescricao('')
-    setDisciplina('Matemática')
-    setSerie('')
-    setDuracao('')
-    setUrl('')
-    setErro('')
-    setEditando(null)
+    setTitulo(''); setDescricao(''); setDisciplina(''); setSerie('')
+    setTipo('video'); setVideoUrl(''); setCapaUrl(''); setLinkLive(''); setDataLive(''); setDuracao(''); setErro('')
   }
 
-  function abrirEdicao(v: Videoaula) {
-    setTitulo(v.titulo)
-    setDescricao(v.descricao || '')
-    setDisciplina(v.disciplina)
-    setSerie(v.serie || '')
-    setDuracao(v.duracao_minutos ? String(v.duracao_minutos) : '')
-    setUrl(v.video_url)
-    setEditando(v)
-    setNovoAberto(true)
-    setErro('')
-  }
-
-  async function handleSalvar() {
+  async function handleCriar() {
     if (!titulo.trim()) return setErro('Informe o título.')
-    if (!url.trim()) return setErro('Informe a URL do vídeo.')
+    if (tipo === 'video' && !videoUrl) return setErro('Faça o upload do arquivo de vídeo.')
+    if (tipo === 'live' && !linkLive) return setErro('Informe o link da transmissão ao vivo.')
 
     setSalvando(true)
     setErro('')
-    
-    const payload = {
+
+    const r = await criarVideoAdmin({
       titulo,
       descricao,
       disciplina,
       serie,
-      duracao_minutos: duracao ? parseInt(duracao, 10) : null,
-      video_url: url
-    }
-
-    if (editando) {
-      const r = await atualizarVideoaula(editando.id, payload)
-      setSalvando(false)
-      if (!r.success) return setErro(r.error || 'Erro.')
-    } else {
-      const r = await criarVideoaula(payload)
-      setSalvando(false)
-      if (!r.success) return setErro(r.error || 'Erro.')
-    }
+      tipo,
+      video_url: videoUrl,
+      capa_url: capaUrl,
+      link_live: linkLive,
+      data_live: dataLive,
+      duracao_minutos: duracao ? parseInt(duracao, 10) : null
+    })
+    
+    setSalvando(false)
+    if (!r.success) return setErro(r.error || 'Erro ao salvar.')
 
     limpar()
-    setNovoAberto(false)
+    setModalAberto(false)
     router.refresh()
   }
 
-  async function handleTogglePublicado(v: Videoaula) {
-    setProcessando(v.id)
-    await alternarPublicacao(v.id, !v.publicado)
+  async function handleAlternarPublicacao(id: string, atual: boolean) {
+    setProcessando(id)
+    await alternarPublicacaoVideo(id, !atual)
     setProcessando(null)
     router.refresh()
   }
 
-  async function handleExcluir() {
-    if (!confirmarExclusao) return
-    setProcessando(confirmarExclusao)
-    const r = await excluirVideoaula(confirmarExclusao)
+  async function handleExcluir(id: string) {
+    if (!confirm('Tem certeza que deseja excluir este vídeo?')) return
+    setProcessando(id)
+    await excluirVideo(id)
     setProcessando(null)
-    if (!r.success) {
-      alert(r.error || 'Erro ao excluir.')
-      return
-    }
-    setConfirmarExclusao(null)
     router.refresh()
   }
 
   return (
-    <AdminShell mode="school" active="EduFlix">
-      <main className="px-5 py-8 lg:px-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading
-            eyebrow="Conteúdo"
-            title="EduFlix"
-            description="Gerencie as videoaulas disponíveis para os alunos."
-          />
-          <button
-            onClick={() => { limpar(); setNovoAberto(true) }}
-            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
-            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
-          >
-            <Plus className="size-4" />
-            Publicar videoaula
-          </button>
-        </div>
+    <div className="px-5 py-8 lg:px-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <SectionHeading 
+          eyebrow="Módulo Extra" 
+          title="EduFlix" 
+          description="Gerencie o catálogo de videoaulas e transmissões ao vivo da escola." 
+        />
+        <button onClick={() => { limpar(); setModalAberto(true) }} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
+          <Plus className="size-4" /> Novo Vídeo / Live
+        </button>
+      </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Panel className="p-5">
-            <div
-              className="grid size-10 place-items-center rounded-lg"
-              style={{
-                backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                color: 'var(--cor-primaria, #0d9488)',
-              }}
-            >
-              <Video className="size-5" />
-            </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Videoaulas</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em]" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{videoaulas.length}</p>
-            <p className="mt-1 text-xs text-[#82939a]">{publicadas} publicadas</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#dbeafe] text-[#3b82f6]"><Eye className="size-5" /></div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Visualizações</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#3b82f6]">{totalViews.toLocaleString('pt-BR')}</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]"><TrendingUp className="size-5" /></div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Conclusão média</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#065f46]">78%</p>
-          </Panel>
-          <Panel className="p-5">
-            <div className="grid size-10 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]"><Users className="size-5" /></div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#6b7d86]">Alunos assistindo</p>
-            <p className="mt-1 text-2xl font-bold tracking-[-.03em] text-[#92400e]">142</p>
-          </Panel>
-        </div>
-
-        <Panel className="mt-8">
-          <div className="border-b border-[#e5ecee] px-5 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap gap-1.5">
-                {['Todas', ...disciplinas.slice(0, 6)].map((d) => {
-                  const ativo = filtroDisciplina === d
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => setFiltroDisciplina(d)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6]'}`}
-                      style={ativo ? {
-                        backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                        color: 'var(--cor-primaria, #0d9488)',
-                      } : undefined}
-                    >
-                      {d}
-                    </button>
-                  )
-                })}
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {videos.map(v => (
+          <div key={v.id} className="group flex flex-col overflow-hidden rounded-xl border border-[#e5ecee] bg-white shadow-sm transition hover:shadow-md">
+            <div className="relative aspect-video bg-[#0f172a] flex items-center justify-center overflow-hidden">
+              {v.capa_url ? (
+                <img src={v.capa_url} alt={v.titulo} className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition" />
+              ) : (
+                <Video className="size-8 text-white/20" />
+              )}
+              <div className="absolute top-2 left-2 flex gap-1">
+                {v.tipo === 'live' ? (
+                  <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><Radio className="size-3"/> LIVE</span>
+                ) : (
+                  <span className="bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"><PlayCircle className="size-3"/> VÍDEO</span>
+                )}
+                {v.publicado ? (
+                  <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">Ativo</span>
+                ) : (
+                  <span className="bg-yellow-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">Rascunho</span>
+                )}
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 lg:w-64">
-                <Search className="size-4 text-[#9aaab0]" />
-                <input type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar videoaula" className="w-full bg-transparent text-sm outline-none placeholder:text-[#a0afb4]" />
+              {v.duracao_minutos && (
+                <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">{v.duracao_minutos} min</span>
+              )}
+            </div>
+            
+            <div className="p-4 flex flex-col flex-1">
+              <h3 className="font-bold text-[#12232b] line-clamp-1">{v.titulo}</h3>
+              <p className="text-xs text-[#82939a] mt-1 line-clamp-2">{v.descricao || 'Sem descrição'}</p>
+              
+              <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#f0f4f5]">
+                <div className="flex items-center gap-1 text-xs text-[#82939a]">
+                  <Users className="size-3" /> {v.visualizacoes} views
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => handleAlternarPublicacao(v.id, v.publicado)} disabled={processando === v.id} className={`p-1.5 rounded-lg transition ${v.publicado ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100'}`} title={v.publicado ? 'Ocultar do aluno' : 'Publicar para o aluno'}>
+                    {processando === v.id ? <Loader2 className="size-4 animate-spin" /> : v.publicado ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                  </button>
+                  <button onClick={() => handleExcluir(v.id)} disabled={processando === v.id} className="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition" title="Excluir">
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        ))}
+        {videos.length === 0 && (
+          <div className="col-span-full py-16 text-center text-[#82939a] bg-white border border-[#dce5e8] rounded-xl">
+            Nenhum vídeo cadastrado. Clique em "Novo Vídeo / Live" para começar.
+          </div>
+        )}
+      </div>
 
-          {filtradas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-              <div
-                className="grid size-14 place-items-center rounded-full"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--cor-primaria, #0d9488) 15%, white)',
-                  color: 'var(--cor-primaria, #0d9488)',
-                }}
-              >
-                <Video className="size-6" />
-              </div>
-              <h3 className="mt-4 text-base font-bold text-[#12232b]">Nenhuma videoaula</h3>
-              <p className="mt-1 max-w-sm text-sm text-[#82939a]">Publique a primeira videoaula para os alunos.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filtradas.map((v) => (
-                <div key={v.id} className={`group overflow-hidden rounded-xl border bg-white transition hover:border-[var(--cor-primaria,#0d9488)] ${!v.publicado ? 'opacity-60 border-[#e5ecee]' : 'border-[#e5ecee]'}`}>
-                  <div className="relative flex aspect-video items-center justify-center bg-[#0e151a]">
-                    <div className="grid size-12 place-items-center rounded-full bg-white/10 backdrop-blur transition group-hover:scale-110">
-                      <Play className="size-5 fill-white text-white" />
-                    </div>
-                    {!v.publicado && (
-                      <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">Rascunho</span>
-                    )}
-                    <span className="absolute bottom-2 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">{formatarDuracao(v.duracao_minutos)}</span>
-                  </div>
-                  <div className="p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--cor-primaria, #0d9488)' }}>{v.disciplina}</span>
-                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-[#243942]">{v.titulo}</h3>
-                    <p className="mt-1 text-xs text-[#82939a]">{v.serie || 'Todas as séries'}</p>
-                    <div className="mt-3 flex items-center justify-between border-t border-[#edf1f2] pt-3 text-xs text-[#82939a]">
-                      <span className="flex items-center gap-1"><Eye className="size-3.5" /> {v.visualizacoes}</span>
-                      <div className="flex gap-1">
-                        <button onClick={() => handleTogglePublicado(v)} disabled={processando === v.id} className="rounded p-1 hover:bg-[#e5ecee] disabled:opacity-50" title={v.publicado ? 'Despublicar' : 'Publicar'}>
-                          {v.publicado ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                        </button>
-                        <button onClick={() => abrirEdicao(v)} className="rounded p-1 hover:bg-[#e5ecee]" title="Editar">
-                          <Edit className="size-3.5" />
-                        </button>
-                        <button onClick={() => setConfirmarExclusao(v.id)} className="rounded p-1 hover:bg-[#fee2e2] hover:text-[#dc2626]" title="Excluir">
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
-      </main>
-
-      {/* MODAL CRIAR / EDITAR */}
-      {novoAberto && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !salvando && setNovoAberto(false)} />
-          <aside className="relative z-10 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
+      {/* MODAL DE CADASTRO */}
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+          <aside className="bg-white w-full max-w-lg h-full flex flex-col shadow-2xl relative">
             <header className="flex items-center justify-between border-b border-[#e5ecee] px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-[#12232b]">{editando ? 'Editar videoaula' : 'Publicar videoaula'}</h2>
-                <p className="mt-0.5 text-xs text-[#82939a]">Aparecerá no portal do aluno</p>
+                <h2 className="text-lg font-bold text-[#12232b]">Novo Conteúdo</h2>
+                <p className="text-xs text-[#82939a] mt-0.5">Adicione um vídeo sob demanda ou uma transmissão ao vivo.</p>
               </div>
-              <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
+              <button onClick={() => setModalAberto(false)} disabled={salvando} className="rounded-lg p-2 text-[#6b7d86] hover:bg-[#f1f5f6] disabled:opacity-50"><X className="size-5" /></button>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Título</label>
-                  <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Introdução às frações" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Descrição</label>
-                  <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} placeholder="Resumo da aula (opcional)" className="w-full resize-none rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">URL do vídeo (YouTube, Vimeo, MP4)</label>
-                  <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Disciplina</label>
-                    <select value={disciplina} onChange={(e) => setDisciplina(e.target.value)} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)]">
-                      {disciplinas.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Série / Turma</label>
-                    <input type="text" value={serie} onChange={(e) => setSerie(e.target.value)} placeholder="Ex: 9º Ano A" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Duração (minutos)</label>
-                  <input type="number" value={duracao} onChange={(e) => setDuracao(e.target.value)} placeholder="Ex: 18" className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none placeholder:text-[#a0afb4] focus:border-[var(--cor-primaria,#0d9488)]" />
-                </div>
-                {erro && <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-600">{erro}</p>}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3 bg-[#f0fdfa] p-2 rounded-lg border border-[#ccfbf1]">
+                <button type="button" onClick={() => setTipo('video')} className={`py-2 rounded-md text-sm font-semibold flex justify-center items-center gap-2 transition ${tipo === 'video' ? 'bg-white shadow-sm text-[#0d9488]' : 'text-[#0f766e]/60 hover:bg-white/50'}`}>
+                  <PlayCircle className="size-4" /> Vídeo Gravado
+                </button>
+                <button type="button" onClick={() => setTipo('live')} className={`py-2 rounded-md text-sm font-semibold flex justify-center items-center gap-2 transition ${tipo === 'live' ? 'bg-white shadow-sm text-[#0d9488]' : 'text-[#0f766e]/60 hover:bg-white/50'}`}>
+                  <Radio className="size-4" /> Transmissão ao Vivo
+                </button>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">Título</label>
+                <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-[#0d9488]" placeholder="Ex: Aula Magna de Matemática" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">Descrição</label>
+                <textarea value={descricao} onChange={e => setDescricao(e.target.value)} rows={2} className="w-full border p-2 rounded-lg outline-none focus:border-[#0d9488] resize-none" placeholder="Do que se trata o vídeo ou live?" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Disciplina</label>
+                  <input type="text" value={disciplina} onChange={e => setDisciplina(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-[#0d9488]" placeholder="Ex: Matemática" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1">Série Alvo</label>
+                  <input type="text" value={serie} onChange={e => setSerie(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-[#0d9488]" placeholder="Ex: 9º Ano (vazio = todos)" />
+                </div>
+              </div>
+
+              {tipo === 'video' ? (
+                <div className="border border-[#e5ecee] bg-[#fafcfc] p-4 rounded-lg space-y-4">
+                  <p className="text-xs font-bold text-[#0d9488] uppercase">Arquivos do Vídeo</p>
+                  
+                  {/* UPLOAD DO VÍDEO */}
+                  <div>
+                    <label className="block text-xs font-bold mb-2">Arquivo de Vídeo</label>
+                    {videoUrl ? (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-700 p-2 rounded border border-green-200 text-sm">
+                        <Check className="size-4" /> Vídeo carregado com sucesso!
+                      </div>
+                    ) : (
+                      <UploadButton
+                        endpoint="videoEduflix"
+                        onUploadBegin={() => setEnviandoVideo(true)}
+                        onClientUploadComplete={(res) => {
+                          if (res && res[0]) {
+                            setVideoUrl(res[0].url)
+                            setEnviandoVideo(false)
+                          }
+                        }}
+                        onUploadError={(error: Error) => {
+                          alert(`Erro no upload: ${error.message}`)
+                          setEnviandoVideo(false)
+                        }}
+                        appearance={{
+                          button: "bg-[#0d9488] text-white w-full py-2 rounded-lg font-semibold text-sm hover:bg-[#0f766e] transition",
+                          allowedContent: "text-xs text-gray-500 mt-1"
+                        }}
+                        content={{
+                          button({ ready }) {
+                            if (ready) return <div className="flex items-center justify-center gap-2"><UploadCloud className="size-4"/> Enviar Vídeo (MP4)</div>;
+                            return "Carregando...";
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* UPLOAD DA CAPA */}
+                  <div>
+                    <label className="block text-xs font-bold mb-2">Imagem de Capa (Thumbnail)</label>
+                    {capaUrl ? (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-700 p-2 rounded border border-green-200 text-sm">
+                        <Check className="size-4" /> Capa carregada!
+                        <button onClick={() => setCapaUrl('')} className="ml-auto text-red-500 hover:underline text-xs">Remover</button>
+                      </div>
+                    ) : (
+                      <UploadButton
+                        endpoint="capaEduflix"
+                        onUploadBegin={() => setEnviandoCapa(true)}
+                        onClientUploadComplete={(res) => {
+                          if (res && res[0]) {
+                            setCapaUrl(res[0].url)
+                            setEnviandoCapa(false)
+                          }
+                        }}
+                        onUploadError={(error: Error) => {
+                          alert(`Erro no upload: ${error.message}`)
+                          setEnviandoCapa(false)
+                        }}
+                        appearance={{
+                          button: "bg-white text-gray-700 border border-gray-300 w-full py-2 rounded-lg font-semibold text-sm hover:bg-gray-50 transition",
+                          allowedContent: "text-xs text-gray-500 mt-1"
+                        }}
+                        content={{
+                          button({ ready }) {
+                            if (ready) return <div className="flex items-center justify-center gap-2"><UploadCloud className="size-4"/> Enviar Capa (JPG/PNG)</div>;
+                            return "Carregando...";
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Duração (minutos)</label>
+                    <input type="number" value={duracao} onChange={e => setDuracao(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-[#0d9488]" placeholder="Ex: 45" />
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-[#e5ecee] bg-[#fafcfc] p-4 rounded-lg space-y-4">
+                  <p className="text-xs font-bold text-red-600 uppercase">Transmissão ao Vivo</p>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Link da Live (YouTube, Twitch, etc)</label>
+                    <input type="text" value={linkLive} onChange={e => setLinkLive(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-red-400" placeholder="https://youtube.com/live/..." />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Data e Hora de Início</label>
+                    <input type="datetime-local" value={dataLive} onChange={e => setDataLive(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-red-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">URL da Capa (Imagem)</label>
+                    <input type="text" value={capaUrl} onChange={e => setCapaUrl(e.target.value)} className="w-full border p-2 rounded-lg outline-none focus:border-red-400" placeholder="https://..." />
+                  </div>
+                </div>
+              )}
+
+              {erro && <p className="text-sm text-red-500">{erro}</p>}
             </div>
 
-            <footer className="flex items-center justify-end gap-2 border-t border-[#e5ecee] bg-[#fafcfc] px-6 py-4">
-              <button onClick={() => setNovoAberto(false)} disabled={salvando} className="rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button
-                onClick={handleSalvar}
-                disabled={salvando}
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
-              >
-                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-                {salvando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Publicar'}
+            <footer className="flex justify-end gap-2 border-t border-[#e5ecee] p-6 bg-white">
+              <button onClick={() => setModalAberto(false)} disabled={salvando || enviandoVideo || enviandoCapa} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleCriar} disabled={salvando || enviandoVideo || enviandoCapa} className="bg-[#0d9488] text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#0f766e] disabled:opacity-50">
+                {salvando ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} 
+                {enviandoVideo || enviandoCapa ? 'Aguardando Upload...' : 'Salvar Conteúdo'}
               </button>
             </footer>
           </aside>
         </div>
       )}
-
-      {/* MODAL EXCLUIR */}
-      {confirmarExclusao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => !processando && setConfirmarExclusao(null)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#fee2e2] text-[#dc2626]"><Trash2 className="size-5" /></div>
-            <h3 className="mt-4 text-center text-lg font-bold text-[#12232b]">Excluir videoaula?</h3>
-            <p className="mt-2 text-center text-sm text-[#82939a]">Essa ação não pode ser desfeita.</p>
-            <div className="mt-6 flex gap-2">
-              <button onClick={() => setConfirmarExclusao(null)} disabled={!!processando} className="flex-1 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2.5 text-sm font-semibold text-[#30454e] disabled:opacity-50">Cancelar</button>
-              <button onClick={handleExcluir} disabled={!!processando} className="flex-1 rounded-lg bg-[#dc2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50">
-                {processando ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </AdminShell>
+    </div>
   )
 }
