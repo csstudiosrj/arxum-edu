@@ -130,3 +130,4 @@ export async function excluirVideo(id: string) {
     return { success: false, error: 'Erro ao excluir vídeo.' }
   }
 }
+
