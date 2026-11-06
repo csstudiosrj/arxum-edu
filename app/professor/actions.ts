@@ -42,9 +42,6 @@ export type OcorrenciaProfessor = {
 
 const PERIODOS_VALIDOS = ['1_bimestre', '2_bimestre', '3_bimestre', '4_bimestre', '1_semestre', '2_semestre']
 
-// ── HELPER DE SEGURANÇA ────────────────────────────────────────────
-// Busca o aluno pelo ID e garante que pertence à escola do professor.
-// Retorna os dados reais do banco (nunca confia no que veio do client).
 async function buscarAlunoValidado(alunoId: string, escolaId: string) {
   const admin = createAdminClient()
   const { data: aluno } = await admin
@@ -57,8 +54,6 @@ async function buscarAlunoValidado(alunoId: string, escolaId: string) {
 
   return aluno
 }
-
-// ── LEITURAS ───────────────────────────────────────────────────────
 
 export async function getAlunosDoProfessor(): Promise<AlunoResumo[]> {
   try {
@@ -120,11 +115,8 @@ export async function getOcorrenciasDoProfessor(): Promise<OcorrenciaProfessor[]
   }
 }
 
-// ── ESCRITAS DE NOTA ───────────────────────────────────────────────
-
 export async function lancarNotaProfessor(data: {
   aluno_id: string
-  // ⚠️ aluno_nome e responsavel_email são IGNORADOS — usamos do banco
   aluno_nome?: string
   responsavel_email?: string
   disciplina: string
@@ -137,26 +129,15 @@ export async function lancarNotaProfessor(data: {
     const prof = await getProfessorDoUsuario()
     if (!prof) return { success: false, error: 'Sessão expirada.' }
 
-    // 1. Validações
     if (!data.aluno_id) return { success: false, error: 'Selecione o aluno.' }
     if (!data.disciplina?.trim()) return { success: false, error: 'Informe a disciplina.' }
-    if (!PERIODOS_VALIDOS.includes(data.periodo)) {
-      return { success: false, error: 'Período inválido.' }
-    }
-    if (data.nota !== null && (data.nota < 0 || data.nota > 10)) {
-      return { success: false, error: 'A nota deve estar entre 0 e 10.' }
-    }
-    if (data.faltas < 0) {
-      return { success: false, error: 'Faltas não pode ser negativa.' }
-    }
+    if (!PERIODOS_VALIDOS.includes(data.periodo)) return { success: false, error: 'Período inválido.' }
+    if (data.nota !== null && (data.nota < 0 || data.nota > 10)) return { success: false, error: 'A nota deve estar entre 0 e 10.' }
+    if (data.faltas < 0) return { success: false, error: 'Faltas não pode ser negativa.' }
 
-    // 2. SEGURANÇA: confirma que o aluno existe E pertence à escola
     const aluno = await buscarAlunoValidado(data.aluno_id, prof.escola_id)
-    if (!aluno) {
-      return { success: false, error: 'Aluno não encontrado nesta escola.' }
-    }
+    if (!aluno) return { success: false, error: 'Aluno não encontrado nesta escola.' }
 
-    // 3. SEGURANÇA: usa os dados reais do banco, não do client
     const admin = createAdminClient()
     const { error } = await admin
       .from('notas')
@@ -178,7 +159,6 @@ export async function lancarNotaProfessor(data: {
 
     if (error) return { success: false, error: error.message }
 
-    // 4. Notifica o responsável REAL do aluno
     try {
       if (aluno.responsavel_email) {
         enviarSeAtivo({
@@ -233,11 +213,8 @@ export async function excluirNotaProfessor(id: string) {
   }
 }
 
-// ── ESCRITAS DE OCORRÊNCIA ─────────────────────────────────────────
-
 export async function criarOcorrenciaProfessor(data: {
   aluno_id: string
-  // ⚠️ aluno_nome e responsavel_email são IGNORADOS — usamos do banco
   aluno_nome?: string
   responsavel_email?: string
   tipo: string
@@ -250,18 +227,13 @@ export async function criarOcorrenciaProfessor(data: {
     const prof = await getProfessorDoUsuario()
     if (!prof) return { success: false, error: 'Sessão expirada.' }
 
-    // 1. Validações
     if (!data.aluno_id) return { success: false, error: 'Selecione o aluno.' }
     if (!data.titulo?.trim()) return { success: false, error: 'Informe o título.' }
     if (!data.descricao?.trim()) return { success: false, error: 'Informe a descrição.' }
 
-    // 2. SEGURANÇA: confirma que o aluno existe E pertence à escola
     const aluno = await buscarAlunoValidado(data.aluno_id, prof.escola_id)
-    if (!aluno) {
-      return { success: false, error: 'Aluno não encontrado nesta escola.' }
-    }
+    if (!aluno) return { success: false, error: 'Aluno não encontrado nesta escola.' }
 
-    // 3. SEGURANÇA: usa os dados reais do banco
     const admin = createAdminClient()
     const { error } = await admin.from('ocorrencias').insert({
       escola_id: prof.escola_id,
@@ -329,13 +301,12 @@ export async function atualizarOcorrenciaProfessor(id: string, data: Partial<{
     if (data.descricao) payload.descricao = data.descricao
     if (data.providencias !== undefined) payload.providencias = data.providencias || null
 
-    // SEGURANÇA: só pode editar as PRÓPRIAS ocorrências
     const { error } = await admin
       .from('ocorrencias')
       .update(payload)
       .eq('id', id)
       .eq('escola_id', prof.escola_id)
-      .eq('autor_nome', prof.nome)  // ⚠️ trava
+      .eq('autor_nome', prof.nome)
 
     if (error) return { success: false, error: error.message }
 
@@ -354,13 +325,12 @@ export async function excluirOcorrenciaProfessor(id: string) {
     if (!prof) return { success: false, error: 'Sessão expirada.' }
 
     const admin = createAdminClient()
-    // SEGURANÇA: só pode excluir as PRÓPRIAS ocorrências
     const { error } = await admin
       .from('ocorrencias')
       .delete()
       .eq('id', id)
       .eq('escola_id', prof.escola_id)
-      .eq('autor_nome', prof.nome)  // ⚠️ trava
+      .eq('autor_nome', prof.nome)
 
     if (error) return { success: false, error: error.message }
 
