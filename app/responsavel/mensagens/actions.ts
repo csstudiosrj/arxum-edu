@@ -48,7 +48,7 @@ export async function getConversasResponsavel(): Promise<Conversa[]> {
         .from('mensagens_internas')
         .select('conversa_id')
         .in('conversa_id', ids)
-        .eq('remetente_tipo', 'escola')
+        .in('remetente_tipo', ['escola', 'professor'])
         .eq('lida', false)
       ;(msgs || []).forEach(m => { contagem[m.conversa_id] = (contagem[m.conversa_id] || 0) + 1 })
     }
@@ -71,7 +71,7 @@ export async function getMensagensResponsavel(conversaId: string): Promise<Mensa
     await admin.from('mensagens_internas')
       .update({ lida: true })
       .eq('conversa_id', conversaId)
-      .eq('remetente_tipo', 'escola')
+      .in('remetente_tipo', ['escola', 'professor'])
       .eq('lida', false)
 
     const { data } = await admin
@@ -104,6 +104,7 @@ export async function enviarMensagemResponsavel(conversaId: string, conteudo: st
     
     revalidatePath('/responsavel/mensagens')
     revalidatePath('/admin/mensagens')
+    revalidatePath('/professor/mensagens')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao enviar.' } }
 }

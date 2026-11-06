@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, type LucideIcon,
+  AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, MessageSquare, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
@@ -19,6 +19,7 @@ const menu: MenuItem[] = [
   ['Lançar notas', '/professor/notas', TrendingUp],
   ['Ocorrências', '/professor/ocorrencias', AlertCircle],
   ['Alunos', '/professor/alunos', Users],
+  ['Mensagens', '/professor/mensagens', MessageSquare],
 ]
 
 export function ProfessorShell({
