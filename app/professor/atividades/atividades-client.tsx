@@ -186,7 +186,11 @@ export function AtividadesProfessorClient({ atividades, modulos }: { atividades:
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {atividades.map(a => (
-          <Panel key={a.id} className="p-5 flex flex-col justify-between cursor-pointer hover:border-[#0d9488] transition" onClick={() => setAtividadeSelecionada(a)}>
+          <div 
+            key={a.id} 
+            onClick={() => setAtividadeSelecionada(a)} 
+            className="cursor-pointer rounded-xl border border-[#dce5e8] bg-white p-5 flex flex-col justify-between transition hover:border-[#0d9488]"
+          >
             <div>
               <div className="flex justify-between items-start mb-4">
                 <div className="grid size-10 place-items-center rounded-lg bg-[#f0fdfa] text-[#0d9488]"><FileText className="size-5" /></div>
@@ -200,7 +204,7 @@ export function AtividadesProfessorClient({ atividades, modulos }: { atividades:
               <span className="flex items-center gap-1 text-[#0d9488]"><CheckCircle2 className="size-4" /> {a.total_entregas} entregas</span>
               <span className="text-[#dc2626]">Prazo: {a.prazo_entrega ? new Date(a.prazo_entrega).toLocaleDateString('pt-BR') : 'Livre'}</span>
             </div>
-          </Panel>
+          </div>
         ))}
         {atividades.length === 0 && (
           <div className="col-span-full py-12 text-center text-[#82939a] bg-white border border-[#dce5e8] rounded-xl">
