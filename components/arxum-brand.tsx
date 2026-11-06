@@ -1,51 +1,19 @@
-'use client'
-
 import Link from 'next/link'
-
-// Símbolo do ARXUM Edu: livro aberto com o ponto da ideia (Manual de Marca §01)
-export function EduSimbolo({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 7.2C10.2 5.7 7.3 5.2 3.5 5.6v12.6c3.8-.4 6.7.1 8.5 1.6 1.8-1.5 4.7-2 8.5-1.6V5.6c-3.8-.4-6.7.1-8.5 1.6Z" fill="#0d9488" fillOpacity="0.12" stroke="#0d9488" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M12 7.2v12.6" stroke="#0d9488" strokeWidth="1.8" />
-      <circle cx="12" cy="3" r="1.2" fill="#0d9488" />
-    </svg>
-  )
-}
 
 export function ArxumBrand({ light = false }: { light?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-1.5" aria-label="ARXUM Edu, início">
-      <EduSimbolo />
-      <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">
-        ARXUM
-      </span>
-      <span
-        className={`font-syne text-lg font-black tracking-[-.03em] ${
-          light ? 'text-[#07090c]' : 'text-white'
-        }`}
-      >
-        Edu
-      </span>
-    </Link>
+    <div className="flex items-center gap-1.5">
+      <span className={`font-syne text-lg font-black tracking-[-.03em] ${light ? 'text-[#12232b]' : 'text-white'}`}>ARXUM</span>
+      <span className="font-syne text-lg font-black tracking-[-.03em] text-[#0d9488]">Edu</span>
+    </div>
   )
 }
 
 export function ByArxum({ light = false }: { light?: boolean }) {
   return (
-    <Link
-      href="/"
-      className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.18em] transition ${
-        light ? 'text-[#82939a] hover:text-[#0d9488]' : 'text-white/40 hover:text-[#0d9488]'
-      }`}
-      aria-label="Desenvolvido por ARXUM Edu"
-    >
-      <span>by</span>
-      <span className="font-syne text-xs font-black tracking-[-.03em] normal-case">
-        <span className="text-[#0d9488]">ARXUM</span>
-        <span className={light ? 'text-[#07090c]' : 'text-white'}> Edu</span>
-      </span>
-    </Link>
+    <p className={`text-[10px] font-medium tracking-wide ${light ? 'text-[#82939a]' : 'text-[#6b7d86]'}`}>
+      Feito por <span className="font-bold">ARXUM</span>
+    </p>
   )
 }
 
@@ -60,7 +28,7 @@ export function PublicHeader({
   logoUrl?: string | null
   escolaNome?: string
 }) {
-  const base = slug ? `/edu/${slug}` : ''
+  const base = slug ? '/escola' : ''
 
   const links = slug
     ? [
@@ -101,26 +69,23 @@ export function PublicHeader({
   return (
     <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
       {marca}
-      <nav className="hidden items-center gap-7 text-sm text-[#8aa0ad] lg:flex">
-        {links.map((item) => (
-          <Link key={item.label} href={item.href} className="transition hover:text-white">
-            {item.label}
+      <nav className="hidden items-center gap-6 md:flex">
+        {links.map((link) => (
+          <Link key={link.label} href={link.href} className="text-sm font-medium text-[#8aa0ad] transition hover:text-white">
+            {link.label}
           </Link>
         ))}
       </nav>
-      <div className="flex items-center gap-2">
-        <Link
-          href={`${base}/login`}
-          className="hidden rounded-lg px-4 py-2 text-sm font-medium text-[#b9cbd4] transition hover:bg-white/5 hover:text-white sm:block"
-        >
-          Área Restrita
+      <div className="flex items-center gap-3">
+        <Link href="/login" className="text-sm font-medium text-[#8aa0ad] transition hover:text-white">
+          Entrar
         </Link>
         <Link
-          href={`${base}/matricula`}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition"
+          href="/matricula"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
           style={{ backgroundColor: cor }}
         >
-          Matrícula Online
+          Matrícula
         </Link>
       </div>
     </header>
@@ -136,7 +101,7 @@ export function PublicFooter({
   cor?: string
   escolaNome?: string
 }) {
-  const base = slug ? `/edu/${slug}` : ''
+  const base = slug ? '/escola' : ''
 
   const colunas = slug
     ? [
@@ -152,8 +117,8 @@ export function PublicFooter({
         ]},
         { titulo: 'Contato', links: [
           { label: 'Fale conosco', href: `${base}/contato` },
-          { label: 'Área Restrita', href: `${base}/login` },
-          { label: 'Matrícula Online', href: `${base}/matricula` },
+          { label: 'Área Restrita', href: '/login' },
+          { label: 'Matrícula Online', href: '/matricula' },
         ]},
       ]
     : [
@@ -178,46 +143,38 @@ export function PublicFooter({
     <footer className="border-t border-white/[.08] px-6 py-12 lg:px-8">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
         <div>
-          <div className="mb-4">
-            {slug && escolaNome ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-syne text-lg font-black tracking-[-.03em]" style={{ color: cor }}>
-                  {escolaNome.split(' ')[0]}
-                </span>
-                {escolaNome.split(' ').length > 1 && (
-                  <span className="font-syne text-lg font-black tracking-[-.03em] text-white">
-                    {escolaNome.split(' ').slice(1).join(' ')}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <ArxumBrand />
-            )}
-          </div>
-          <p className="max-w-xs text-sm leading-6 text-[#8aa0ad]">
-            Educação que prepara para o futuro, com propósito, tecnologia e cuidado.
+          {slug ? (
+            <div className="flex flex-col gap-4">
+              <span className="font-syne text-2xl font-black tracking-[-.03em]" style={{ color: cor }}>
+                {escolaNome}
+              </span>
+              <p className="text-xs leading-5 text-[#8aa0ad]">
+                Educação que prepara para o futuro.<br />
+                Um espaço para crescer, descobrir e transformar.
+              </p>
+            </div>
+          ) : (
+            <ArxumBrand />
+          )}
+          <p className="mt-6 text-[10px] text-[#5e7a94]">
+            © {new Date().getFullYear()} {escolaNome || 'ARXUM Edu'}. Todos os direitos reservados.
           </p>
-          {/* REMOVIDO O <ByArxum /> DAQUI */}
         </div>
+
         {colunas.map((col) => (
           <div key={col.titulo}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[.16em] text-[#c7d5db]">
-              {col.titulo}
-            </h3>
-            <div className="flex flex-col gap-3 text-sm text-[#718895]">
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-wider text-white">{col.titulo}</h4>
+            <ul className="space-y-2.5">
               {col.links.map((link) => (
-                <Link key={link.label} href={link.href} className="hover:opacity-80" style={{ color: 'inherit' }}>
-                  {link.label}
-                </Link>
+                <li key={link.label}>
+                  <Link href={link.href} className="text-sm text-[#8aa0ad] transition hover:text-white">
+                    {link.label}
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         ))}
-      </div>
-      <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/[.08] pt-6 text-xs text-[#617783] sm:flex-row sm:items-center sm:justify-between">
-        <span>© 2026 {escolaNome || 'ARXUM Edu'}. Todos os direitos reservados.</span>
-        {/* MANTIDO APENAS O <ByArxum /> NO RODAPÉ */}
-        <ByArxum />
       </div>
     </footer>
   )

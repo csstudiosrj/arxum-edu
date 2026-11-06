@@ -33,7 +33,7 @@ export function ContatoClient({
   logoUrl: string | null
   escola: EscolaInfo
 }) {
-  const base = `/edu/${slug}`
+  const base = `/escola`
   const par = getFontePar(fontePar)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -228,7 +228,7 @@ export function ContatoClient({
                 Faça a inscrição online em menos de 10 minutos.
               </p>
               <Link
-                href={`${base}/matricula`}
+                href="/matricula"
                 className="mt-4 inline-block rounded-lg px-4 py-2 text-xs font-semibold text-white transition hover:brightness-90"
                 style={{ backgroundColor: cor }}
               >

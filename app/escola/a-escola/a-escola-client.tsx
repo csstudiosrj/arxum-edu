@@ -21,7 +21,7 @@ export function AEscolaClient({
   cor: string
   logoUrl: string | null
 }) {
-  const base = `/edu/${slug}`
+  const base = `/escola`
   const par = getFontePar(fontePar)
 
   const estiloFontes = {

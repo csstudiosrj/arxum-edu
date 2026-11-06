@@ -116,7 +116,7 @@ export function SiteClient({ conteudoInicial, paginasInicial, fontePar, slug, es
           <div className="flex items-center gap-2">
             {slug && (
               <a
-                href={`/edu/${slug}`}
+                href={`/escola`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] hover:border-[var(--cor-primaria,#0d9488)]"
