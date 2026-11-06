@@ -48,7 +48,7 @@ export async function getConversasProfessor(): Promise<Conversa[]> {
         .from('mensagens_internas')
         .select('conversa_id')
         .in('conversa_id', ids)
-        .eq('remetente_tipo', 'responsavel')
+        .in('remetente_tipo', ['responsavel', 'aluno'])
         .eq('lida', false)
       ;(msgs || []).forEach(m => { contagem[m.conversa_id] = (contagem[m.conversa_id] || 0) + 1 })
     }
@@ -71,7 +71,7 @@ export async function getMensagensProfessor(conversaId: string): Promise<Mensage
     await admin.from('mensagens_internas')
       .update({ lida: true })
       .eq('conversa_id', conversaId)
-      .eq('remetente_tipo', 'responsavel')
+      .in('remetente_tipo', ['responsavel', 'aluno'])
       .eq('lida', false)
 
     const { data } = await admin
@@ -104,6 +104,7 @@ export async function enviarMensagemProfessor(conversaId: string, conteudo: stri
     
     revalidatePath('/professor/mensagens')
     revalidatePath('/responsavel/mensagens')
+    revalidatePath('/aluno/mensagens')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao enviar.' } }
 }
@@ -158,6 +159,7 @@ export async function criarConversaProfessor(alunoId: string, assunto: string) {
 
     revalidatePath('/professor/mensagens')
     revalidatePath('/responsavel/mensagens')
+    revalidatePath('/aluno/mensagens')
     return { success: true, conversaId: conversa.id }
   } catch (e) {
     return { success: false, error: 'Erro ao criar conversa.' }

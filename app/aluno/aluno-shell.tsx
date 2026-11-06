@@ -22,6 +22,7 @@ const menu: MenuItem[] = [
   ['EduFlix', '/aluno/eduflix', PlayCircle],
   ['Agenda', '/aluno/agenda', Calendar],
   ['Comunicados', '/aluno/comunicados', MessageSquare],
+  ['Mensagens', '/aluno/mensagens', MessageSquare],
 ]
 
 export function AlunoShell({

@@ -49,7 +49,7 @@ export async function getConversasEscola(): Promise<Conversa[]> {
         .from('mensagens_internas')
         .select('conversa_id')
         .in('conversa_id', ids)
-        .eq('remetente_tipo', 'responsavel')
+        .in('remetente_tipo', ['responsavel', 'aluno'])
         .eq('lida', false)
 
       ;(msgs || []).forEach(m => {
@@ -80,7 +80,7 @@ export async function getMensagensChat(conversaId: string): Promise<MensagemChat
     await admin.from('mensagens_internas')
       .update({ lida: true })
       .eq('conversa_id', conversaId)
-      .eq('remetente_tipo', 'responsavel')
+      .in('remetente_tipo', ['responsavel', 'aluno'])
       .eq('lida', false)
 
     const { data } = await admin
@@ -158,6 +158,7 @@ export async function enviarMensagemChat(conversaId: string, conteudo: string) {
 
     revalidatePath('/admin/mensagens')
     revalidatePath('/responsavel/mensagens')
+    revalidatePath('/aluno/mensagens')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao enviar mensagem.' }
