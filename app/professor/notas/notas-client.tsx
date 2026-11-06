@@ -19,7 +19,6 @@ const PERIODOS = [
   { key: '2_semestre', label: '2º Semestre' },
 ]
 
-// ── SEMÂNTICO: nota por faixa ───────────────────────────────────────
 function corNota(nota: number | null): string {
   if (nota === null) return 'bg-[#e5ecee] text-[#5e7a94]'
   if (nota >= 7) return 'bg-[#d1fae5] text-[#065f46]'
@@ -98,7 +97,6 @@ export function NotasProfessorClient({
     setEnviando(true)
     setErro('')
     
-    // A ação lancarNotaProfessor já faz um upsert
     const r = await lancarNotaProfessor({
       aluno_id: aluno.id,
       aluno_nome: aluno.nome,
@@ -267,7 +265,11 @@ export function NotasProfessorClient({
                   <label className="mb-1.5 block text-xs font-semibold text-[#536871]">Aluno</label>
                   <select value={alunoIdx} onChange={(e) => setAlunoIdx(e.target.value)} disabled={!!editando} className="w-full rounded-lg border border-[#d5e0e3] bg-white px-3 py-2 text-sm text-[#243942] outline-none focus:border-[var(--cor-primaria,#0d9488)] disabled:bg-[#f0f4f5] disabled:text-[#82939a]">
                     <option value="">Selecione</option>
-                    {alunos.map((a, i) => <option key={a.id} value={String(i)}>{a.nome} {a.serie ? `— ${a.serie}` : ''}</option>)}
+                    {alunos.map((a, i) => (
+                      <option key={a.id} value={String(i)}>
+                        {a.nome} {a.serie ? `— ${a.serie}` : ''} {a.turno ? `(${a.turno})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
