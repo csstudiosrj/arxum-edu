@@ -193,7 +193,6 @@ export async function getMeusComunicados(): Promise<ComunicadoResponsavel[]> {
 
     const admin = createAdminClient()
     
-    // 1. Buscar os filhos para saber as séries e turnos
     const { data: filhos } = await admin
       .from('alunos')
       .select('serie, turno, escola_id')
@@ -206,7 +205,6 @@ export async function getMeusComunicados(): Promise<ComunicadoResponsavel[]> {
     const turnos = filhos.map(f => f.turno).filter(Boolean) as string[]
     const escolaId = filhos[0].escola_id
 
-    // 2. Buscar comunicados da escola
     const { data: coms, error } = await admin
       .from('comunicados')
       .select('id, titulo, mensagem, setor, prioridade, autor_nome, criado_em, segmento_serie, segmento_turno')
@@ -217,14 +215,12 @@ export async function getMeusComunicados(): Promise<ComunicadoResponsavel[]> {
 
     if (error || !coms) return []
 
-    // 3. Filtrar por segmentação (Série ou Turno)
     const comunicadosFiltrados = coms.filter(c => {
       const matchSerie = !c.segmento_serie || series.includes(c.segmento_serie)
       const matchTurno = !c.segmento_turno || turnos.includes(c.segmento_turno)
       return matchSerie && matchTurno
     })
 
-    // 4. Buscar leituras
     const { data: leituras } = await admin
       .from('comunicados_leituras')
       .select('comunicado_id')
@@ -617,5 +613,77 @@ export async function solicitarExclusaoDados(motivo: string) {
   } catch (e) {
     console.error('[LGPD exclusão]', e)
     return { success: false, error: 'Erro ao registrar solicitação.' }
+  }
+}
+
+export async function getDadosParaDocumento(alunoId: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, error: 'Sessão expirada.' }
+
+    const admin = createAdminClient()
+    
+    const { data: aluno } = await admin
+      .from('alunos')
+      .select('nome, serie, turno, responsavel_nome, responsavel_cpf, escola_id')
+      .eq('id', alunoId)
+      .eq('responsavel_email', user.email)
+      .maybeSingle()
+
+    if (!aluno) return { success: false, error: 'Aluno não encontrado ou não vinculado.' }
+
+    const { data: escola } = await admin
+      .from('escolas')
+      .select('nome, cnpj, endereco')
+      .eq('id', aluno.escola_id)
+      .single()
+
+    return {
+      success: true,
+      dados: {
+        escolaNome: escola?.nome || 'Escola',
+        escolaCnpj: escola?.cnpj || null,
+        escolaEndereco: escola?.endereco || null,
+        alunoNome: aluno.nome,
+        alunoSerie: aluno.serie,
+        alunoTurno: aluno.turno,
+        responsavelNome: aluno.responsavel_nome,
+        responsavelCpf: aluno.responsavel_cpf,
+        escolaId: aluno.escola_id,
+      }
+    }
+  } catch (e) {
+    return { success: false, error: 'Erro ao buscar dados.' }
+  }
+}
+
+export async function getNotasParaBoletim(alunoId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin.from('notas').select('disciplina, periodo, nota, faltas').eq('aluno_id', alunoId)
+  
+  if (!data) return { notas: [], media: null }
+
+  const notasValidas = data.filter((n) => n.nota !== null)
+  const media = notasValidas.length > 0 ? notasValidas.reduce((s, n) => s + (n.nota || 0), 0) / notasValidas.length : null
+  
+  return { notas: data, media }
+}
+
+export async function registrarEmissaoDocumento(alunoId: string, escolaId: string, tipo: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    const admin = createAdminClient()
+    await admin.from('documentos_emitidos').insert({
+      escola_id: escolaId,
+      aluno_id: alunoId,
+      responsavel_email: user?.email || 'Secretaria',
+      tipo_documento: tipo
+    })
+    return { success: true }
+  } catch (e) {
+    return { success: false }
   }
 }
