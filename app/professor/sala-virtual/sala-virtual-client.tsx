@@ -116,12 +116,22 @@ export function SalaVirtualProfessorClient({
   async function handleExcluir() {
     if (!confirmar) return
     setSalvando(true)
+    
+    // CORREÇÃO AQUI: Verificando o retorno do backend
+    let r
     if (confirmar.tipo === 'modulo') {
-      await excluirModuloProfessor(confirmar.id)
+      r = await excluirModuloProfessor(confirmar.id)
     } else {
-      await excluirAulaProfessor(confirmar.id)
+      r = await excluirAulaProfessor(confirmar.id)
     }
+    
     setSalvando(false)
+
+    if (!r.success) {
+      alert(r.error || 'Erro ao excluir.')
+      return
+    }
+
     setConfirmar(null)
     router.refresh()
   }
