@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, Download, TrendingUp, FileSignature, PenTool, type LucideIcon } from 'lucide-react'
+import { CalendarDays, ChevronRight, ChevronDown, CircleDollarSign, FileText, Home, ImageIcon, LogOut, MessageSquare, Search, Settings, ShieldCheck, WalletCards, Bell, BookOpen, ClipboardCheck, Users, X, Clock, CheckCircle2, AlertCircle, ExternalLink, Calendar, Loader2, ShieldAlert, Award, Heart, FileQuestion, UserCheck, FileDown, Trash2, Download, TrendingUp, FileSignature, PenTool, Share2, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -12,6 +12,7 @@ import { marcarComoLido, responderAutorizacao, marcarOcorrenciaLida, exportarMeu
 import type { MarcaEscola } from '@/lib/auth/marca'
 import { CheckoutFatura } from '@/components/checkout-fatura'
 import { gerarDocumentoHTML } from '@/lib/documentos/gerador'
+import { AgendaSync } from '@/components/agenda-sync'
 
 type MenuItem = readonly [LucideIcon, string, string]
 type Atalho = readonly [string, LucideIcon, string]
@@ -172,7 +173,7 @@ function corNota(nota: number | null): string {
 }
 
 export function ResponsavelClient({
-  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias, filhos, marca,
+  inscricoes, comunicados, faturas, eventos, autorizacoes, boletins, albuns, ocorrencias, filhos, marca, escolaSlug
 }: {
   inscricoes: InscricaoResponsavel[]
   comunicados: ComunicadoResponsavel[]
@@ -184,6 +185,7 @@ export function ResponsavelClient({
   ocorrencias: OcorrenciaResponsavel[]
   filhos: Filho[]
   marca: MarcaEscola | null
+  escolaSlug: string
 }) {
   const router = useRouter()
   const [saindo, setSaindo] = useState(false)
@@ -213,6 +215,8 @@ export function ResponsavelClient({
   const [termos, setTermos] = useState<TermoResponsavel[]>([])
   const [termoAberto, setTermoAberto] = useState<TermoResponsavel | null>(null)
   const [assinando, setAssinando] = useState(false)
+
+  const [modalSyncAberto, setModalSyncAberto] = useState(false)
 
   useEffect(() => {
     getMeusTermosPendentes().then(setTermos)
@@ -504,7 +508,6 @@ export function ResponsavelClient({
             </section>
           )}
 
-          {/* NOVA SEÇÃO: TERMOS E ASSINATURAS */}
           {termosPendentes.length > 0 && (
             <section id="termos" className="mb-10">
               <div className="mb-4 flex items-center justify-between">
@@ -534,7 +537,6 @@ export function ResponsavelClient({
             </section>
           )}
 
-          {/* NOVA SEÇÃO: SECRETARIA DIGITAL */}
           <section id="documentos" className="mb-10">
             <h3 className="mb-4 text-lg font-bold">Secretaria Digital</h3>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -750,7 +752,15 @@ export function ResponsavelClient({
 
           <div className="mt-10 grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
             <section id="agenda">
-              <h3 className="mb-4 text-lg font-bold">Próximos eventos</h3>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold">Próximos eventos</h3>
+                <button 
+                  onClick={() => setModalSyncAberto(true)} 
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-3 py-1.5 text-xs font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]"
+                >
+                  <Share2 className="size-3.5" /> Sincronizar
+                </button>
+              </div>
               {eventos.length === 0 ? (
                 <div className="rounded-xl border border-[#dbe5e8] bg-white p-8 text-center"><Calendar className="mx-auto text-[#a0afb4]" size={28}/><p className="mt-3 text-sm text-[#8aa0ad]">Nenhum evento agendado pela escola.</p></div>
               ) : (
@@ -1311,6 +1321,10 @@ export function ResponsavelClient({
           </footer>
         </div>
       </div>
+    )}
+
+    {modalSyncAberto && escolaSlug && (
+      <AgendaSync slug={escolaSlug} onClose={() => setModalSyncAberto(false)} />
     )}
   </div>
 }
