@@ -9,7 +9,7 @@ import {
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { 
   criarTurma, getAlunosDaTurma, getProfessoresDaTurma, 
-  vincularAluno, vincularProfessor, desvincularProfessor, getTurmas, // <-- IMPORT CORRIGIDO
+  vincularAluno, vincularProfessor, desvincularProfessor, getTurmas,
   type Turma, type AlunoSimples, type ProfessorSimples, type ProfessorTurma 
 } from './actions'
 
@@ -28,6 +28,7 @@ export function TurmasClient({
   const [serie, setSerie] = useState('')
   const [turno, setTurno] = useState('Manhã')
   const [anoLetivo, setAnoLetivo] = useState('2026')
+  const [capacidade, setCapacidade] = useState('30')
   const [processando, setProcessando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -62,12 +63,14 @@ export function TurmasClient({
     if (!nome.trim() || !serie.trim()) return setErro('Preencha nome e série.')
     setProcessando(true)
     setErro('')
-    const r = await criarTurma({ nome, serie, turno, ano_letivo: anoLetivo })
+    const r = await criarTurma({ 
+      nome, serie, turno, ano_letivo: anoLetivo, 
+      capacidade_maxima: parseInt(capacidade) || 30 
+    })
     setProcessando(false)
     if (r.success) {
       setNovaTurmaAberta(false)
-      setNome(''); setSerie('')
-      // Atualiza a lista local sem recarregar a página inteira
+      setNome(''); setSerie(''); setCapacidade('30')
       const novas = await getTurmas()
       setTurmas(novas)
       router.refresh()
@@ -88,7 +91,7 @@ export function TurmasClient({
 
   async function handleRemoverAluno(alunoId: string) {
     if (!turmaSelecionada) return
-    const r = await vincularAluno(alunoId, null) // Remove a turma
+    const r = await vincularAluno(alunoId, null)
     if (r.success) {
       const novosAlunos = await getAlunosDaTurma(turmaSelecionada.id)
       setAlunosDaTurma(novosAlunos)
@@ -147,6 +150,13 @@ export function TurmasClient({
                 </div>
                 <h3 className="font-bold text-[#12232b] text-lg">{t.nome}</h3>
                 <p className="text-sm text-[#82939a] mt-1">{t.serie} · {t.turno}</p>
+                
+                <div className="mt-4 border-t border-[#e5ecee] pt-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#536871]">Ocupação</span>
+                  <span className={`text-xs font-bold ${t.ocupacao_atual >= t.capacidade_maxima ? 'text-red-600' : 'text-[#0d9488]'}`}>
+                    {t.ocupacao_atual} / {t.capacidade_maxima} vagas
+                  </span>
+                </div>
               </Panel>
             ))}
           </div>
@@ -166,9 +176,15 @@ export function TurmasClient({
                   <label className="mb-1 block text-xs font-semibold text-[#536871]">Nome da Turma</label>
                   <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: 9º Ano A" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria)]" />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-[#536871]">Série (Base)</label>
-                  <input type="text" value={serie} onChange={e => setSerie(e.target.value)} placeholder="Ex: 9º Ano" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria)]" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#536871]">Série (Base)</label>
+                    <input type="text" value={serie} onChange={e => setSerie(e.target.value)} placeholder="Ex: 9º Ano" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria)]" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#536871]">Capacidade (Vagas)</label>
+                    <input type="number" value={capacidade} onChange={e => setCapacidade(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-[var(--cor-primaria)]" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -217,7 +233,6 @@ export function TurmasClient({
                   <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[var(--cor-primaria)]" /></div>
                 ) : abaDetalhe === 'alunos' ? (
                   <>
-                    {/* VINCULAR NOVO ALUNO */}
                     <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4">
                       <p className="text-xs font-bold text-[#536871] uppercase mb-2">Adicionar aluno à turma</p>
                       <div className="flex gap-2">
@@ -237,9 +252,8 @@ export function TurmasClient({
                       </div>
                     </div>
 
-                    {/* LISTA DE ALUNOS */}
                     <div>
-                      <h3 className="text-sm font-bold text-[#12232b] mb-2">Alunos na Turma ({alunosDaTurma.length})</h3>
+                      <h3 className="text-sm font-bold text-[#12232b] mb-2">Alunos na Turma ({alunosDaTurma.length} / {turmaSelecionada.capacidade_maxima})</h3>
                       <div className="border rounded-lg divide-y">
                         {alunosDaTurma.map(a => (
                           <div key={a.id} className="flex items-center justify-between p-3 hover:bg-[#fafcfc]">
@@ -256,7 +270,6 @@ export function TurmasClient({
                   </>
                 ) : (
                   <>
-                    {/* VINCULAR PROFESSOR */}
                     <div className="rounded-lg border border-[#e5ecee] bg-[#fafcfc] p-4 space-y-3">
                       <p className="text-xs font-bold text-[#536871] uppercase">Vincular Professor / Disciplina</p>
                       <div className="grid grid-cols-2 gap-3">
@@ -269,7 +282,6 @@ export function TurmasClient({
                       <button onClick={handleVincularProfessor} className="w-full bg-[var(--cor-primaria)] text-white py-2 rounded font-semibold text-sm">Vincular</button>
                     </div>
 
-                    {/* LISTA DE PROFESSORES */}
                     <div>
                       <h3 className="text-sm font-bold text-[#12232b] mb-2">Professores da Turma</h3>
                       <div className="border rounded-lg divide-y">

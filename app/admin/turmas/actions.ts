@@ -10,6 +10,8 @@ export type Turma = {
   serie: string
   turno: string
   ano_letivo: string
+  capacidade_maxima: number
+  ocupacao_atual: number
 }
 
 export type AlunoSimples = { id: string; nome: string; serie: string | null; turno: string | null; turma_id: string | null }
@@ -22,18 +24,35 @@ export async function getTurmas(): Promise<Turma[]> {
     if (!escola) return []
 
     const admin = createAdminClient()
-    const { data, error } = await admin
+    const { data: turmas, error } = await admin
       .from('turmas')
       .select('*')
       .eq('escola_id', escola.id)
       .order('nome', { ascending: true })
 
-    if (error) return []
-    return (data || []) as Turma[]
+    if (error || !turmas) return []
+
+    // Busca a ocupação de cada turma
+    const { data: alunos } = await admin
+      .from('alunos')
+      .select('turma_id')
+      .eq('escola_id', escola.id)
+      .eq('status', 'ativo')
+      .not('turma_id', 'is', null)
+
+    const ocupacaoMap: Record<string, number> = {}
+    ;(alunos || []).forEach(a => {
+      if (a.turma_id) ocupacaoMap[a.turma_id] = (ocupacaoMap[a.turma_id] || 0) + 1
+    })
+
+    return turmas.map(t => ({
+      ...t,
+      ocupacao_atual: ocupacaoMap[t.id] || 0
+    })) as Turma[]
   } catch (e) { return [] }
 }
 
-export async function criarTurma(data: { nome: string; serie: string; turno: string; ano_letivo: string }) {
+export async function criarTurma(data: { nome: string; serie: string; turno: string; ano_letivo: string; capacidade_maxima: number }) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
@@ -45,7 +64,8 @@ export async function criarTurma(data: { nome: string; serie: string; turno: str
       nome: data.nome,
       serie: data.serie,
       turno: data.turno,
-      ano_letivo: data.ano_letivo || '2026'
+      ano_letivo: data.ano_letivo || '2026',
+      capacidade_maxima: data.capacidade_maxima || 30
     })
 
     if (error) return { success: false, error: error.message }
@@ -54,6 +74,11 @@ export async function criarTurma(data: { nome: string; serie: string; turno: str
   } catch (e) { return { success: false, error: 'Erro ao criar turma.' } }
 }
 
+export async function getTurmasParaSelecao(): Promise<Turma[]> {
+  return getTurmas()
+}
+
+// ... (manter o resto do arquivo igual: getAlunosDaTurma, getAlunosSemTurma, vincularAluno, getProfessoresDaTurma, getProfessores, vincularProfessor, desvincularProfessor) ...
 export async function getAlunosDaTurma(turmaId: string): Promise<AlunoSimples[]> {
   try {
     const admin = createAdminClient()

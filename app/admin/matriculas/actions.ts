@@ -60,10 +60,7 @@ export async function getInscricoes(): Promise<Inscricao[]> {
       .eq('escola_id', escola.id)
       .order('criado_em', { ascending: false })
 
-    if (error) {
-      console.error('Erro ao buscar inscrições:', error)
-      return []
-    }
+    if (error) return []
 
     if (!data || data.length === 0) return []
 
@@ -88,19 +85,22 @@ export async function getInscricoes(): Promise<Inscricao[]> {
       }
     }) as Inscricao[]
   } catch (e) {
-    console.error('Erro inesperado:', e)
     return []
   }
 }
 
-export async function atualizarStatusInscricao(id: string, novoStatus: string, dataEntrevista?: string) {
+export async function atualizarStatusInscricao(
+  id: string, 
+  novoStatus: string, 
+  dataEntrevista?: string,
+  turmaId?: string
+) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const supabase = createAdminClient()
 
-    // 1. Buscar os dados da inscrição primeiro
     const { data: inscricaoAtual, error: fetchError } = await supabase
       .from('inscricoes')
       .select('*')
@@ -112,8 +112,11 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
       return { success: false, error: 'Inscrição não encontrada.' }
     }
 
-    // 2. Se for efetivar matrícula, validar limites e criar aluno ANTES de mudar o status
     if (novoStatus === 'matriculado') {
+      if (!turmaId) {
+        return { success: false, error: 'Selecione uma turma para matricular o aluno.' }
+      }
+
       const { data: existente } = await supabase
         .from('alunos')
         .select('id')
@@ -121,7 +124,7 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
         .maybeSingle()
 
       if (!existente) {
-        // TRAVA DE SEGURANÇA: LIMITE DE ALUNOS
+        // TRAVA DE SEGURANÇA: LIMITE DE ALUNOS (PLANO)
         const { data: escolaData } = await supabase.from('escolas').select('plano').eq('id', escola.id).single()
         const { data: plano } = await supabase.from('planos').select('max_alunos, teto_alunos_excedentes').eq('slug', escolaData?.plano || 'semente').single()
         
@@ -142,10 +145,31 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
           }
         }
 
-        // CRIA O ALUNO
+        // TRAVA DE SEGURANÇA: CAPACIDADE DA TURMA
+        const { data: turma } = await supabase
+          .from('turmas')
+          .select('capacidade_maxima')
+          .eq('id', turmaId)
+          .eq('escola_id', escola.id)
+          .single()
+
+        if (!turma) return { success: false, error: 'Turma não encontrada.' }
+
+        const { count: alunosNaTurma } = await supabase
+          .from('alunos')
+          .select('*', { count: 'exact', head: true })
+          .eq('turma_id', turmaId)
+          .eq('status', 'ativo')
+
+        if ((alunosNaTurma || 0) >= turma.capacidade_maxima) {
+          return { success: false, error: 'Esta turma já está lotada. Selecione outra turma.' }
+        }
+
+        // CRIA O ALUNO (VINCULADO À TURMA)
         const { error: erroAluno } = await supabase.from('alunos').insert({
           escola_id: escola.id,
           inscricao_id: inscricaoAtual.id,
+          turma_id: turmaId, // AQUI O VÍNCULO
           nome: inscricaoAtual.aluno_nome,
           data_nascimento: inscricaoAtual.aluno_data_nascimento,
           serie: inscricaoAtual.aluno_serie,
@@ -174,13 +198,11 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
         })
 
         if (erroAluno) {
-          console.error('Erro ao criar aluno:', erroAluno)
           return { success: false, error: 'Erro ao criar o aluno no banco de dados.' }
         }
       }
     }
 
-    // 3. Só agora atualiza o status da inscrição
     const payload: any = { status: novoStatus, atualizado_em: new Date().toISOString() }
     if (novoStatus === 'entrevista' && dataEntrevista) {
       payload.data_entrevista = dataEntrevista
@@ -198,7 +220,6 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
       return { success: false, error: error?.message || 'Erro ao atualizar status.' }
     }
 
-    // 4. Dispara e-mail
     try {
       await enviarSeAtivo({
         escolaId: escola.id,
@@ -213,11 +234,12 @@ export async function atualizarStatusInscricao(id: string, novoStatus: string, d
           }),
       })
     } catch (e) {
-      console.error('[email] Falha ao enviar, mas status foi atualizado:', e)
+      console.error('[email] Falha ao enviar:', e)
     }
 
     revalidatePath('/admin/matriculas')
     revalidatePath('/admin/alunos')
+    revalidatePath('/admin/turmas')
     revalidatePath('/responsavel')
     revalidatePath('/dashboard')
     return { success: true }
