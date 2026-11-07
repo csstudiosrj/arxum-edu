@@ -1,16 +1,21 @@
 import { createEvents } from 'ics'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: Request, { params }: { params: { slug: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    // No Next.js 16, os params são uma Promise e precisam de await
+    const { slug } = await context.params
     const admin = createAdminClient()
 
     // 1. Busca a escola pelo slug
     const { data: escola } = await admin
       .from('escolas')
       .select('id, nome')
-      .eq('slug', params.slug)
+      .eq('slug', slug)
       .maybeSingle()
 
     if (!escola) {
@@ -67,7 +72,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
     return new NextResponse(value, {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="agenda-${params.slug}.ics"`,
+        'Content-Disposition': `attachment; filename="agenda-${slug}.ics"`,
       },
     })
   } catch (e) {
