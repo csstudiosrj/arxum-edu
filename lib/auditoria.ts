@@ -29,6 +29,5 @@ export async function registrarLog(data: {
     })
   } catch (e) {
     console.error('Falha ao registrar log de auditoria:', e)
-    // Não lança erro para não quebrar a ação principal
   }
 }
