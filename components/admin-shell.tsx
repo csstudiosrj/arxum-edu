@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { 
-  AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, ChevronRight, 
-  CircleDollarSign, Database, FileSignature, FileText, Globe, GraduationCap, 
-  Headphones, HeartPulse, HelpCircle, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, 
-  Mail, Menu, Network, Palette, Plus, Search, Settings, ShieldCheck, SlidersHorizontal, 
-  Sparkles, TrendingUp, UploadCloud, UserCog, Users, WalletCards, X 
+  AlertCircle, BarChart3, Bell, BookOpen, Briefcase, Building2, Calendar, 
+  ChevronDown, ChevronRight, ChevronLeft, CircleDollarSign, Database, FileSignature, 
+  FileText, Globe, GraduationCap, Headphones, HeartPulse, HelpCircle, Image as ImageIcon, 
+  Inbox, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, Network, Palette, Plus, 
+  Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, 
+  UserCog, Users, WalletCards, X 
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
@@ -20,9 +21,11 @@ type AdminMode = 'school' | 'super'
 
 const COR_FALLBACK = '#0d9488'
 
+// Ícones adicionados e estrutura mantida
 const schoolMenuGroups = [
   {
     titulo: 'Gestão',
+    icone: Briefcase,
     items: [
       ['Visão geral', '/dashboard', LayoutDashboard],
       ['Relatórios', '/admin/relatorios', BarChart3],
@@ -35,6 +38,7 @@ const schoolMenuGroups = [
   },
   {
     titulo: 'Secretaria',
+    icone: FileText,
     items: [
       ['Matrículas', '/admin/matriculas', FileText],
       ['Alunos', '/admin/alunos', Users],
@@ -46,6 +50,7 @@ const schoolMenuGroups = [
   },
   {
     titulo: 'Pedagógico',
+    icone: GraduationCap,
     items: [
       ['Notas', '/admin/notas', TrendingUp],
       ['Ocorrências', '/admin/ocorrencias', AlertCircle],
@@ -57,6 +62,7 @@ const schoolMenuGroups = [
   },
   {
     titulo: 'Comunicação',
+    icone: MessageCircle,
     items: [
       ['Mensagens', '/admin/mensagens', Inbox],
       ['Comunicação', '/admin/comunicacao', Bell],
@@ -67,6 +73,7 @@ const schoolMenuGroups = [
   },
   {
     titulo: 'Site e Marca',
+    icone: Globe,
     items: [
       ['Site', '/admin/site', Globe],
       ['Personalização', '/admin/personalizacao', Palette],
@@ -77,6 +84,7 @@ const schoolMenuGroups = [
 const superMenuGroups = [
   {
     titulo: 'Administração',
+    icone: Briefcase,
     items: [
       ['Visão geral', '/super-admin', LayoutDashboard], 
       ['Escolas', '/super-admin/escolas', Building2],
@@ -88,6 +96,7 @@ const superMenuGroups = [
   },
   {
     titulo: 'Sistema',
+    icone: Settings,
     items: [
       ['Comunicação', '/super-admin/comunicacao', Mail],
       ['Suporte', '/super-admin/suporte', Headphones],
@@ -112,18 +121,24 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   const [corPrimaria, setCorPrimaria] = useState(COR_FALLBACK)
   const [nomeEscola, setNomeEscola] = useState('Carregando...')
   
-  // Estado para o menu do avatar
   const [menuAberto, setMenuAberto] = useState(false)
   const avatarRef = useRef<HTMLDivElement>(null)
 
-  // Estado para a sanfona do sidebar (inicia com o grupo do item ativo aberto)
   const menuGroups = mode === 'super' ? superMenuGroups : schoolMenuGroups
-  const grupoAtivo = menuGroups.find(g => g.items.some(i => i[0] === active))?.titulo
-  const [gruposAbertos, setGruposAbertos] = useState<string[]>(grupoAtivo ? [grupoAtivo] : ['Gestão'])
+  
+  // Encontra o grupo ativo atual
+  const grupoAtivoObj = menuGroups.find(g => g.items.some(i => i[0] === active))
+  const grupoAtivoNome = grupoAtivoObj?.titulo || ''
+  
+  // Encontra o primeiro item do grupo ativo para servir de link no breadcrumb
+  const primeiroItemDoGrupo = grupoAtivoObj?.items[0]
+
+  // Estado da sanfona inicia com o grupo ativo aberto
+  const [gruposAbertos, setGruposAbertos] = useState<string[]>(grupoAtivoNome ? [grupoAtivoNome] : ['Gestão'])
 
   const router = useRouter()
 
-  // Bugfix do Dropdown: Fecha ao clicar fora
+  // Fecha dropdown ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (avatarRef.current && !avatarRef.current.contains(event.target as Node)) {
@@ -183,7 +198,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 
   return <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]" style={cssVars}>
     
-    {/* SIDEBAR SANFONA */}
+    {/* SIDEBAR SANFONA MELHORADO */}
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#e5ecee] px-5">
         <ArxumBrand light={true} />
@@ -194,14 +209,20 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
       <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
         {menuGroups.map((group) => {
           const isAberto = gruposAbertos.includes(group.titulo)
+          const GroupIcon = group.icone
           return (
             <div key={group.titulo} className="mb-2">
               <button 
                 onClick={() => toggleGrupo(group.titulo)}
                 className="flex w-full items-center justify-between rounded-lg px-2 py-2 hover:bg-[#f1f5f6] transition"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#82939a]">{group.titulo}</span>
-                {isAberto ? <ChevronDown size={14} className="text-[#82939a]" /> : <ChevronRight size={14} className="text-[#82939a]" />}
+                <div className="flex items-center gap-2.5">
+                  <GroupIcon size={16} className={isAberto ? 'text-[#12232b]' : 'text-[#82939a]'} />
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isAberto ? 'text-[#12232b]' : 'text-[#536871]'}`}>
+                    {group.titulo}
+                  </span>
+                </div>
+                {isAberto ? <ChevronDown size={14} className="text-[#536871]" /> : <ChevronRight size={14} className="text-[#82939a]" />}
               </button>
               
               {isAberto && (
@@ -228,24 +249,35 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
       </div>
     </aside>
 
-    {/* CONTEÚDO PRINCIPAL */}
     <div className="flex min-h-screen flex-col lg:pl-[248px]">
       
-      {/* HEADER REFORMULADO */}
+      {/* HEADER COM BREADCRUMBS NAVEGÁVEIS */}
       <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
         
-        {/* Lado Esquerdo: Menu Mobile e Breadcrumbs */}
         <div className="flex items-center gap-4">
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
+          
+          {/* BREADCRUMBS NAVEGÁVEL */}
           <div className="hidden sm:flex items-center gap-2 text-sm">
-            <span className="text-[#82939a]">{grupoAtivo}</span>
-            <ChevronRight size={14} className="text-[#d5e0e3]" />
+            {grupoAtivoObj && (
+              <>
+                <Link 
+                  href={primeiroItemDoGrupo[1]} 
+                  className="flex items-center gap-1 text-[#82939a] hover:text-[var(--cor-primaria)] transition group"
+                  title={`Ir para ${primeiroItemDoGrupo[0]}`}
+                >
+                  <ChevronLeft size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
+                  {grupoAtivoNome}
+                </Link>
+                <ChevronRight size={14} className="text-[#d5e0e3]" />
+              </>
+            )}
             <span className="font-semibold text-[#12232b]">{active}</span>
           </div>
           <div className="sm:hidden text-sm font-semibold text-[#12232b]">{active}</div>
         </div>
         
-        {/* Centro: Busca Global e Ajuda */}
+        {/* BUSCA E AJUDA */}
         {mode === 'school' && (
           <div className="hidden flex-1 items-center justify-center gap-3 px-8 md:flex">
             <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-[#d5e0e3] bg-[#f6f8f9] px-3 py-2 text-sm text-[#9aaab0] transition focus-within:border-[var(--cor-primaria)] focus-within:bg-white">
@@ -258,7 +290,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
           </div>
         )}
 
-        {/* Lado Direito: Ações, Sino e Avatar */}
+        {/* AÇÕES E AVATAR */}
         <div className="flex items-center gap-3 sm:gap-4">
           {mode === 'school' && (
             <Link href="/admin/matriculas" className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[var(--cor-primaria)] px-3 py-2 text-xs font-semibold text-white hover:brightness-90 transition">
@@ -268,7 +300,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 
           {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <SinoSuperAdmin />}
           
-          {/* MENU DO AVATAR COM REF */}
           <div className="relative" ref={avatarRef}>
             <button
               onClick={() => setMenuAberto(!menuAberto)}
@@ -307,7 +338,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
         </div>
       </header>
 
-      {/* CONTEÚDO DA PÁGINA */}
       <div className="flex-1">
         {children}
       </div>
