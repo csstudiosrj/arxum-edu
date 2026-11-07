@@ -344,8 +344,9 @@ export function SectionHeading({ eyebrow, title, description }: { eyebrow?: stri
   )
 }
 
-export const Panel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <section className={`rounded-xl border border-[#dce5e8] bg-white ${className}`}>{children}</section>
+// AQUI ESTÁ A CORREÇÃO: Aceita todos os atributos de uma section (incluindo onClick)
+export const Panel = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLElement>) => (
+  <section className={`rounded-xl border border-[#dce5e8] bg-white ${className}`} {...props}>{children}</section>
 )
 
 export function ActionButton({ children, variant = 'primary' }: { children: React.ReactNode; variant?: 'primary' | 'secondary' | 'ghost' }) {
