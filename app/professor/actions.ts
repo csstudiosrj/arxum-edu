@@ -5,6 +5,8 @@ import { getProfessorDoUsuario } from '@/lib/auth/professor-atual'
 import { notificarNotaLancada, notificarOcorrencia } from '@/lib/emails/notificacoes'
 import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
+import { registrarLog } from '@/lib/auditoria'
+import { createClient } from '@/lib/supabase/server'
 
 export type AlunoResumo = {
   id: string
@@ -56,6 +58,13 @@ async function buscarAlunoValidado(alunoId: string, escolaId: string) {
     .maybeSingle()
 
   return aluno
+}
+
+// Helper para pegar o email do professor logado
+async function getEmailUsuario() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.email || 'desconhecido'
 }
 
 export async function getAlunosDoProfessor(): Promise<{ alunos: AlunoResumo[], configRecursos: any }> {
@@ -193,6 +202,18 @@ export async function lancarNotaProfessor(data: {
 
     if (error) return { success: false, error: error.message }
 
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: prof.escola_id,
+      usuario_email: email,
+      usuario_nome: prof.nome,
+      acao: 'LANCAR_NOTA',
+      entidade: 'notas',
+      entidade_id: aluno.id,
+      detalhes: { disciplina: data.disciplina, periodo: data.periodo, nota: data.nota }
+    })
+
     try {
       if (aluno.responsavel_email) {
         enviarSeAtivo({
@@ -230,6 +251,8 @@ export async function excluirNotaProfessor(id: string) {
     if (!prof) return { success: false, error: 'Sessão expirada.' }
 
     const admin = createAdminClient()
+    const { data: nota } = await admin.from('notas').select('aluno_nome, disciplina, periodo').eq('id', id).single()
+    
     const { error } = await admin
       .from('notas')
       .delete()
@@ -237,6 +260,18 @@ export async function excluirNotaProfessor(id: string) {
       .eq('escola_id', prof.escola_id)
 
     if (error) return { success: false, error: error.message }
+
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: prof.escola_id,
+      usuario_email: email,
+      usuario_nome: prof.nome,
+      acao: 'DELETAR_NOTA',
+      entidade: 'notas',
+      entidade_id: id,
+      detalhes: { aluno: nota?.aluno_nome, disciplina: nota?.disciplina, periodo: nota?.periodo }
+    })
 
     revalidatePath('/professor/notas')
     revalidatePath('/admin/notas')
@@ -269,7 +304,7 @@ export async function criarOcorrenciaProfessor(data: {
     if (!aluno) return { success: false, error: 'Aluno não encontrado nesta escola.' }
 
     const admin = createAdminClient()
-    const { error } = await admin.from('ocorrencias').insert({
+    const { data: nova, error } = await admin.from('ocorrencias').insert({
       escola_id: prof.escola_id,
       aluno_id: aluno.id,
       aluno_nome: aluno.nome,
@@ -280,9 +315,21 @@ export async function criarOcorrenciaProfessor(data: {
       descricao: data.descricao,
       providencias: data.providencias || null,
       autor_nome: prof.nome,
-    })
+    }).select('id').single()
 
     if (error) return { success: false, error: error.message }
+
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: prof.escola_id,
+      usuario_email: email,
+      usuario_nome: prof.nome,
+      acao: 'CRIAR_OCORRENCIA',
+      entidade: 'ocorrencias',
+      entidade_id: nova?.id,
+      detalhes: { aluno: aluno.nome, titulo: data.titulo, tipo: data.tipo }
+    })
 
     try {
       if (aluno.responsavel_email) {
@@ -344,6 +391,18 @@ export async function atualizarOcorrenciaProfessor(id: string, data: Partial<{
 
     if (error) return { success: false, error: error.message }
 
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: prof.escola_id,
+      usuario_email: email,
+      usuario_nome: prof.nome,
+      acao: 'EDITAR_OCORRENCIA',
+      entidade: 'ocorrencias',
+      entidade_id: id,
+      detalhes: data
+    })
+
     revalidatePath('/professor/ocorrencias')
     revalidatePath('/admin/ocorrencias')
     revalidatePath('/responsavel')
@@ -367,6 +426,18 @@ export async function excluirOcorrenciaProfessor(id: string) {
       .eq('autor_nome', prof.nome)
 
     if (error) return { success: false, error: error.message }
+
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: prof.escola_id,
+      usuario_email: email,
+      usuario_nome: prof.nome,
+      acao: 'DELETAR_OCORRENCIA',
+      entidade: 'ocorrencias',
+      entidade_id: id,
+      detalhes: {}
+    })
 
     revalidatePath('/professor/ocorrencias')
     revalidatePath('/admin/ocorrencias')

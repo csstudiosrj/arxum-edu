@@ -5,6 +5,8 @@ import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 import { criarPagamentoPix, criarPagamentoBoleto } from '@/lib/mercadopago'
+import { registrarLog } from '@/lib/auditoria'
+import { createClient } from '@/lib/supabase/server'
 
 export type Fatura = {
   id: string
@@ -35,6 +37,12 @@ export type RegraCobranca = {
   dias: number
   tipo: 'antes' | 'depois'
   ativo: boolean
+}
+
+async function getEmailUsuario() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.email || 'desconhecido'
 }
 
 export async function getFaturas(): Promise<Fatura[]> {
@@ -107,7 +115,6 @@ export async function salvarReguaCobranca(regras: RegraCobranca[]) {
       .eq('id', escola.id)
 
     if (error) return { success: false, error: error.message }
-
     revalidatePath('/admin/financeiro')
     return { success: true }
   } catch (e) {
@@ -155,6 +162,18 @@ export async function criarFatura(data: {
 
     if (error) return { success: false, error: error.message }
 
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: escola.id,
+      usuario_email: email,
+      usuario_nome: email.split('@')[0],
+      acao: 'CRIAR_FATURA',
+      entidade: 'faturas',
+      entidade_id: fatura?.id,
+      detalhes: { aluno: data.aluno_nome, valor: data.valor_centavos, vencimento: data.vencimento }
+    })
+
     revalidatePath('/admin/financeiro')
     return { success: true, faturaId: fatura.id }
   } catch (e) {
@@ -195,6 +214,18 @@ export async function gerarPixAdmin(faturaId: string) {
       metodo_pagamento: 'pix',
     }).eq('id', faturaId)
 
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: escola.id,
+      usuario_email: email,
+      usuario_nome: email.split('@')[0],
+      acao: 'GERAR_PIX',
+      entidade: 'faturas',
+      entidade_id: faturaId,
+      detalhes: { aluno: fatura.aluno_nome }
+    })
+
     revalidatePath('/admin/financeiro')
     return { success: true, pix: { copiaCola: pix.pixCopiaCola, qr: pix.pixQrImagem } }
   } catch (e) {
@@ -218,7 +249,6 @@ export async function enviarCobrancaEmail(faturaId: string, regraId?: string) {
 
     if (process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY)
-      
       let html = template.corpo_html
       let assunto = template.assunto
       
@@ -242,13 +272,26 @@ export async function enviarCobrancaEmail(faturaId: string, regraId?: string) {
         html: `<div style="font-family: sans-serif; color: #12232b; max-width: 600px; margin: 0 auto; border: 1px solid #e5ecee; border-radius: 12px; overflow: hidden;"><div style="background-color: #0d9488; padding: 24px; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">${escola.nome}</h1></div><div style="padding: 32px;">${html}</div></div>`
       })
 
-      // Se foi a régua automática, salva o ID da regra para não enviar de novo
       if (regraId) {
         const enviadas = fatura.cobrancas_enviadas || []
         await admin.from('faturas').update({
           cobrancas_enviadas: [...enviadas, regraId]
         }).eq('id', faturaId)
       }
+    }
+
+    // LOG DE AUDITORIA (apenas se for envio manual, para não poluir a régua automática)
+    if (!regraId) {
+      const email = await getEmailUsuario()
+      await registrarLog({
+        escola_id: escola.id,
+        usuario_email: email,
+        usuario_nome: email.split('@')[0],
+        acao: 'ENVIAR_COBRANCA',
+        entidade: 'faturas',
+        entidade_id: faturaId,
+        detalhes: { aluno: fatura.aluno_nome, valor: fatura.valor_centavos }
+      })
     }
 
     revalidatePath('/admin/financeiro')
@@ -264,6 +307,9 @@ export async function excluirFatura(id: string) {
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
 
     const admin = createAdminClient()
+    
+    const { data: fatura } = await admin.from('faturas').select('aluno_nome, valor_centavos').eq('id', id).single()
+
     const { error } = await admin
       .from('faturas')
       .delete()
@@ -271,6 +317,18 @@ export async function excluirFatura(id: string) {
       .eq('escola_id', escola.id)
 
     if (error) return { success: false, error: error.message }
+
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: escola.id,
+      usuario_email: email,
+      usuario_nome: email.split('@')[0],
+      acao: 'DELETAR_FATURA',
+      entidade: 'faturas',
+      entidade_id: id,
+      detalhes: { aluno: fatura?.aluno_nome, valor: fatura?.valor_centavos }
+    })
 
     revalidatePath('/admin/financeiro')
     return { success: true }

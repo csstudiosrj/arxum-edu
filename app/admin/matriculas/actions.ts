@@ -5,6 +5,8 @@ import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { enviarEmailStatusMatricula } from '@/lib/emails/status-matricula'
 import { enviarSeAtivo } from '@/lib/notificacoes-config-server'
 import { revalidatePath } from 'next/cache'
+import { registrarLog } from '@/lib/auditoria'
+import { createClient } from '@/lib/supabase/server'
 
 export type DocumentosMatricula = {
   rg_aluno?: { url: string; nome: string } | null
@@ -48,6 +50,12 @@ export type Inscricao = {
   autorizou_imagem: boolean | null
 }
 
+async function getEmailUsuario() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.email || 'desconhecido'
+}
+
 export async function getInscricoes(): Promise<Inscricao[]> {
   try {
     const escola = await getEscolaDoUsuario()
@@ -61,7 +69,6 @@ export async function getInscricoes(): Promise<Inscricao[]> {
       .order('criado_em', { ascending: false })
 
     if (error) return []
-
     if (!data || data.length === 0) return []
 
     const { data: consentimentos } = await supabase
@@ -124,7 +131,6 @@ export async function atualizarStatusInscricao(
         .maybeSingle()
 
       if (!existente) {
-        // TRAVA DE SEGURANÇA: LIMITE DE ALUNOS (PLANO)
         const { data: escolaData } = await supabase.from('escolas').select('plano').eq('id', escola.id).single()
         const { data: plano } = await supabase.from('planos').select('max_alunos, teto_alunos_excedentes').eq('slug', escolaData?.plano || 'semente').single()
         
@@ -145,7 +151,6 @@ export async function atualizarStatusInscricao(
           }
         }
 
-        // TRAVA DE SEGURANÇA: CAPACIDADE DA TURMA
         const { data: turma } = await supabase
           .from('turmas')
           .select('capacidade_maxima')
@@ -165,11 +170,10 @@ export async function atualizarStatusInscricao(
           return { success: false, error: 'Esta turma já está lotada. Selecione outra turma.' }
         }
 
-        // CRIA O ALUNO (VINCULADO À TURMA)
         const { error: erroAluno } = await supabase.from('alunos').insert({
           escola_id: escola.id,
           inscricao_id: inscricaoAtual.id,
-          turma_id: turmaId, // AQUI O VÍNCULO
+          turma_id: turmaId,
           nome: inscricaoAtual.aluno_nome,
           data_nascimento: inscricaoAtual.aluno_data_nascimento,
           serie: inscricaoAtual.aluno_serie,
@@ -219,6 +223,18 @@ export async function atualizarStatusInscricao(
     if (error || !inscricaoAtualizada) {
       return { success: false, error: error?.message || 'Erro ao atualizar status.' }
     }
+
+    // LOG DE AUDITORIA
+    const email = await getEmailUsuario()
+    await registrarLog({
+      escola_id: escola.id,
+      usuario_email: email,
+      usuario_nome: email.split('@')[0],
+      acao: 'ALTERAR_STATUS_MATRICULA',
+      entidade: 'matriculas',
+      entidade_id: id,
+      detalhes: { de: inscricaoAtual.status, para: novoStatus, turma_id: turmaId }
+    })
 
     try {
       await enviarSeAtivo({
