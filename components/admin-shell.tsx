@@ -2,7 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, CircleDollarSign, Database, FileSignature, FileText, Globe, GraduationCap, Headphones, HeartPulse, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, UserCog, Users, WalletCards, X, HelpCircle } from 'lucide-react'
+import { 
+  AlertCircle, BarChart3, Bell, BookOpen, Building2, Calendar, ChevronDown, 
+  CircleDollarSign, Database, FileSignature, FileText, Globe, GraduationCap, 
+  Headphones, HeartPulse, Image as ImageIcon, Inbox, LayoutDashboard, LogOut, 
+  Mail, Menu, Network, Palette, Settings, ShieldCheck, SlidersHorizontal, 
+  Sparkles, TrendingUp, UploadCloud, UserCog, Users, WalletCards, X, HelpCircle, Search, Plus
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
 import { SinoNotificacoesLoader } from '@/components/sino-notificacoes-loader'
@@ -14,39 +20,83 @@ type AdminMode = 'school' | 'super'
 
 const COR_FALLBACK = '#0d9488'
 
-const schoolItems = [
-  ['Visão geral', '/dashboard', LayoutDashboard], ['Relatórios', '/admin/relatorios', BarChart3],
-  ['Site', '/admin/site', Globe], ['Personalização', '/admin/personalizacao', Palette],
-  ['Unidades', '/admin/unidades', Network], ['Usuários', '/admin/usuarios', UserCog],
-  ['Matrículas', '/admin/matriculas', FileText], ['Formulários', '/admin/formularios', SlidersHorizontal],
-  ['Alunos', '/admin/alunos', Users], ['Professores', '/admin/professores', GraduationCap],
-  ['Recursos', '/admin/recursos', HeartPulse],
-  ['Notas', '/admin/notas', TrendingUp], ['Ocorrências', '/admin/ocorrencias', AlertCircle],
-  ['Termos', '/admin/termos', FileSignature],
-  ['Financeiro', '/admin/financeiro', WalletCards], ['Comunicação', '/admin/comunicacao', Bell],
-  ['Mensagens', '/admin/mensagens', Inbox], ['Agenda', '/admin/agenda', Calendar],
-  ['Autorizações', '/admin/autorizacoes', ShieldCheck], ['Galeria', '/admin/galeria', ImageIcon],
-  ['EduFlix', '/admin/eduflix', BookOpen], ['Sala virtual', '/admin/sala-virtual', BookOpen],
-  ['Loja', '/admin/loja', CircleDollarSign], 
-  ['Add-ons', '/admin/addons', Sparkles],
-  ['Importação', '/admin/importacao', UploadCloud],
-  ['Exportação', '/admin/exportacao', Database], 
-  ['Suporte', '/admin/suporte', Headphones],
-  ['Central de Ajuda', '/admin/ajuda', HelpCircle],
-  ['Configurações', '/admin/configuracoes', Settings],
+// Agrupamento do Sidebar para a Escola
+const schoolMenuGroups = [
+  {
+    titulo: 'Gestão',
+    items: [
+      ['Visão geral', '/dashboard', LayoutDashboard],
+      ['Relatórios', '/admin/relatorios', BarChart3],
+      ['Financeiro', '/admin/financeiro', WalletCards],
+      ['Loja', '/admin/loja', CircleDollarSign],
+      ['Add-ons', '/admin/addons', Sparkles],
+      ['Importação', '/admin/importacao', UploadCloud],
+      ['Exportação', '/admin/exportacao', Database],
+    ]
+  },
+  {
+    titulo: 'Secretaria',
+    items: [
+      ['Matrículas', '/admin/matriculas', FileText],
+      ['Alunos', '/admin/alunos', Users],
+      ['Professores', '/admin/professores', GraduationCap],
+      ['Usuários', '/admin/usuarios', UserCog],
+      ['Unidades', '/admin/unidades', Network],
+      ['Termos', '/admin/termos', FileSignature],
+    ]
+  },
+  {
+    titulo: 'Pedagógico',
+    items: [
+      ['Notas', '/admin/notas', TrendingUp],
+      ['Ocorrências', '/admin/ocorrencias', AlertCircle],
+      ['Recursos', '/admin/recursos', HeartPulse],
+      ['Formulários', '/admin/formularios', SlidersHorizontal],
+      ['Sala Virtual', '/admin/sala-virtual', BookOpen],
+      ['EduFlix', '/admin/eduflix', BookOpen],
+    ]
+  },
+  {
+    titulo: 'Comunicação',
+    items: [
+      ['Mensagens', '/admin/mensagens', Inbox],
+      ['Comunicação', '/admin/comunicacao', Bell],
+      ['Agenda', '/admin/agenda', Calendar],
+      ['Autorizações', '/admin/autorizacoes', ShieldCheck],
+      ['Galeria', '/admin/galeria', ImageIcon],
+    ]
+  },
+  {
+    titulo: 'Site e Marca',
+    items: [
+      ['Site', '/admin/site', Globe],
+      ['Personalização', '/admin/personalizacao', Palette],
+    ]
+  }
 ] as const
 
-const superItems = [
-  ['Visão geral', '/super-admin', LayoutDashboard], 
-  ['Escolas', '/super-admin/escolas', Building2],
-  ['Planos', '/super-admin/planos', WalletCards], 
-  ['Add-ons', '/super-admin/addons', Palette],
-  ['Financeiro', '/super-admin/financeiro', CircleDollarSign], 
-  ['Comunicação', '/super-admin/comunicacao', Mail],
-  ['Monetização', '/super-admin/monetizacao', TrendingUp],
-  ['Sistema', '/super-admin/sistema', Settings],
-  ['Suporte', '/super-admin/suporte', Headphones],
-  ['Métricas', '/super-admin/metricas', BarChart3],
+// Agrupamento do Sidebar para o Super Admin
+const superMenuGroups = [
+  {
+    titulo: 'Administração',
+    items: [
+      ['Visão geral', '/super-admin', LayoutDashboard], 
+      ['Escolas', '/super-admin/escolas', Building2],
+      ['Planos', '/super-admin/planos', WalletCards], 
+      ['Add-ons', '/super-admin/addons', Palette],
+      ['Financeiro', '/super-admin/financeiro', CircleDollarSign], 
+      ['Monetização', '/super-admin/monetizacao', TrendingUp],
+    ]
+  },
+  {
+    titulo: 'Sistema',
+    items: [
+      ['Comunicação', '/super-admin/comunicacao', Mail],
+      ['Suporte', '/super-admin/suporte', Headphones],
+      ['Métricas', '/super-admin/metricas', BarChart3],
+      ['Configurações', '/super-admin/sistema', Settings],
+    ]
+  }
 ] as const
 
 function iniciaisDe(nome: string): string {
@@ -67,7 +117,7 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   const [menuAberto, setMenuAberto] = useState(false)
   
   const router = useRouter()
-  const items = mode === 'super' ? superItems : schoolItems
+  const menuGroups = mode === 'super' ? superMenuGroups : schoolMenuGroups
 
   useEffect(() => {
     if (mode === 'super') {
@@ -110,35 +160,72 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
   const iniciais = nomeUsuario ? iniciaisDe(nomeUsuario) : '·'
 
   return <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]" style={cssVars}>
-    <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white px-4 py-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-      <div className="flex items-center justify-between px-2">
+    
+    {/* SIDEBAR */}
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#e5ecee] px-5">
         <ArxumBrand light={true} />
         {mode === 'super' && <span className="rounded-md bg-[#ccfbf1] px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-[#0f766e]">Admin</span>}
         <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
       </div>
-      <div className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {items.map(([label, href, Icon]) => {
-          const ativo = active === label
-          return (
-            <Link key={label} href={href} onClick={() => setOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`} style={ativo ? { backgroundColor: `${corPrimaria}1a`, color: corPrimaria } : undefined}>
-              <Icon className="size-[18px]" />{label}
-            </Link>
-          )
-        })}
-      </div>
-      <div className="border-t border-[#e5ecee] pt-4">
-        <button onClick={handleLogout} disabled={saindo} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#82939a] hover:bg-[#f1f5f6] disabled:opacity-50">
-          <LogOut className="size-[18px]" />{saindo ? 'Saindo...' : 'Sair'}
-        </button>
+      
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        {menuGroups.map((group, idx) => (
+          <div key={idx} className="mb-6">
+            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-[#82939a]">{group.titulo}</p>
+            <div className="flex flex-col gap-0.5">
+              {group.items.map(([label, href, Icon]) => {
+                const ativo = active === label
+                return (
+                  <Link 
+                    key={label} 
+                    href={href} 
+                    onClick={() => setOpen(false)} 
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${ativo ? '' : 'text-[#6b7d86] hover:bg-[#f1f5f6] hover:text-[#17252d]'}`} 
+                    style={ativo ? { backgroundColor: `${corPrimaria}1a`, color: corPrimaria } : undefined}
+                  >
+                    <Icon className="size-[18px]" />{label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </aside>
-    <div className="lg:pl-[248px]">
-      <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
-        <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
-        <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
-        <div className="ml-auto flex items-center gap-4">
+
+    {/* CONTEÚDO PRINCIPAL */}
+    <div className="flex min-h-screen flex-col lg:pl-[248px]">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
+        <div className="flex items-center gap-4">
+          <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
+          <div className="hidden text-sm font-semibold text-[#6b7d86] sm:block">{nomeEscola}</div>
+        </div>
+        
+        {/* ESPAÇO CENTRAL DO HEADER: Busca Global */}
+        {mode === 'school' && (
+          <div className="hidden flex-1 justify-center px-8 md:flex">
+            <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-[#d5e0e3] bg-[#f6f8f9] px-3 py-2 text-sm text-[#9aaab0] transition focus-within:border-[var(--cor-primaria)] focus-within:bg-white">
+              <Search className="size-4" />
+              <input type="text" placeholder="Buscar aluno, fatura ou turma..." className="w-full bg-transparent outline-none placeholder:text-[#a0afb4]" />
+              <kbd className="hidden rounded border border-[#d5e0e3] bg-white px-1.5 text-[10px] font-semibold text-[#82939a] sm:block">⌘K</kbd>
+            </div>
+          </div>
+        )}
+
+        {/* LADO DIREITO DO HEADER: Ações Rápidas, Sino e Avatar */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          {mode === 'school' && (
+            <Link href="/admin/matriculas" className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[var(--cor-primaria)] px-3 py-2 text-xs font-semibold text-white hover:brightness-90 transition">
+              <Plus className="size-3.5" /> Nova Matrícula
+            </Link>
+          )}
+
           {mode === 'school' ? <SinoNotificacoesLoader papel="admin" /> : <SinoSuperAdmin />}
           
+          {/* MENU DO AVATAR */}
           <div className="relative">
             <button
               onClick={() => setMenuAberto(!menuAberto)}
@@ -147,14 +234,35 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
             >
               {iniciais}
             </button>
+            
             {menuAberto && (
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setMenuAberto(false)} />
-                <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-xl border border-[#dce5e8] bg-white p-2 shadow-xl">
-                  <div className="border-b border-[#edf1f2] px-3 py-2 mb-1">
+                {/* OVERLAY INVISÍVEL PARA FECHAR AO CLICAR FORA (BUG FIX) */}
+                <div className="fixed inset-0 z-40 bg-black/5" onClick={() => setMenuAberto(false)} />
+                
+                <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-[#dce5e8] bg-white p-2 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="border-b border-[#edf1f2] px-3 py-3 mb-1">
                     <p className="truncate text-sm font-bold text-[#12232b]">{nomeUsuario}</p>
                     <p className="truncate text-xs text-[#82939a]">{emailUsuario}</p>
                   </div>
+                  
+                  {/* ITENS DE AJUDA E CONFIGURAÇÕES MOVIDOS PARA CÁ */}
+                  {mode === 'school' && (
+                    <>
+                      <Link href="/admin/configuracoes" onClick={() => setMenuAberto(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#536871] hover:bg-[#f1f5f6] transition">
+                        <Settings className="size-4" /> Configurações
+                      </Link>
+                      <Link href="/admin/ajuda" onClick={() => setMenuAberto(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#536871] hover:bg-[#f1f5f6] transition">
+                        <HelpCircle className="size-4" /> Central de Ajuda
+                      </Link>
+                      <Link href="/admin/suporte" onClick={() => setMenuAberto(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#536871] hover:bg-[#f1f5f6] transition">
+                        <Headphones className="size-4" /> Suporte ARXUM
+                      </Link>
+                    </>
+                  )}
+                  
+                  <div className="my-1 border-t border-[#edf1f2]" />
+                  
                   <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[#dc2626] hover:bg-[#fee2e2] transition">
                     <LogOut className="size-4" /> Sair da conta
                   </button>
@@ -164,7 +272,11 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
           </div>
         </div>
       </header>
-      {children}
+
+      {/* CONTEÚDO DA PÁGINA */}
+      <div className="flex-1">
+        {children}
+      </div>
     </div>
   </div>
 }
