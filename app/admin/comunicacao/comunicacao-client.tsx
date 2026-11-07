@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2 } from 'lucide-react'
+import { Plus, Bell, Eye, X, Trash2, AlertCircle, Send, Loader2, Mail } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { criarComunicado, excluirComunicado, type Comunicado } from './actions'
 
@@ -108,16 +109,24 @@ export function ComunicacaoClient({ comunicados, filtros }: { comunicados: Comun
           <SectionHeading
             eyebrow="Comunicação"
             title="Central de comunicação"
-            description="Envie comunicados para os responsáveis da escola."
+            description="Envie comunicados para os responsáveis ou dispare e-mails em massa."
           />
-          <button 
-            onClick={() => setNovoAberto(true)} 
-            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
-            style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
-          >
-            <Plus className="size-4" />
-            Novo comunicado
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link 
+              href="/admin/comunicacao/emails" 
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#b8c9ce] bg-white px-4 py-2 text-sm font-semibold text-[#30454e] transition hover:border-[var(--cor-primaria,#0d9488)]"
+            >
+              <Mail className="size-4" /> Disparar E-mails
+            </Link>
+            <button 
+              onClick={() => setNovoAberto(true)} 
+              className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90"
+              style={{ backgroundColor: 'var(--cor-primaria, #0d9488)' }}
+            >
+              <Plus className="size-4" />
+              Novo comunicado
+            </button>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
