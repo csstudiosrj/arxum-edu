@@ -27,6 +27,14 @@ export type Fatura = {
   pix_expira_em?: string | null
   boleto_linha?: string | null
   boleto_url?: string | null
+  cobrancas_enviadas?: string[] | null
+}
+
+export type RegraCobranca = {
+  id: string
+  dias: number
+  tipo: 'antes' | 'depois'
+  ativo: boolean
 }
 
 export async function getFaturas(): Promise<Fatura[]> {
@@ -68,6 +76,45 @@ export async function getAlunosParaFatura(): Promise<Array<{ id: string; nome: s
   }
 }
 
+export async function getConfiguracaoFinanceiro(): Promise<RegraCobranca[]> {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return []
+
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('escolas')
+      .select('config_financeiro')
+      .eq('id', escola.id)
+      .maybeSingle()
+
+    const regras = (data?.config_financeiro as RegraCobranca[]) || []
+    return regras
+  } catch (e) {
+    return []
+  }
+}
+
+export async function salvarReguaCobranca(regras: RegraCobranca[]) {
+  try {
+    const escola = await getEscolaDoUsuario()
+    if (!escola) return { success: false, error: 'Escola não encontrada.' }
+
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('escolas')
+      .update({ config_financeiro: regras })
+      .eq('id', escola.id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/admin/financeiro')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: 'Erro ao salvar.' }
+  }
+}
+
 export async function criarFatura(data: {
   aluno_id?: string
   aluno_nome: string
@@ -82,7 +129,6 @@ export async function criarFatura(data: {
 
     const admin = createAdminClient()
     
-    // Buscar o ID do aluno para vincular se não foi passado
     let finalAlunoId = data.aluno_id
     if (!finalAlunoId) {
       const { data: aluno } = await admin
@@ -103,7 +149,8 @@ export async function criarFatura(data: {
       descricao: data.descricao,
       valor_centavos: data.valor_centavos,
       vencimento: data.vencimento,
-      status: 'em_aberto'
+      status: 'em_aberto',
+      cobrancas_enviadas: []
     }).select('id').single()
 
     if (error) return { success: false, error: error.message }
@@ -155,7 +202,7 @@ export async function gerarPixAdmin(faturaId: string) {
   }
 }
 
-export async function enviarCobrancaEmail(faturaId: string) {
+export async function enviarCobrancaEmail(faturaId: string, regraId?: string) {
   try {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
@@ -166,7 +213,6 @@ export async function enviarCobrancaEmail(faturaId: string) {
 
     if (!fatura.responsavel_email) return { success: false, error: 'Responsável sem e-mail cadastrado.' }
 
-    // Busca o template de cobrança (usando o que já criamos no super admin)
     const { data: template } = await admin.from('email_templates').select('*').eq('slug', 'cobranca_manual').maybeSingle()
     if (!template) return { success: false, error: 'Template de cobrança não encontrado.' }
 
@@ -195,8 +241,17 @@ export async function enviarCobrancaEmail(faturaId: string) {
         subject: assunto,
         html: `<div style="font-family: sans-serif; color: #12232b; max-width: 600px; margin: 0 auto; border: 1px solid #e5ecee; border-radius: 12px; overflow: hidden;"><div style="background-color: #0d9488; padding: 24px; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">${escola.nome}</h1></div><div style="padding: 32px;">${html}</div></div>`
       })
+
+      // Se foi a régua automática, salva o ID da regra para não enviar de novo
+      if (regraId) {
+        const enviadas = fatura.cobrancas_enviadas || []
+        await admin.from('faturas').update({
+          cobrancas_enviadas: [...enviadas, regraId]
+        }).eq('id', faturaId)
+      }
     }
 
+    revalidatePath('/admin/financeiro')
     return { success: true }
   } catch (e) {
     return { success: false, error: 'Erro ao enviar e-mail.' }
