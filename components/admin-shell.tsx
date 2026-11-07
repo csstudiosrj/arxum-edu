@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronRight, ChevronLeft, CircleDollarSign, Database, FileSignature, 
   FileText, Globe, GraduationCap, Headphones, HeartPulse, HelpCircle, Image as ImageIcon, 
   Inbox, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, Network, Palette, Plus, 
-  Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, 
+  Search, Settings, ShieldCheck, ShieldAlert, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, 
   UserCog, Users, WalletCards, X, FileCheck
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -29,11 +29,12 @@ const schoolMenuGroups = [
       ['Visão geral', '/dashboard', LayoutDashboard],
       ['Relatórios', '/admin/relatorios', BarChart3],
       ['Financeiro', '/admin/financeiro', WalletCards],
-      ['Minha Assinatura', '/admin/assinatura', FileCheck], // NOVO
+      ['Minha Assinatura', '/admin/assinatura', FileCheck],
       ['Loja', '/admin/loja', CircleDollarSign],
       ['Add-ons', '/admin/addons', Sparkles],
       ['Importação', '/admin/importacao', UploadCloud],
       ['Exportação', '/admin/exportacao', Database],
+      ['Auditoria e LGPD', '/admin/auditoria', ShieldAlert],
     ]
   },
   {
@@ -43,7 +44,7 @@ const schoolMenuGroups = [
       ['Matrículas', '/admin/matriculas', FileText],
       ['Alunos', '/admin/alunos', Users],
       ['Professores', '/admin/professores', GraduationCap],
-      ['Turmas', '/admin/turmas', Network], // Adicionado Turmas aqui
+      ['Turmas', '/admin/turmas', Network],
       ['Usuários', '/admin/usuarios', UserCog],
       ['Unidades', '/admin/unidades', Network],
       ['Termos', '/admin/termos', FileSignature],
