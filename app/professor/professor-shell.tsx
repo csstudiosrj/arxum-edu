@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, MessageSquare, type LucideIcon,
+  AlertCircle, BookOpen, Home, LogOut, Menu, TrendingUp, Users, X, MessageSquare, ClipboardCheck, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArxumBrand, ByArxum } from '@/components/arxum-brand'
@@ -16,6 +16,7 @@ type MenuItem = readonly [string, string, LucideIcon]
 const menu: MenuItem[] = [
   ['Início', '/professor', Home],
   ['Sala virtual', '/professor/sala-virtual', BookOpen],
+  ['Chamada', '/professor/chamada', ClipboardCheck],
   ['Lançar notas', '/professor/notas', TrendingUp],
   ['Ocorrências', '/professor/ocorrencias', AlertCircle],
   ['Alunos', '/professor/alunos', Users],
