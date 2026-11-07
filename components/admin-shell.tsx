@@ -8,7 +8,7 @@ import {
   FileText, Globe, GraduationCap, Headphones, HeartPulse, HelpCircle, Image as ImageIcon, 
   Inbox, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, Network, Palette, Plus, 
   Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, UploadCloud, 
-  UserCog, Users, WalletCards, X 
+  UserCog, Users, WalletCards, X, FileCheck
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ArxumBrand } from '@/components/arxum-brand'
@@ -29,6 +29,7 @@ const schoolMenuGroups = [
       ['Visão geral', '/dashboard', LayoutDashboard],
       ['Relatórios', '/admin/relatorios', BarChart3],
       ['Financeiro', '/admin/financeiro', WalletCards],
+      ['Minha Assinatura', '/admin/assinatura', FileCheck], // NOVO
       ['Loja', '/admin/loja', CircleDollarSign],
       ['Add-ons', '/admin/addons', Sparkles],
       ['Importação', '/admin/importacao', UploadCloud],
@@ -42,6 +43,7 @@ const schoolMenuGroups = [
       ['Matrículas', '/admin/matriculas', FileText],
       ['Alunos', '/admin/alunos', Users],
       ['Professores', '/admin/professores', GraduationCap],
+      ['Turmas', '/admin/turmas', Network], // Adicionado Turmas aqui
       ['Usuários', '/admin/usuarios', UserCog],
       ['Unidades', '/admin/unidades', Network],
       ['Termos', '/admin/termos', FileSignature],
@@ -344,7 +346,6 @@ export function SectionHeading({ eyebrow, title, description }: { eyebrow?: stri
   )
 }
 
-// AQUI ESTÁ A CORREÇÃO: Aceita todos os atributos de uma section (incluindo onClick)
 export const Panel = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLElement>) => (
   <section className={`rounded-xl border border-[#dce5e8] bg-white ${className}`} {...props}>{children}</section>
 )
