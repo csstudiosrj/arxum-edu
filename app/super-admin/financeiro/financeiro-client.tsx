@@ -1,50 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Plus, Loader2, X, Copy, Check, Link as LinkIcon, RefreshCw, DollarSign, WalletCards, AlertCircle, TrendingUp, ArrowRight, CalendarClock, FileText } from 'lucide-react'
+import { 
+  TrendingUp, DollarSign, WalletCards, AlertCircle, ArrowRight, 
+  RefreshCw, Loader2, CheckCircle2, ShieldCheck, X, Link as LinkIcon, 
+  CalendarClock, FileText
+} from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { type MetricasFinanceiras, type EscolaFinanceiro } from '../actions'
 import { 
-  gerarCobrancaCheckout, 
-  sincronizarPagamentoManual, 
-  getDadosCobrancaEscola, 
-  getFaturasPorEscola,
-  getInfoAssinaturaEscola,
-  gerarAssinaturaRecorrente,
-  cancelarAssinaturaRecorrente,
-  getResumoTaxasPendentes,
-  gerarFaturaTaxas,
-  type ResumoTaxaEscola
+  getResumoTaxasPendentes, gerarFaturaTaxas, type ResumoTaxaEscola,
+  getFaturasPorEscola, getInfoAssinaturaEscola, 
+  gerarAssinaturaRecorrente, cancelarAssinaturaRecorrente,
+  sincronizarPagamentoManual, gerarCobrancaCheckout, getDadosCobrancaEscola
 } from './actions'
 
 export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFinanceiras, escolas: EscolaFinanceiro[] }) {
-  const searchParams = useSearchParams()
-  
-  // Navegação de Abas
   const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'taxas'>('dashboard')
-
-  const [novaAberta, setNovaAberta] = useState(false)
-  const [escolaDetalhe, setEscolaDetalhe] = useState<EscolaFinanceiro | null>(null)
-  const [processando, setProcessando] = useState(false)
-  const [sincronizando, setSincronizando] = useState<string | null>(null)
-  const [erro, setErro] = useState('')
-  const [linkGerado, setLinkGerado] = useState<string | null>(null)
-  const [copiou, setCopiou] = useState(false)
+  const [filtroHealth, setFiltroHealth] = useState<'todas' | 'bom' | 'atencao' | 'risco'>('todas')
   
-  // Form nova fatura
-  const [escolaId, setEscolaId] = useState('')
-  const [descricao, setDescricao] = useState('Assinatura ARXUM')
-  const [valorBase, setValorBase] = useState(0)
-  const [desconto, setDesconto] = useState('0')
-  const [referencia, setReferencia] = useState(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
-  const [carregandoValor, setCarregandoValor] = useState(false)
-
-  // Add-ons
-  const [addonsDisponiveis, setAddonsDisponiveis] = useState<Array<{slug: string, nome: string, preco_centavos: number}>>([])
-  const [addonsSelecionados, setAddonsSelecionados] = useState<string[]>([])
-
-  // Extrato e Assinatura
+  // Drawer da Escola
+  const [escolaDetalhe, setEscolaDetalhe] = useState<EscolaFinanceiro | null>(null)
   const [faturas, setFaturas] = useState<any[]>([])
   const [carregandoExtrato, setCarregandoExtrato] = useState(false)
   const [assinaturaInfo, setAssinaturaInfo] = useState<{mercadopago_preapproval_id: string | null, status_assinatura: string} | null>(null)
@@ -57,23 +33,36 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
   const [carregandoTaxas, setCarregandoTaxas] = useState(false)
   const [gerandoFaturaId, setGerandoFaturaId] = useState<string | null>(null)
 
+  // Cobrança Manual (Backup)
+  const [modalCobrancaAberto, setModalCobrancaAberto] = useState(false)
+  const [escolaIdCobranca, setEscolaIdCobranca] = useState('')
+  const [descricaoCobranca, setDescricaoCobranca] = useState('Cobrança Avulsa ARXUM')
+  const [valorBaseCobranca, setValorBaseCobranca] = useState(0)
+  const [linkGerado, setLinkGerado] = useState<string | null>(null)
+  const [processandoCobranca, setProcessandoCobranca] = useState(false)
+
   const formatarDinheiro = (centavos: number) => (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-  // Deep Link
-  useEffect(() => {
-    const escolaIdParam = searchParams.get('escolaId')
-    if (escolaIdParam) {
-      const escolaEncontrada = escolas.find(e => e.id === escolaIdParam)
-      if (escolaEncontrada) setEscolaDetalhe(escolaEncontrada)
-    }
-  }, [searchParams, escolas])
-
-  // Carrega dados das abas
   useEffect(() => {
     if (abaAtiva === 'taxas' && resumoTaxas.length === 0) {
       carregarTaxas()
     }
   }, [abaAtiva])
+
+  useEffect(() => {
+    if (escolaDetalhe) {
+      setCarregandoExtrato(true)
+      setErroDrawer('')
+      Promise.all([
+        getFaturasPorEscola(escolaDetalhe.id),
+        getInfoAssinaturaEscola(escolaDetalhe.id)
+      ]).then(([faturasData, assinaturaData]) => {
+        setFaturas(faturasData)
+        setAssinaturaInfo(assinaturaData)
+        setCarregandoExtrato(false)
+      })
+    }
+  }, [escolaDetalhe])
 
   async function carregarTaxas() {
     setCarregandoTaxas(true)
@@ -94,75 +83,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
     } else {
       alert(r.error)
     }
-  }
-
-  useEffect(() => {
-    if (escolaId) {
-      setCarregandoValor(true)
-      getDadosCobrancaEscola(escolaId).then(r => {
-        if (r.success && r.valorBaseCentavos !== undefined) {
-          setValorBase(r.valorBaseCentavos)
-          setAddonsDisponiveis(r.addons || [])
-          setAddonsSelecionados((r.addons || []).map(a => a.slug))
-        } else {
-          setErro(r.error || 'Erro ao buscar valor.')
-        }
-        setCarregandoValor(false)
-      })
-    } else {
-      setValorBase(0)
-      setAddonsDisponiveis([])
-      setAddonsSelecionados([])
-    }
-  }, [escolaId])
-
-  useEffect(() => {
-    if (escolaDetalhe) {
-      setCarregandoExtrato(true)
-      setErroDrawer('')
-      Promise.all([
-        getFaturasPorEscola(escolaDetalhe.id),
-        getInfoAssinaturaEscola(escolaDetalhe.id)
-      ]).then(([faturasData, assinaturaData]) => {
-        setFaturas(faturasData)
-        setAssinaturaInfo(assinaturaData)
-        setCarregandoExtrato(false)
-      })
-    }
-  }, [escolaDetalhe])
-
-  async function handleGerarCobranca() {
-    if (!escolaId || valorBase === 0) return setErro('Selecione uma escola com plano válido.')
-    setProcessando(true)
-    setErro('')
-    
-    const descCentavos = Math.round(parseFloat(desconto.replace(',', '.')) * 100) || 0
-
-    const r = await gerarCobrancaCheckout(escolaId, descCentavos, addonsSelecionados, descricao, referencia)
-    
-    setProcessando(false)
-    if (!r.success) return setErro(r.error || 'Erro.')
-    
-    setLinkGerado(r.link || null)
-    navigator.clipboard.writeText(r.link || '')
-    setCopiou(true)
-    setTimeout(() => setCopiou(false), 3000)
-  }
-
-  function abrirNovaCobranca(escola?: EscolaFinanceiro) {
-    if (escola) setEscolaId(escola.id)
-    else setEscolaId('')
-    setDesconto('0')
-    setLinkGerado(null)
-    setErro('')
-    setNovaAberta(true)
-  }
-
-  async function handleSincronizar(faturaId: string) {
-    setSincronizando(faturaId)
-    await sincronizarPagamentoManual(faturaId)
-    setSincronizando(null)
-    window.location.reload()
   }
 
   async function handleGerarAssinatura() {
@@ -198,41 +118,66 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
     }
   }
 
-  const valorBaseCentavos = valorBase
-  const descontoCentavos = Math.round(parseFloat(desconto.replace(',', '.')) * 100) || 0
-  
-  const somaAddonsCentavos = addonsSelecionados.reduce((acc, slug) => {
-    const addon = addonsDisponiveis.find(a => a.slug === slug)
-    return acc + (addon?.preco_centavos || 0)
-  }, 0)
+  async function handleSincronizar(faturaId: string) {
+    if (!confirm('Sincronizar pagamento manualmente?')) return
+    const r = await sincronizarPagamentoManual(faturaId)
+    if (r.success) window.location.reload()
+    else alert(r.error)
+  }
 
-  const valorFinal = valorBaseCentavos + somaAddonsCentavos - descontoCentavos
+  async function handleCobrancaManual() {
+    if (!escolaIdCobranca) return alert('Selecione a escola.')
+    setProcessandoCobranca(true)
+    
+    // Se não tiver valor base, busca automático (fallback)
+    let valorFinal = valorBaseCobranca
+    if (valorFinal === 0) {
+      const rDados = await getDadosCobrancaEscola(escolaIdCobranca)
+      if (rDados.success) valorFinal = rDados.valorBaseCentavos || 0
+    }
+
+    if (valorFinal === 0) {
+      setProcessandoCobranca(false)
+      return alert('Não foi possível calcular o valor base. Informe o valor manualmente.')
+    }
+
+    const r = await gerarCobrancaCheckout(escolaIdCobranca, 0, [], descricaoCobranca, new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
+    setProcessandoCobranca(false)
+
+    if (r.success && r.link) {
+      setLinkGerado(r.link)
+      navigator.clipboard.writeText(r.link)
+    } else {
+      alert(r.error || 'Erro ao gerar cobrança.')
+    }
+  }
+
+  const escolasFiltradas = escolas.filter(e => filtroHealth === 'todas' || e.health_score === filtroHealth)
 
   return (
     <AdminShell mode="super" active="Financeiro">
       <main className="px-5 py-8 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <SectionHeading eyebrow="ARXUM Admin" title="Inteligência Financeira" description="Gestão de LTV, inadimplência e saúde das escolas." />
-          <button onClick={() => abrirNovaCobranca()} className="bg-[#0d9488] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-[#0f766e]">
-            <Plus className="size-4" /> Nova cobrança avulsa
+          <SectionHeading eyebrow="ARXUM Admin" title="Inteligência Financeira" description="Acompanhe o MRR, a saúde das escolas e as taxas de intermediação." />
+          <button onClick={() => setModalCobrancaAberto(true)} className="text-xs font-semibold text-[#82939a] hover:text-[#12232b] underline underline-offset-4">
+            Cobrança Avulsa (Backup)
           </button>
         </div>
 
-        {/* ABAS */}
         <div className="mt-8 flex gap-1 border-b border-[#e5ecee]">
-          <button onClick={() => setAbaAtiva('dashboard')} className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${abaAtiva === 'dashboard' ? 'border-[#0d9488] text-[#0d9488]' : 'border-transparent text-[#6b7d86] hover:text-[#12232b]'}`}>
-            Visão Geral
-          </button>
+          <button onClick={() => setAbaAtiva('dashboard')} className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${abaAtiva === 'dashboard' ? 'border-[#0d9488] text-[#0d9488]' : 'border-transparent text-[#6b7d86] hover:text-[#12232b]'}`}>Visão Geral</button>
           <button onClick={() => setAbaAtiva('taxas')} className={`px-4 py-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${abaAtiva === 'taxas' ? 'border-[#0d9488] text-[#0d9488]' : 'border-transparent text-[#6b7d86] hover:text-[#12232b]'}`}>
-            <FileText className="size-4" /> Taxas e Repasses
+            <FileText className="size-4" /> Taxas e Repasses (Lojas)
           </button>
         </div>
 
-        {/* CONTEÚDO: DASHBOARD */}
         {abaAtiva === 'dashboard' && (
           <>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Panel className="p-5">
+              <Panel 
+                onClick={() => setFiltroHealth('todas')}
+                className={`p-5 cursor-pointer transition ${filtroHealth === 'todas' ? 'ring-2 ring-[#0d9488] border-transparent' : ''}`}
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="grid size-8 place-items-center rounded-lg bg-[#d1fae5] text-[#065f46]"><TrendingUp className="size-4" /></div>
                   <p className="text-xs font-semibold uppercase text-[#6b7d86]">MRR (Mensal)</p>
@@ -240,6 +185,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                 <p className="text-2xl font-bold text-[#065f46]">{formatarDinheiro(metricas.mrrCentavos)}</p>
                 <p className="mt-1 text-xs text-[#82939a]">ARR: {formatarDinheiro(metricas.arrCentavos)}</p>
               </Panel>
+              
               <Panel className="p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="grid size-8 place-items-center rounded-lg bg-[#dbeafe] text-[#1e40af]"><DollarSign className="size-4" /></div>
@@ -247,32 +193,40 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                 </div>
                 <p className="text-2xl font-bold text-[#1e40af]">{formatarDinheiro(metricas.totalRecebido)}</p>
               </Panel>
+              
               <Panel className="p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="grid size-8 place-items-center rounded-lg bg-[#fef3c7] text-[#92400e]"><WalletCards className="size-4" /></div>
-                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Em Aberto</p>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Faturas em Aberto</p>
                 </div>
                 <p className="text-2xl font-bold text-[#92400e]">{formatarDinheiro(metricas.totalEmAberto)}</p>
               </Panel>
-              <Panel className="p-5">
+              
+              <Panel 
+                onClick={() => setFiltroHealth('risco')}
+                className={`p-5 cursor-pointer transition hover:border-[#991b1b] ${filtroHealth === 'risco' ? 'ring-2 ring-[#991b1b] border-transparent' : ''}`}
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="grid size-8 place-items-center rounded-lg bg-[#fee2e2] text-[#991b1b]"><AlertCircle className="size-4" /></div>
-                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Vencido</p>
+                  <p className="text-xs font-semibold uppercase text-[#6b7d86]">Escolas em Risco</p>
                 </div>
-                <p className="text-2xl font-bold text-[#991b1b]">{formatarDinheiro(metricas.totalVencido)}</p>
+                <p className="text-2xl font-bold text-[#991b1b]">{escolas.filter(e => e.health_score === 'risco').length}</p>
               </Panel>
             </div>
 
             <Panel className="mt-8">
               <div className="border-b border-[#e5ecee] px-5 py-4 flex justify-between items-center">
                  <h2 className="text-base font-bold text-[#12232b]">Saúde Financeira das Escolas</h2>
+                 {filtroHealth !== 'todas' && (
+                   <button onClick={() => setFiltroHealth('todas')} className="text-xs text-[#0d9488] hover:underline font-semibold flex items-center gap-1"><X size={12}/> Limpar filtro</button>
+                 )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Escola</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Plano</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Assinatura</th>
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">LTV (Gerado)</th>
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Atraso Médio</th>
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Health Score</th>
@@ -280,10 +234,15 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                     </tr>
                   </thead>
                   <tbody>
-                    {escolas.map(e => (
-                      <tr key={e.id} className="border-b border-[#f0f4f5]">
+                    {escolasFiltradas.map(e => (
+                      <tr key={e.id} className="border-b border-[#f0f4f5] hover:bg-[#fafcfc] transition">
                         <td className="px-5 py-3.5 text-sm font-semibold text-[#243942]">{e.nome}</td>
-                        <td className="px-5 py-3.5 text-sm capitalize text-[#4d626c]">{e.plano}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${e.status_assinatura === 'ativa' ? 'bg-[#d1fae5] text-[#065f46]' : e.status_assinatura === 'trial' ? 'bg-[#dbeafe] text-[#1e40af]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
+                            {e.status_assinatura === 'ativa' ? <CheckCircle2 size={12}/> : e.status_assinatura === 'trial' ? <CalendarClock size={12}/> : <AlertCircle size={12}/>}
+                            {e.status_assinatura.toUpperCase()}
+                          </span>
+                        </td>
                         <td className="px-5 py-3.5 text-sm font-semibold text-[#0d9488]">{formatarDinheiro(e.ltvCentavos)}</td>
                         <td className="px-5 py-3.5 text-sm text-[#82939a]">{e.media_dias_atraso} dias</td>
                         <td className="px-5 py-3.5">
@@ -292,9 +251,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-right flex justify-end gap-2">
-                          <button onClick={() => abrirNovaCobranca(e)} className="text-xs bg-[#0d9488] text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-[#0f766e]">
-                            Cobrar
-                          </button>
                           <button onClick={() => setEscolaDetalhe(e)} className="text-xs border border-[#b8c9ce] text-[#30454e] px-3 py-1.5 rounded-lg font-semibold hover:border-[#0d9488] flex items-center gap-1">
                             Extrato <ArrowRight className="size-3" />
                           </button>
@@ -308,7 +264,6 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
           </>
         )}
 
-        {/* CONTEÚDO: TAXAS E REPASSES */}
         {abaAtiva === 'taxas' && (
           <Panel className="mt-6">
             <div className="border-b border-[#e5ecee] px-5 py-4 flex justify-between items-center">
@@ -335,7 +290,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                   <thead>
                     <tr className="border-b border-[#e5ecee] bg-[#fafcfc]">
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Escola</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Taxas (Loja/Mensalidade)</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Taxas (Loja)</th>
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Add-ons</th>
                       <th className="px-5 py-3 text-left text-[10px] font-bold uppercase text-[#6b7d86]">Total a Faturar</th>
                       <th className="px-5 py-3 text-right text-[10px] font-bold uppercase text-[#6b7d86]">Ações</th>
@@ -369,136 +324,7 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
             )}
           </Panel>
         )}
-
       </main>
-
-      {/* MODAL NOVA COBRANÇA */}
-      {novaAberta && !linkGerado && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-          <aside className="bg-white w-full max-w-md h-full p-6 relative shadow-2xl overflow-y-auto">
-            <button onClick={() => setNovaAberta(false)} className="absolute right-4 top-4 text-gray-500 hover:text-gray-800"><X /></button>
-            <h2 className="text-xl font-bold mb-1">Gerar Link de Pagamento</h2>
-            <p className="text-sm text-gray-500 mb-6">O cliente poderá pagar via PIX, Boleto ou Cartão.</p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold mb-1 block">Escola</label>
-                <select value={escolaId} onChange={e => setEscolaId(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]">
-                  <option value="">Selecione a escola...</option>
-                  {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold mb-1 block">Descrição da Cobrança</label>
-                <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold mb-1 block">Valor Base (Travado)</label>
-                <div className="w-full border p-2 rounded bg-gray-100 text-gray-600 font-semibold flex items-center justify-between">
-                  {carregandoValor ? <Loader2 className="animate-spin size-4" /> : formatarDinheiro(valorBaseCentavos)}
-                  <span className="text-[10px] uppercase text-gray-400">Plano</span>
-                </div>
-              </div>
-
-              {addonsDisponiveis.length > 0 && (
-                <div className="border border-[#e5ecee] p-3 rounded-lg bg-[#fafcfc]">
-                  <label className="text-xs font-bold mb-2 block text-[#12232b]">Add-ons Ativos da Escola</label>
-                  <div className="space-y-2">
-                    {addonsDisponiveis.map(addon => (
-                      <label key={addon.slug} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={addonsSelecionados.includes(addon.slug)}
-                          onChange={(e) => {
-                            if (e.target.checked) setAddonsSelecionados([...addonsSelecionados, addon.slug])
-                            else setAddonsSelecionados(addonsSelecionados.filter(s => s !== addon.slug))
-                          }}
-                          className="rounded text-[#0d9488] focus:ring-[#0d9488]" 
-                        />
-                        <span className="flex-1 text-[#243942]">{addon.nome}</span>
-                        <span className="font-semibold text-[#0d9488]">+ {formatarDinheiro(addon.preco_centavos)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-bold mb-1 block text-red-600">Desconto (R$)</label>
-                <input type="text" value={desconto} onChange={e => setDesconto(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
-              </div>
-
-              <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-4 rounded-lg mt-2">
-                <div className="flex justify-between items-center text-sm mb-1">
-                  <span className="text-gray-600">Valor Base:</span>
-                  <span>{formatarDinheiro(valorBaseCentavos)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm mb-1 text-green-600">
-                  <span>Add-ons:</span>
-                  <span>+ {formatarDinheiro(somaAddonsCentavos)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm mb-2 text-red-600">
-                  <span>Desconto:</span>
-                  <span>- {formatarDinheiro(descontoCentavos)}</span>
-                </div>
-                <div className="flex justify-between items-center font-bold text-lg border-t border-[#ccfbf1] pt-2 text-[#0f766e]">
-                  <span>Total a Pagar:</span>
-                  <span>{formatarDinheiro(valorFinal > 0 ? valorFinal : 0)}</span>
-                </div>
-              </div>
-
-              <div>
-                  <label className="text-xs font-bold mb-1 block">Referência (Mês/Ano)</label>
-                  <input type="text" value={referencia} onChange={e => setReferencia(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
-              </div>
-
-              {erro && <p className="text-red-500 text-sm">{erro}</p>}
-              
-              <button onClick={handleGerarCobranca} disabled={processando || valorFinal <= 0} className="w-full bg-[#0d9488] text-white py-3 rounded-lg font-bold flex justify-center hover:bg-[#0f766e] mt-4 disabled:opacity-50">
-                {processando ? <Loader2 className="animate-spin" /> : 'Gerar Link no Mercado Pago'}
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* MODAL LINK GERADO */}
-      {linkGerado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full relative text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-green-100 text-green-600 mb-4">
-              <Check className="size-6" />
-            </div>
-            <h3 className="font-bold text-lg mb-2">Link de Pagamento Pronto!</h3>
-            <p className="text-sm text-gray-500 mb-4">Copie o link e envie para a escola.</p>
-            <div className="flex gap-2">
-              <input readOnly value={linkGerado} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded text-gray-500" />
-              <button onClick={() => navigator.clipboard.writeText(linkGerado)} className="bg-[#0d9488] text-white px-3 py-2 rounded hover:bg-[#0f766e] font-bold text-sm">Copiar</button>
-            </div>
-            <button onClick={() => { setLinkGerado(null); setNovaAberta(false); window.location.reload(); }} className="mt-6 w-full border py-2 rounded font-bold text-gray-700 hover:bg-gray-50">Fechar</button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL LINK DE ASSINATURA */}
-      {linkAssinatura && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full relative text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-[#f0fdfa] text-[#0d9488] mb-4">
-              <CalendarClock className="size-6" />
-            </div>
-            <h3 className="font-bold text-lg mb-2">Link de Assinatura Gerado!</h3>
-            <p className="text-sm text-gray-500 mb-4">Envie este link para a escola autorizar a cobrança automática via Cartão ou PIX.</p>
-            <div className="flex gap-2">
-              <input readOnly value={linkAssinatura} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded text-gray-500" />
-              <button onClick={() => navigator.clipboard.writeText(linkAssinatura)} className="bg-[#0d9488] text-white px-3 py-2 rounded hover:bg-[#0f766e] font-bold text-sm">Copiar</button>
-            </div>
-            <button onClick={() => setLinkAssinatura(null)} className="mt-6 w-full border py-2 rounded font-bold text-gray-700 hover:bg-gray-50">Fechar</button>
-          </div>
-        </div>
-      )}
 
       {/* DRAWER EXTRATO DA ESCOLA */}
       {escolaDetalhe && (
@@ -559,8 +385,8 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
                             {f.status}
                           </span>
                           {f.status !== 'pago' && (
-                            <button onClick={() => handleSincronizar(f.id)} disabled={sincronizando === f.id} className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 font-semibold disabled:opacity-50">
-                              {sincronizando === f.id ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} Sincronizar (Manual)
+                            <button onClick={() => handleSincronizar(f.id)} className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 font-semibold">
+                              <RefreshCw className="size-3" /> Sincronizar
                             </button>
                           )}
                         </div>
@@ -571,6 +397,52 @@ export function FinanceiroClient({ metricas, escolas }: { metricas: MetricasFina
               )}
             </div>
           </aside>
+        </div>
+      )}
+
+      {/* MODAL COBRANÇA MANUAL (BACKUP) */}
+      {modalCobrancaAberto && !linkGerado && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+          <aside className="bg-white w-full max-w-md h-full p-6 relative shadow-2xl overflow-y-auto">
+            <button onClick={() => setModalCobrancaAberto(false)} className="absolute right-4 top-4 text-gray-500 hover:text-gray-800"><X /></button>
+            <h2 className="text-xl font-bold mb-1">Cobrança Avulsa</h2>
+            <p className="text-sm text-gray-500 mb-6">Use esta tela APENAS se o Mercado Pago falhar.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold mb-1 block">Escola</label>
+                <select value={escolaIdCobranca} onChange={e => setEscolaIdCobranca(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]">
+                  <option value="">Selecione a escola...</option>
+                  {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold mb-1 block">Descrição</label>
+                <input type="text" value={descricaoCobranca} onChange={e => setDescricaoCobranca(e.target.value)} className="w-full border p-2 rounded outline-none focus:border-[#0d9488]" />
+              </div>
+
+              <button onClick={handleCobrancaManual} disabled={processandoCobranca || !escolaIdCobranca} className="w-full bg-[#0d9488] text-white py-3 rounded-lg font-bold flex justify-center hover:bg-[#0f766e] mt-4 disabled:opacity-50">
+                {processandoCobranca ? <Loader2 className="animate-spin" /> : 'Gerar Link no Mercado Pago'}
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* MODAL LINK GERADO */}
+      {linkGerado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full relative text-center">
+            <div className="mx-auto grid size-12 place-items-center rounded-full bg-green-100 text-green-600 mb-4"><CheckCircle2 className="size-6" /></div>
+            <h3 className="font-bold text-lg mb-2">Link de Pagamento Pronto!</h3>
+            <p className="text-sm text-gray-500 mb-4">Copie o link e envie para a escola.</p>
+            <div className="flex gap-2">
+              <input readOnly value={linkGerado} className="flex-1 border p-2 text-xs truncate bg-gray-50 rounded text-gray-500" />
+              <button onClick={() => navigator.clipboard.writeText(linkGerado)} className="bg-[#0d9488] text-white px-3 py-2 rounded hover:bg-[#0f766e] font-bold text-sm">Copiar</button>
+            </div>
+            <button onClick={() => { setLinkGerado(null); setModalCobrancaAberto(false); }} className="mt-6 w-full border py-2 rounded font-bold text-gray-700 hover:bg-gray-50">Fechar</button>
+          </div>
         </div>
       )}
     </AdminShell>

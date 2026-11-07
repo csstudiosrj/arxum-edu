@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CreditCard, CheckCircle2, Clock, AlertCircle, Download, ExternalLink, Loader2, Sparkles, ShieldCheck } from 'lucide-react'
+import { CreditCard, CheckCircle2, Clock, AlertCircle, Download, ExternalLink, Loader2, Sparkles, ShieldCheck, CalendarClock } from 'lucide-react'
 import { AdminShell, SectionHeading, Panel } from '@/components/admin-shell'
 import { gerarPagamentoArxum, type FaturaArxum } from './actions'
 
@@ -26,11 +26,13 @@ const statusLabels: Record<string, string> = {
 }
 
 export function AssinaturaClient({ 
-  faturas, planoAtual, addonsAtivos 
+  faturas, planoAtual, addonsAtivos, statusAssinatura, mercadopagoPreapprovalId
 }: { 
   faturas: FaturaArxum[], 
   planoAtual: string,
-  addonsAtivos: any[]
+  addonsAtivos: any[],
+  statusAssinatura: string,
+  mercadopagoPreapprovalId: string | null
 }) {
   const [processando, setProcessando] = useState<string | null>(null)
 
@@ -55,20 +57,30 @@ export function AssinaturaClient({
         <SectionHeading
           eyebrow="Financeiro"
           title="Minha Assinatura ARXUM"
-          description="Gerencie seu plano, add-ons e faturas da plataforma."
+          description="Acompanhe seu plano, add-ons e faturas da plataforma."
         />
 
         {/* Resumo do Plano Atual */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Panel className="p-6 bg-gradient-to-br from-[#173b4a] to-[#0d2833] text-white border-none">
-            <div className="flex items-start justify-between">
+          <Panel className="p-6 bg-gradient-to-br from-[#173b4a] to-[#0d2833] text-white border-none relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 size-40 rounded-full bg-[#0d9488] opacity-20 blur-3xl"></div>
+            <div className="flex items-start justify-between relative z-10">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[#8aa0ad]">Seu Plano Atual</p>
                 <h2 className="text-2xl font-bold mt-1 capitalize">{planoAtual}</h2>
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">
+                  {statusAssinatura === 'ativa' ? <><CheckCircle2 size={12} className="text-[#0d9488]"/> Assinatura Ativa</> : 
+                   statusAssinatura === 'trial' ? <><CalendarClock size={12} className="text-blue-400"/> Período de Teste</> : 
+                   <><AlertCircle size={12} className="text-red-400"/> Pagamento Pendente</>}
+                </div>
               </div>
               <div className="grid size-10 place-items-center rounded-lg bg-white/10"><Sparkles size={20} className="text-[#0d9488]"/></div>
             </div>
-            <p className="mt-4 text-sm text-[#8aa0ad]">Para alterar seu plano, entre em contato com nosso suporte ou acesse a aba de Add-ons.</p>
+            {mercadopagoPreapprovalId ? (
+              <p className="mt-4 text-xs text-[#8aa0ad] relative z-10">Sua cobrança é automática via Mercado Pago. Não é necessário pagar manualmente.</p>
+            ) : (
+              <p className="mt-4 text-xs text-[#8aa0ad] relative z-10">Sua cobrança é gerada todo mês. Você receberá a fatura para pagamento.</p>
+            )}
           </Panel>
 
           <Panel className="p-6">
@@ -93,7 +105,7 @@ export function AssinaturaClient({
         
         {faturasPendentes.length === 0 ? (
           <div className="rounded-xl border border-[#d1fae5] bg-[#d1fae5]/30 p-8 text-center flex flex-col items-center">
-            <CheckCircle2 className="size-10 text-[#065f46] mb-3" />
+            <ShieldCheck className="size-10 text-[#065f46] mb-3" />
             <p className="text-base font-bold text-[#065f46]">Tudo em dia!</p>
             <p className="text-sm text-[#065f46]/80 mt-1">Você não possui nenhuma fatura pendente com a ARXUM.</p>
           </div>
