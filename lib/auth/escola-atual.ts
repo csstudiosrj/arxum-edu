@@ -27,6 +27,7 @@ export type EscolaCompleta = {
   branding_portais: boolean
   criado_em: string
   config_avaliacao: any // NOVO AQUI
+  ano_letivo_ativo: string | null // NOVO AQUI
 }
 
 export async function getEscolaDoUsuario(): Promise<EscolaCompleta | null> {
