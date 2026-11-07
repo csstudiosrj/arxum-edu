@@ -5,6 +5,14 @@ import { getEscolaDoUsuario } from '@/lib/auth/escola-atual'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
+export type Variacao = {
+  id?: string
+  sku: string
+  tamanho: string
+  cor: string
+  estoque: number
+}
+
 export type Produto = {
   id: string
   nome: string
@@ -14,6 +22,7 @@ export type Produto = {
   estoque: number
   ativo: boolean
   criado_em: string
+  variacoes?: Variacao[]
 }
 
 export type NovoProduto = {
@@ -22,6 +31,7 @@ export type NovoProduto = {
   categoria: string
   preco_centavos: number
   estoque: number
+  variacoes: Variacao[]
 }
 
 export type Pedido = {
@@ -32,7 +42,7 @@ export type Pedido = {
   status: string
   observacao: string | null
   criado_em: string
-  itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number }>
+  itens: Array<{ produto_nome: string; quantidade: number; preco_unitario_centavos: number; tamanho?: string; cor?: string }>
 }
 
 export async function getProdutos(): Promise<Produto[]> {
@@ -40,9 +50,30 @@ export async function getProdutos(): Promise<Produto[]> {
     const escola = await getEscolaDoUsuario()
     if (!escola) return []
     const admin = createAdminClient()
-    const { data, error } = await admin.from('produtos').select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em').eq('escola_id', escola.id).order('criado_em', { ascending: false })
-    if (error) return []
-    return (data || []) as Produto[]
+    
+    const { data: produtos, error } = await admin
+      .from('produtos')
+      .select('id, nome, descricao, categoria, preco_centavos, estoque, ativo, criado_em')
+      .eq('escola_id', escola.id)
+      .order('criado_em', { ascending: false })
+
+    if (error || !produtos) return []
+
+    const idsProdutos = produtos.map(p => p.id)
+    let variacoes: any[] = []
+    
+    if (idsProdutos.length > 0) {
+      const { data: vars } = await admin
+        .from('produto_variacoes')
+        .select('*')
+        .in('produto_id', idsProdutos)
+      variacoes = (vars || [])
+    }
+
+    return produtos.map(p => ({
+      ...p,
+      variacoes: variacoes.filter(v => v.produto_id === p.id)
+    })) as Produto[]
   } catch (e) { return [] }
 }
 
@@ -57,13 +88,13 @@ export async function getPedidos(): Promise<Pedido[]> {
     const idsPedidos = pedidos.map((p) => p.id)
     let itens: any[] = []
     if (idsPedidos.length > 0) {
-      const { data } = await admin.from('pedido_itens').select('pedido_id, produto_nome, quantidade, preco_unitario_centavos').in('pedido_id', idsPedidos)
+      const { data } = await admin.from('pedido_itens').select('pedido_id, produto_nome, quantidade, preco_unitario_centavos, tamanho, cor').in('pedido_id', idsPedidos)
       itens = (data || [])
     }
     
     return pedidos.map((p) => ({
       id: p.id, responsavel_email: p.responsavel_email, responsavel_nome: p.responsavel_nome, total_centavos: p.total_centavos, status: p.status, observacao: p.observacao, criado_em: p.criado_em,
-      itens: itens.filter((i) => i.pedido_id === p.id).map((i) => ({ produto_nome: i.produto_nome, quantidade: i.quantidade, preco_unitario_centavos: i.preco_unitario_centavos }))
+      itens: itens.filter((i) => i.pedido_id === p.id).map((i) => ({ produto_nome: i.produto_nome, quantidade: i.quantidade, preco_unitario_centavos: i.preco_unitario_centavos, tamanho: i.tamanho, cor: i.cor }))
     })) as Pedido[]
   } catch (e) { return [] }
 }
@@ -73,8 +104,36 @@ export async function criarProduto(data: NovoProduto) {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
     const admin = createAdminClient()
-    const { error } = await admin.from('produtos').insert({ escola_id: escola.id, nome: data.nome, descricao: data.descricao || null, categoria: data.categoria, preco_centavos: data.preco_centavos, estoque: data.estoque })
-    if (error) return { success: false, error: error.message }
+
+    // 1. Calcula o estoque total baseado nas variações (se houver) ou no valor direto
+    const estoqueTotal = data.variacoes.length > 0 
+      ? data.variacoes.reduce((acc, v) => acc + v.estoque, 0) 
+      : data.estoque
+
+    const { data: novo, error } = await admin.from('produtos').insert({ 
+      escola_id: escola.id, 
+      nome: data.nome, 
+      descricao: data.descricao || null, 
+      categoria: data.categoria, 
+      preco_centavos: data.preco_centavos, 
+      estoque: estoqueTotal 
+    }).select('id').single()
+
+    if (error || !novo) return { success: false, error: error?.message }
+
+    // 2. Salva as variações
+    if (data.variacoes.length > 0) {
+      await admin.from('produto_variacoes').insert(
+        data.variacoes.map(v => ({
+          produto_id: novo.id,
+          sku: v.sku || null,
+          tamanho: v.tamanho || null,
+          cor: v.cor || null,
+          estoque: v.estoque
+        }))
+      )
+    }
+
     revalidatePath('/admin/loja'); revalidatePath('/loja')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao criar produto.' } }
@@ -85,8 +144,36 @@ export async function atualizarProduto(id: string, data: NovoProduto) {
     const escola = await getEscolaDoUsuario()
     if (!escola) return { success: false, error: 'Escola não encontrada.' }
     const admin = createAdminClient()
-    const { error } = await admin.from('produtos').update({ nome: data.nome, descricao: data.descricao || null, categoria: data.categoria, preco_centavos: data.preco_centavos, estoque: data.estoque, atualizado_em: new Date().toISOString() }).eq('id', id).eq('escola_id', escola.id)
+
+    const estoqueTotal = data.variacoes.length > 0 
+      ? data.variacoes.reduce((acc, v) => acc + v.estoque, 0) 
+      : data.estoque
+
+    const { error } = await admin.from('produtos').update({ 
+      nome: data.nome, 
+      descricao: data.descricao || null, 
+      categoria: data.categoria, 
+      preco_centavos: data.preco_centavos, 
+      estoque: estoqueTotal, 
+      atualizado_em: new Date().toISOString() 
+    }).eq('id', id).eq('escola_id', escola.id)
+
     if (error) return { success: false, error: error.message }
+
+    // Estratégia de variações: apaga as antigas e recria (mais simples para o MVP)
+    await admin.from('produto_variacoes').delete().eq('produto_id', id)
+    if (data.variacoes.length > 0) {
+      await admin.from('produto_variacoes').insert(
+        data.variacoes.map(v => ({
+          produto_id: id,
+          sku: v.sku || null,
+          tamanho: v.tamanho || null,
+          cor: v.cor || null,
+          estoque: v.estoque
+        }))
+      )
+    }
+
     revalidatePath('/admin/loja'); revalidatePath('/loja')
     return { success: true }
   } catch (e) { return { success: false, error: 'Erro ao atualizar produto.' } }
@@ -113,7 +200,6 @@ export async function atualizarStatusPedido(id: string, novoStatus: string) {
     const { data: pedido, error } = await admin.from('pedidos').update({ status: novoStatus, atualizado_em: new Date().toISOString() }).eq('id', id).eq('escola_id', escola.id).select('responsavel_email, responsavel_nome, total_centavos').single()
     if (error) return { success: false, error: error.message }
 
-    // Envio de E-mail Automático ao mudar status
     const slugsEmail: Record<string, string> = { pago: 'pedido_pago', enviado: 'pedido_enviado', disponivel_retirada: 'pedido_retirada' }
     const templateSlug = slugsEmail[novoStatus]
 
