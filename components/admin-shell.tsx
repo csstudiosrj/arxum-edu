@@ -21,7 +21,6 @@ type AdminMode = 'school' | 'super'
 
 const COR_FALLBACK = '#0d9488'
 
-// Ícones adicionados e estrutura mantida
 const schoolMenuGroups = [
   {
     titulo: 'Gestão',
@@ -126,19 +125,14 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 
   const menuGroups = mode === 'super' ? superMenuGroups : schoolMenuGroups
   
-  // Encontra o grupo ativo atual
   const grupoAtivoObj = menuGroups.find(g => g.items.some(i => i[0] === active))
   const grupoAtivoNome = grupoAtivoObj?.titulo || ''
-  
-  // Encontra o primeiro item do grupo ativo para servir de link no breadcrumb
   const primeiroItemDoGrupo = grupoAtivoObj?.items[0]
 
-  // Estado da sanfona inicia com o grupo ativo aberto
   const [gruposAbertos, setGruposAbertos] = useState<string[]>(grupoAtivoNome ? [grupoAtivoNome] : ['Gestão'])
 
   const router = useRouter()
 
-  // Fecha dropdown ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (avatarRef.current && !avatarRef.current.contains(event.target as Node)) {
@@ -198,7 +192,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 
   return <div className="min-h-screen bg-[#f6f8f9] text-[#17252d]" style={cssVars}>
     
-    {/* SIDEBAR SANFONA MELHORADO */}
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-[#dce5e8] bg-white transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#e5ecee] px-5">
         <ArxumBrand light={true} />
@@ -251,15 +244,13 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
 
     <div className="flex min-h-screen flex-col lg:pl-[248px]">
       
-      {/* HEADER COM BREADCRUMBS NAVEGÁVEIS */}
       <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between border-b border-[#dce5e8] bg-white/90 px-5 backdrop-blur lg:px-8">
         
         <div className="flex items-center gap-4">
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu /></button>
           
-          {/* BREADCRUMBS NAVEGÁVEL */}
           <div className="hidden sm:flex items-center gap-2 text-sm">
-            {grupoAtivoObj && (
+            {grupoAtivoObj && primeiroItemDoGrupo && (
               <>
                 <Link 
                   href={primeiroItemDoGrupo[1]} 
@@ -277,7 +268,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
           <div className="sm:hidden text-sm font-semibold text-[#12232b]">{active}</div>
         </div>
         
-        {/* BUSCA E AJUDA */}
         {mode === 'school' && (
           <div className="hidden flex-1 items-center justify-center gap-3 px-8 md:flex">
             <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-[#d5e0e3] bg-[#f6f8f9] px-3 py-2 text-sm text-[#9aaab0] transition focus-within:border-[var(--cor-primaria)] focus-within:bg-white">
@@ -290,7 +280,6 @@ export function AdminShell({ children, mode = 'school', active = 'Visão geral' 
           </div>
         )}
 
-        {/* AÇÕES E AVATAR */}
         <div className="flex items-center gap-3 sm:gap-4">
           {mode === 'school' && (
             <Link href="/admin/matriculas" className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-[var(--cor-primaria)] px-3 py-2 text-xs font-semibold text-white hover:brightness-90 transition">
